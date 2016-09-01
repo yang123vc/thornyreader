@@ -1,0 +1,11 @@
+LOCAL_PATH:= $(call my-dir)
+include $(CLEAR_VARS)
+SAVED_NDK_APP_DST_DIR := $(NDK_APP_DST_DIR)
+NDK_APP_DST_DIR := assets/thornyreader/$(TARGET_ARCH_ABI)
+
+LOCAL_MODULE := runpie
+LOCAL_ARM_MODE := $(APP_ARM_MODE)
+LOCAL_SRC_FILES := runpie.c
+
+include $(BUILD_EXECUTABLE)
+NDK_APP_DST_DIR := $(SAVED_NDK_APP_DST_DIR)
