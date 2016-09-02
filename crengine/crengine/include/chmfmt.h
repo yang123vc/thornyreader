@@ -1,17 +1,13 @@
-#ifndef CHMFMT_H
-#define CHMFMT_H
+#ifndef __CHMFMT_H__
+#define __CHMFMT_H__
 
-#include "../include/crsetup.h"
-#include "../include/lvtinydom.h"
+#include "crsetup.h"
+#include "lvtinydom.h"
 
-#if CHM_SUPPORT_ENABLED==1
-
-bool DetectCHMFormat( LvStreamRef stream );
-bool ImportCHMDocument( LvStreamRef stream, CrDom * doc);
+bool DetectCHMFormat( LVStreamRef stream );
+bool ImportCHMDocument( LVStreamRef stream, CrDom * doc);
 
 /// opens CHM container
-LVContainerRef LVOpenCHMContainer( LvStreamRef stream );
+LVContainerRef LVOpenCHMContainer( LVStreamRef stream );
 
-#endif
-
-#endif // CHMFMT_H
+#endif // __CHMFMT_H__

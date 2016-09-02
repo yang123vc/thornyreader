@@ -570,6 +570,7 @@ static struct {
     {"windows-852", __cp852, CRENC_ID_CP852},
     {"koi-8r", __koi8r, CRENC_ID_KOI8R},
     {"koi8r", __koi8r, CRENC_ID_KOI8R},
+    {"koi8-r", __koi8r, CRENC_ID_KOI8R},
     {"iso8859-2", __iso8859_2, CRENC_ID_ISO8859_2},
     {"iso-8859-2", __iso8859_2, CRENC_ID_ISO8859_2},
     {"iso8859_2", __iso8859_2, CRENC_ID_ISO8859_2},
@@ -1728,12 +1729,14 @@ bool isValidUtf8Data( const unsigned char * buf, int buf_size )
         lUInt8 ch = *buf++;
         if ( (ch & 0x80) == 0 ) {
         } else if ( (ch & 0xC0) == 0x80 ) {
-            CRLog::trace("unexpected char %02x at position %x, str=%s", ch, (buf-1-start), lString8((const char *)(buf-1), 32).c_str());
+            //CRLog::trace("unexpected char %02x at position %x, str=%s",
+            //		ch, (buf-1-start), lString8((const char *)(buf-1), 32).c_str());
             return false;
         } else if ( (ch & 0xE0) == 0xC0 ) {
             ch = *buf++;
             if ( (ch & 0xC0) != 0x80 ) {
-                CRLog::trace("unexpected char %02x at position %x, str=%s", ch, (buf-1-start), lString8((const char *)(buf-1), 32).c_str());
+                //CRLog::trace("unexpected char %02x at position %x, str=%s",
+                //		ch, (buf-1-start), lString8((const char *)(buf-1), 32).c_str());
                 return false;
             }
         } else if ( (ch & 0xF0) == 0xE0 ) {
@@ -1951,7 +1954,7 @@ int strincmp(const unsigned char * buf, const char * pattern, int len)
 
 int strnstr(const unsigned char * buf, int buf_len, const char * pattern)
 {
-    int plen = strlen(pattern);
+    int plen = (int)strlen(pattern);
     for (int i=0; i<=buf_len - plen; i++) {
         if (!strincmp(buf + i, pattern, plen)) {
             return i;
@@ -1962,7 +1965,7 @@ int strnstr(const unsigned char * buf, int buf_len, const char * pattern)
 
 int rstrnstr(const unsigned char * buf, int buf_len, const char * pattern)
 {
-    int plen = strlen(pattern);
+    int plen = (int)strlen(pattern);
     for (int i=buf_len - plen; i>=0; i--) {
         if (!strincmp(buf + i, pattern, plen)) {
             return i;
@@ -2012,10 +2015,11 @@ bool detectXmlHtmlEncoding(const unsigned char * buf, int buf_len, char * html_e
     return false;
 }
 
-int AutodetectCodePage(const unsigned char * buf, int buf_size, char * cp_name, char * lang_name, bool skipHtml)
+int AutodetectCodePage(const unsigned char* buf, int buf_size,
+		char* cp_name, char* lang_name, bool skipHtml)
 {
     int res = AutodetectCodePageUtf( buf, buf_size, cp_name, lang_name );
-    if ( res )
+    if (res)
         return res;
     // use character statistics
    short char_stat[256];
@@ -2046,7 +2050,7 @@ int AutodetectCodePage(const unsigned char * buf, int buf_size, char * cp_name, 
    }
    strcpy(cp_name, cp_stat_table[bestn].cp_name);
    strcpy(lang_name, cp_stat_table[bestn].lang_name);
-   CRLog::trace("Detected codepage:%s lang:%s index:%d %s", cp_name, lang_name, bestn, skipHtml ? "(skipHtml)" : "");
+   CRLog::trace("Detected codepage: %s lang: %s index: %d %s", cp_name, lang_name, bestn, skipHtml ? "(skipHtml)" : "");
    if (skipHtml) {
        if (detectXmlHtmlEncoding(buf, buf_size, cp_name)) {
            CRLog::trace("Encoding parsed from XML/HTML: %s", cp_name);

@@ -81,13 +81,10 @@
     - Tools
         - TrueType to grayscale bitmap font convertor
 
-
-
     \section main_authors Authors
 
     - Vadim Lopatin (http://www.coolreader.org/) - most source code
     - Alan (http://alreader.kms.ru/) - hyphenation sypport code
-    
 
     \section main_install Installation
 
@@ -99,9 +96,7 @@
 
     \note current version supports only build under Win32 with MS VC++ 6.0
 
-
     \section getting_started Getting started
-
 
     Please see Tools/Fb2Test/Fb2Test.cpp source code for sample code.
 
@@ -119,16 +114,13 @@
 
     Typical usage of LVDocView:
     - Load document using LVDocView::LoadDoc() method.
-    - Call LVDocView::setStyleSheet() to set stylesheet for document.
+    - Call LVDocView::setStylesheet() to set stylesheet for document.
     - Set draw buffer dimensions using LVDocView::Resize(dx, dy).
     - LVDocView::Draw() draws document into gray buffer. 
     - \a DrawBuf2DC() can be used to draw gray bitmap in Windows device context.
     - LVDocView::GetPos() and LVDocView::SetPos() can be used to scroll throuh document.
 
-
-
     \section main_license License
-
 
     This source code is distributed under the terms of
     GNU General Public License.
@@ -146,7 +138,5 @@
 #include "lvdocview.h"
 #include "lvstsheet.h"
 #include "lvdrawbuf.h"
-#include "props.h"
-#include "w32utils.h"
 
 #endif//CRENGINE_H_INCLUDED

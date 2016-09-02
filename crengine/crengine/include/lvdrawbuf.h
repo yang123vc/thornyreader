@@ -16,24 +16,57 @@
 
 #include "crsetup.h"
 
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
 extern "C" {
 #include <windows.h>
 }
-#elif __SYMBIAN32__
-#include <e32base.h>
-#include <w32std.h>
 #endif
 
 #include "lvtypes.h"
 #include "lvimg.h"
 
 class LVFont;
+class GLDrawBuf; // workaround for no-rtti builds
 
 /// Abstract drawing buffer
 class LVDrawBuf
 {
 public:
+    // GL draw buffer support
+    /// GL draw buffer compatibility - requires this call before any drawing
+    virtual void beforeDrawing() {}
+    /// GL draw buffer compatibility - requires this call after any drawing
+    virtual void afterDrawing() {}
+
+    // tiles support
+    /// returns true if drawing buffer is tiled
+    virtual bool isTiled() { return false; }
+    /// returns tile width (or just width if no tiles)
+    virtual int tileWidth() { return GetWidth(); }
+    /// returns tile height (or just height if no tiles)
+    virtual int tileHeight() { return GetHeight(); }
+    /// returns tile drawbuf for tiled image, returns this for non tiled draw buffer
+    virtual LVDrawBuf * getTile(int x, int y) {
+        CR_UNUSED2(x, y);
+        return this;
+    }
+    /// returns number of tiles in row
+    virtual int getXtiles() {
+        return 1;
+    }
+    /// returns number of tiles in column
+    virtual int getYtiles() {
+        return 1;
+    }
+
+    /// returns tile rectangle
+    virtual void getTileRect(lvRect & rc, int x, int y) {
+        CR_UNUSED2(x, y);
+        rc.left = rc.top = 0;
+        rc.right = GetWidth();
+        rc.bottom = GetHeight();
+    }
+
     /// returns white pixel value
     virtual lUInt32 GetWhiteColor() = 0;
     /// returns black pixel value
@@ -70,8 +103,20 @@ public:
     virtual lUInt32 GetAvgColor(lvRect & rc16) = 0;
     /// get linearly interpolated pixel value (coordinates are fixed floating points *16)
     virtual lUInt32 GetInterpolatedColor(int x16, int y16) = 0;
+    /// draw gradient filled rectangle with colors for top-left, top-right, bottom-right, bottom-left
+    virtual void GradientRect(int x0, int y0, int x1, int y1, lUInt32 color1, lUInt32 color2, lUInt32 color3, lUInt32 color4) {
+        CR_UNUSED8(x0, x1, y0, y1, color1, color2, color3, color4);
+    }
     /// fills rectangle with specified color
     virtual void FillRect( int x0, int y0, int x1, int y1, lUInt32 color ) = 0;
+    /// draw frame
+    inline void DrawFrame(const lvRect & rc, lUInt32 color, int width = 1)
+    {
+        FillRect( rc.left, rc.top, rc.right, rc.top + width, color );
+        FillRect( rc.left, rc.bottom - width, rc.right, rc.bottom, color );
+        FillRect( rc.left, rc.top + width, rc.left + width, rc.bottom - width, color );
+        FillRect( rc.right - width, rc.top + width, rc.right, rc.bottom - width, color );
+    }
     /// fills rectangle with specified color
     inline void FillRect( const lvRect & rc, lUInt32 color )
     {
@@ -114,12 +159,20 @@ public:
     /// draws bitmap (1 byte per pixel) using specified palette
     virtual void Draw(int x, int y, const lUInt8 * bitmap, int width, int height, lUInt32 * palette) = 0;
     /// draws image
-    virtual void Draw(LVImageSourceRef img, int x, int y, int width, int height, bool dither=true) = 0;
+    virtual void Draw( LVImageSourceRef img, int x, int y, int width, int height, bool dither=true ) = 0;
+    /// draws part of source image, possible rescaled
+    virtual void Draw( LVImageSourceRef img, int x, int y, int width, int height, int srcx, int srcy, int srcwidth, int srcheight, bool dither=true ) { CR_UNUSED10(img, x, y, width, height, srcx, srcy, srcwidth, srcheight, dither); }
+    /// for GL buf only - rotated drawing
+    virtual void DrawRotated( LVImageSourceRef img, int x, int y, int width, int height, int rotationAngle) { Draw(img, x, y, width, height); CR_UNUSED(rotationAngle); }
     /// draws buffer content to another buffer doing color conversion if necessary
     virtual void DrawTo(LVDrawBuf* buf, int x, int y, int options, lUInt32 * palette) = 0;
     /// draws rescaled buffer content to another buffer doing color conversion if necessary
-    virtual void DrawRescaled(LVDrawBuf* src, int x, int y, int dx, int dy, int options) = 0;
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+    virtual void DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, int options) = 0;
+    /// draws rescaled buffer content to another buffer doing color conversion if necessary
+    virtual void DrawFragment(LVDrawBuf * src, int srcx, int srcy, int srcdx, int srcdy, int x, int y, int dx, int dy, int options) {
+        CR_UNUSED10(src, srcx, srcy, srcdx, srcdy, x, y, dx, dy, options);
+    }
+#if defined(_WIN32) && !defined(QT_GL)
     /// draws buffer content to another buffer doing color conversion if necessary
     virtual void DrawTo( HDC dc, int x, int y, int options, lUInt32 * palette ) = 0;
 #endif
@@ -136,8 +189,15 @@ public:
 */
     /// returns scanline pointer
     virtual lUInt8 * GetScanLine( int y ) = 0;
+
+
+    virtual int getAlpha() { return 0; }
+    virtual void setAlpha(int alpha) { CR_UNUSED(alpha); }
+    virtual lUInt32 applyAlpha(lUInt32 cl) { return cl; }
+
     /// virtual destructor
     virtual ~LVDrawBuf() { }
+    virtual GLDrawBuf * asGLDrawBuf() { return NULL; }
 };
 
 /// LVDrawBufferBase
@@ -180,41 +240,6 @@ public:
     virtual ~LVBaseDrawBuf() { }
 };
 
-/// use to simplify saving draw buffer state
-class LVDrawStateSaver
-{
-    LVDrawBuf & _buf;
-    lUInt32 _textColor;
-    lUInt32 _backgroundColor;
-    lvRect _clipRect;
-	LVDrawStateSaver & operator = (LVDrawStateSaver &) {
-		// no assignment
-        return *this;
-	}
-public:
-    /// save settings
-    LVDrawStateSaver( LVDrawBuf & buf )
-    : _buf( buf )
-    , _textColor( buf.GetTextColor() )
-    , _backgroundColor( buf.GetBackgroundColor() )
-    {
-        _buf.GetClipRect( &_clipRect );
-    }
-    void restore()
-    {
-        _buf.SetTextColor( _textColor );
-        _buf.SetBackgroundColor( _backgroundColor );
-        _buf.SetClipRect( &_clipRect );
-    }
-    /// restore settings on destroy
-    ~LVDrawStateSaver()
-    {
-        restore();
-    }
-};
-
-#define SAVE_DRAW_STATE( buf ) LVDrawStateSaver drawBufSaver( buf )
-
 enum DrawBufPixelFormat
 {
     DRAW_BUF_1_BPP = 1, /// 1 bpp, 8 pixels per byte packed
@@ -250,7 +275,7 @@ public:
     virtual void DrawTo( LVDrawBuf * buf, int x, int y, int options, lUInt32 * palette );
     /// draws rescaled buffer content to another buffer doing color conversion if necessary
     virtual void DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, int options);
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
     /// draws buffer content to another buffer doing color conversion if necessary
     virtual void DrawTo( HDC dc, int x, int y, int options, lUInt32 * palette );
 #endif
@@ -303,7 +328,7 @@ inline lUInt16 rgb888to565(lUInt32 cl)
 class LVColorDrawBuf : public LVBaseDrawBuf
 {
 private:
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
     HDC _drawdc;
     HBITMAP _drawbmp;
 #endif
@@ -318,7 +343,7 @@ public:
     virtual void DrawTo( LVDrawBuf * buf, int x, int y, int options, lUInt32 * palette );
     /// draws rescaled buffer content to another buffer doing color conversion if necessary
     virtual void DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, int options);
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
     /// draws buffer content to another buffer doing color conversion if necessary
     virtual void DrawTo( HDC dc, int x, int y, int options, lUInt32 * palette );
 #endif
@@ -353,7 +378,7 @@ public:
     virtual ~LVColorDrawBuf();
     /// convert to 1-bit bitmap
     void ConvertToBitmap(bool flgDither);
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
     /// returns device context for bitmap buffer
     HDC GetDC() { return _drawdc; }
 #endif

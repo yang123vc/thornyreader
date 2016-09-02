@@ -26,33 +26,190 @@
 #endif
 
 #if (USE_LIBJPEG==1)
-
-//#include "../../wxWidgets/src/jpeg/jinclude.h"
 extern "C" {
 #include <jpeglib.h>
 }
-
 #include <jerror.h>
-
-#if !defined(HAVE_WXJPEG_BOOLEAN)
 typedef boolean wxjpeg_boolean;
 #endif
 
-#endif
+void CR9PatchInfo::applyPadding(lvRect & dstPadding) const
+{
+	if (dstPadding.left < padding.left)
+		dstPadding.left = padding.left;
+	if (dstPadding.right < padding.right)
+		dstPadding.right = padding.right;
+	if (dstPadding.top < padding.top)
+		dstPadding.top = padding.top;
+	if (dstPadding.bottom < padding.bottom)
+		dstPadding.bottom = padding.bottom;
+}
+
+static void fixNegative(int n[4]) {
+	int d1 = n[1] - n[0];
+	int d2 = n[3] - n[2];
+	if (d1 + d2 > 0) {
+		n[1] = n[2] = n[0] + (n[3] - n[0]) * d1 / (d1 + d2);
+	} else {
+		n[1] = n[2] = (n[0] + n [3]) / 2;
+	}
+}
+
+/// caclulate dst and src rectangles (src does not include layout frame)
+void CR9PatchInfo::calcRectangles(const lvRect & dst, const lvRect & src, lvRect dstitems[9], lvRect srcitems[9]) const {
+	for (int i=0; i<9; i++) {
+		srcitems[i].clear();
+		dstitems[i].clear();
+	}
+	if (dst.isEmpty() || src.isEmpty())
+		return;
+
+	int sx[4], sy[4], dx[4], dy[4];
+	sx[0] = src.left;
+	sx[1] = src.left + frame.left;
+	sx[2] = src.right - frame.right;
+	sx[3] = src.right;
+	sy[0] = src.top;
+	sy[1] = src.top + frame.top;
+	sy[2] = src.bottom - frame.bottom;
+	sy[3] = src.bottom;
+	dx[0] = dst.left;
+	dx[1] = dst.left + frame.left;
+	dx[2] = dst.right - frame.right;
+	dx[3] = dst.right;
+	dy[0] = dst.top;
+	dy[1] = dst.top + frame.top;
+	dy[2] = dst.bottom - frame.bottom;
+	dy[3] = dst.bottom;
+	if (dx[1] > dx[2]) {
+		// shrink horizontal
+		fixNegative(dx);
+	}
+	if (dy[1] > dy[2]) {
+		// shrink vertical
+		fixNegative(dy);
+	}
+	// fill calculated rectangles
+	for (int y = 0; y<3; y++) {
+		for (int x = 0; x < 3; x++) {
+			int i = y * 3 + x;
+			srcitems[i].left = sx[x];
+			srcitems[i].right = sx[x + 1];
+			srcitems[i].top = sy[y];
+			srcitems[i].bottom = sy[y + 1];
+			dstitems[i].left = dx[x];
+			dstitems[i].right = dx[x + 1];
+			dstitems[i].top = dy[y];
+			dstitems[i].bottom = dy[y + 1];
+		}
+	}
+}
 
 
-LVImageSource::~LVImageSource() {}
+class CRNinePatchDecoder : public LVImageDecoderCallback
+{
+	int _dx;
+	int _dy;
+	CR9PatchInfo * _info;
+public:
+	CRNinePatchDecoder(int dx, int dy, CR9PatchInfo * info) : _dx(dx), _dy(dy), _info(info) {
+	}
+    virtual ~CRNinePatchDecoder() { }
+    virtual void OnStartDecode( LVImageSource * obj ) {
+        CR_UNUSED(obj);
+    }
+    bool isUsedPixel(lUInt32 pixel) {
+    	return (pixel == 0x000000); // black
+    }
+    void decodeHLine(lUInt32 * line, int & x0, int & x1) {
+    	bool foundUsed = false;
+    	for (int x = 0; x < _dx; x++) {
+    		if (isUsedPixel(line[x])) {
+    			if (!foundUsed) {
+    				x0 = x;
+        			foundUsed = true;
+    			}
+    			x1 = x + 1;
+    		}
+    	}
+    }
+    void decodeVLine(lUInt32 pixel, int y, int & y0, int & y1) {
+    	if (isUsedPixel(pixel)) {
+    		if (y0 == 0)
+    			y0 = y;
+    		y1 = y + 1;
+    	}
+    }
+    virtual bool OnLineDecoded( LVImageSource * obj, int y, lUInt32 * data ) {
+        CR_UNUSED(obj);
+        if (y == 0) {
+    		decodeHLine(data, _info->frame.left, _info->frame.right);
+    	} else if (y == _dy - 1) {
+    		decodeHLine(data, _info->padding.left, _info->padding.right);
+    	} else {
+    		decodeVLine(data[0], y, _info->frame.top, _info->frame.bottom);
+    		decodeVLine(data[_dx - 1], y, _info->padding.top, _info->padding.bottom);
+    	}
+    	return true;
+    }
+    virtual void OnEndDecode( LVImageSource * obj, bool errors ) {
+        CR_UNUSED2(obj, errors);
+    }
+};
+
+
+static void fixNegative(int & n) {
+	if (n < 0)
+		n = 0;
+}
+CR9PatchInfo * LVImageSource::DetectNinePatch()
+{
+	if (_ninePatch)
+		return _ninePatch;
+	_ninePatch = new CR9PatchInfo();
+	CRNinePatchDecoder decoder(GetWidth(), GetHeight(), _ninePatch);
+	Decode(&decoder);
+	if (!(_ninePatch->frame.left > 0 && _ninePatch->frame.top > 0
+			&& _ninePatch->frame.left < _ninePatch->frame.right
+			&& _ninePatch->frame.top < _ninePatch->frame.bottom)) {
+		delete _ninePatch;
+		_ninePatch = NULL;
+	}
+	// remove 1 pixel frame
+	_ninePatch->padding.left--;
+	_ninePatch->padding.top--;
+	_ninePatch->padding.right = GetWidth() - _ninePatch->padding.right - 1;
+	_ninePatch->padding.bottom = GetHeight() - _ninePatch->padding.bottom - 1;
+	fixNegative(_ninePatch->padding.left);
+	fixNegative(_ninePatch->padding.top);
+	fixNegative(_ninePatch->padding.right);
+	fixNegative(_ninePatch->padding.bottom);
+	_ninePatch->frame.left--;
+	_ninePatch->frame.top--;
+	_ninePatch->frame.right = GetWidth() - _ninePatch->frame.right - 1;
+	_ninePatch->frame.bottom = GetHeight() - _ninePatch->frame.bottom - 1;
+	fixNegative(_ninePatch->frame.left);
+	fixNegative(_ninePatch->frame.top);
+	fixNegative(_ninePatch->frame.right);
+	fixNegative(_ninePatch->frame.bottom);
+	return _ninePatch;
+}
+
+LVImageSource::~LVImageSource() {
+	if (_ninePatch)
+		delete _ninePatch;
+}
 
 
 class LVNodeImageSource : public LVImageSource
 {
 protected:
     ldomNode *  _node;
-    LvStreamRef _stream;
+    LVStreamRef _stream;
     int _width;
     int _height;
 public:
-    LVNodeImageSource( ldomNode * node, LvStreamRef stream )
+    LVNodeImageSource( ldomNode * node, LVStreamRef stream )
         : _node(node), _stream(stream), _width(0), _height(0)
     {
 
@@ -328,7 +485,7 @@ class LVPngImageSource : public LVNodeImageSource
 {
 protected:
 public:
-    LVPngImageSource( ldomNode * node, LvStreamRef stream );
+    LVPngImageSource( ldomNode * node, LVStreamRef stream );
     virtual ~LVPngImageSource();
     virtual void   Compact();
     virtual bool   Decode( LVImageDecoderCallback * callback );
@@ -336,16 +493,16 @@ public:
 };
 
 
-static void lvpng_error_func (png_structp png, png_const_charp)
+static void lvpng_error_func (png_structp png, png_const_charp msg)
 {
-    //fprintf(stderr, "png error: %s\n", msg)
+	CRLog::error("libpng: %s", msg);
     longjmp(png_jmpbuf(png), 1);
 }
 
-static void lvpng_warning_func (png_structp png, png_const_charp)
+static void lvpng_warning_func (png_structp png, png_const_charp msg)
 {
-    //fprintf(stderr, "png warning: %s\n", msg)
-    longjmp(png_jmpbuf(png), 1);
+	CR_UNUSED(png);
+	CRLog::warn("libpng: %s", msg);
 }
 
 static void lvpng_read_func(png_structp png, png_bytep buf, png_size_t len)
@@ -353,7 +510,7 @@ static void lvpng_read_func(png_structp png, png_bytep buf, png_size_t len)
     LVNodeImageSource * obj = (LVNodeImageSource *) png_get_io_ptr(png);
     LVStream * stream = obj->GetSourceStream();
     lvsize_t bytesRead = 0;
-    if ( stream->Read( buf, len, &bytesRead )!=LVERR_OK || bytesRead!=(lvsize_t)len )
+	if ( stream->Read( buf, (int)len, &bytesRead )!=LVERR_OK || bytesRead!=len )
         longjmp(png_jmpbuf(png), 1);
 }
 
@@ -521,7 +678,7 @@ class LVJpegImageSource : public LVNodeImageSource
     jpeg_decompress_struct cinfo;
 protected:
 public:
-    LVJpegImageSource( ldomNode * node, LvStreamRef stream )
+    LVJpegImageSource( ldomNode * node, LVStreamRef stream )
         : LVNodeImageSource(node, stream)
     {
     	//CRLog::trace("creating LVJpegImageSource");
@@ -652,7 +809,7 @@ public:
 
 #if (USE_LIBPNG==1)
 
-LVPngImageSource::LVPngImageSource( ldomNode * node, LvStreamRef stream )
+LVPngImageSource::LVPngImageSource( ldomNode * node, LVStreamRef stream )
         : LVNodeImageSource(node, stream)
 {
 }
@@ -797,7 +954,7 @@ protected:
 
     lUInt32 * m_global_color_table;
 public:
-    LVGifImageSource( ldomNode * node, LvStreamRef stream )
+    LVGifImageSource( ldomNode * node, LVStreamRef stream )
         : LVNodeImageSource(node, stream)
     {
         m_global_color_table = NULL;
@@ -998,7 +1155,7 @@ int LVGifImageSource::DecodeFromBuffer(unsigned char *buf, int buf_size, LVImage
             {
                 LVGifFrame * pFrame = new LVGifFrame(this);
                 int cbRead = 0;
-                if (pFrame->DecodeFromBuffer(p, buf_size - (p - buf), cbRead) ) {
+				if (pFrame->DecodeFromBuffer(p, (int)(buf_size - (p - buf)), cbRead) ) {
                     found = true;
                     pFrame->Draw( callback );
                 }
@@ -1008,7 +1165,7 @@ int LVGifImageSource::DecodeFromBuffer(unsigned char *buf, int buf_size, LVImage
             break;
         case '!': // extension record
             {
-                res = skipGifExtension(p, buf_size - (p - buf));
+				res = skipGifExtension(p, (int)(buf_size - (p - buf)));
             }
             break;
         case ';': // terminate record
@@ -1016,6 +1173,7 @@ int LVGifImageSource::DecodeFromBuffer(unsigned char *buf, int buf_size, LVImage
             break;
         default:
             res = false;
+            break;
         }
     }
 
@@ -1280,7 +1438,7 @@ bool LVGifImageSource::Decode( LVImageDecoderCallback * callback )
 
 //    // for DEBUG
 //    {
-//        LvStreamRef out = LVOpenFileStream("/tmp/test.gif", LVOM_WRITE);
+//        LVStreamRef out = LVOpenFileStream("/tmp/test.gif", LVOM_WRITE);
 //        out->Write(buf, sz, NULL);
 //    }
 
@@ -1345,7 +1503,7 @@ int LVGifFrame::DecodeFromBuffer( unsigned char * buf, int buf_size, int &bytes_
 
     // test raster stream size
     int i;
-    int rest_buf_size = buf_size - (p-buf);
+	int rest_buf_size = (int)(buf_size - (p-buf));
     for (i=0; i<rest_buf_size && p[i]; ) {
         // next block
         int block_size = p[i];
@@ -1357,7 +1515,7 @@ int LVGifFrame::DecodeFromBuffer( unsigned char * buf, int buf_size, int &bytes_
         return 0; // error
 
     // set read bytes count
-    bytes_read = (p-buf) + i;
+	bytes_read = (int)((p-buf) + i);
 
     // create stream buffer
     stream_buffer = new unsigned char[stream_buffer_size+3];
@@ -1445,7 +1603,7 @@ LVImageSourceRef LVCreateDummyImageSource( ldomNode * node, int width, int heigh
     return LVImageSourceRef( new LVDummyImageSource( node, width, height ) );
 }
 
-LVImageSourceRef LVCreateStreamImageSource( ldomNode * node, LvStreamRef stream )
+LVImageSourceRef LVCreateStreamImageSource( ldomNode * node, LVStreamRef stream )
 {
     LVImageSourceRef ref;
     if ( stream.isNull() )
@@ -1484,7 +1642,7 @@ LVImageSourceRef LVCreateStreamImageSource( ldomNode * node, LvStreamRef stream 
     return ref;
 }
 
-LVImageSourceRef LVCreateStreamImageSource( LvStreamRef stream )
+LVImageSourceRef LVCreateStreamImageSource( LVStreamRef stream )
 {
     return LVCreateStreamImageSource( NULL, stream );
 }
@@ -1495,7 +1653,7 @@ LVImageSourceRef LVCreateNodeImageSource( ldomNode * node )
     LVImageSourceRef ref;
     if (!node->isElement())
         return ref;
-    LvStreamRef stream = node->createBase64Stream();
+    LVStreamRef stream = node->createBase64Stream();
     if (stream.isNull())
         return ref;
 //    if ( CRLog::isDebugEnabled() ) {
@@ -1513,7 +1671,7 @@ LVImageSourceRef LVCreateFileCopyImageSource( lString16 fname )
 }
 
 /// creates image source as memory copy of stream contents
-LVImageSourceRef LVCreateStreamCopyImageSource( LvStreamRef stream )
+LVImageSourceRef LVCreateStreamCopyImageSource( LVStreamRef stream )
 {
     if (stream.isNull())
         return LVImageSourceRef();
@@ -1685,6 +1843,180 @@ LVImageSourceRef LVCreateTileTransform( LVImageSourceRef src, int newWidth, int 
         return LVImageSourceRef();
     return LVImageSourceRef( new LVStretchImgSource( src, newWidth, newHeight, IMG_TRANSFORM_TILE, IMG_TRANSFORM_TILE,
                                                      offsetX, offsetY ) );
+}
+
+static inline lUInt32 limit256(int n) {
+    if (n < 0)
+        return 0;
+    else if (n > 255)
+        return 255;
+    else
+        return (lUInt32)n;
+}
+
+class LVColorTransformImgSource : public LVImageSource, public LVImageDecoderCallback
+{
+protected:
+    LVImageSourceRef _src;
+    lUInt32 _add;
+    lUInt32 _multiply;
+    LVImageDecoderCallback * _callback;
+    LVColorDrawBuf * _drawbuf;
+    int _sumR;
+    int _sumG;
+    int _sumB;
+    int _countPixels;
+public:
+    LVColorTransformImgSource(LVImageSourceRef src, lUInt32 addRGB, lUInt32 multiplyRGB)
+        : _src( src )
+        , _add(addRGB)
+        , _multiply(multiplyRGB)
+        , _drawbuf(NULL)
+    {
+    }
+    virtual ~LVColorTransformImgSource() {
+        if (_drawbuf)
+            delete _drawbuf;
+    }
+
+    virtual void OnStartDecode( LVImageSource * )
+    {
+        _callback->OnStartDecode(this);
+        _sumR = _sumG = _sumB = _countPixels = 0;
+        if (_drawbuf)
+            delete _drawbuf;
+        _drawbuf = new LVColorDrawBuf(_src->GetWidth(), _src->GetHeight(), 32);
+    }
+    virtual bool OnLineDecoded( LVImageSource * obj, int y, lUInt32 * data ) {
+        CR_UNUSED(obj);
+        int dx = _src->GetWidth();
+
+        lUInt32 * row = (lUInt32*)_drawbuf->GetScanLine(y);
+        for (int x = 0; x < dx; x++) {
+            lUInt32 cl = data[x];
+            row[x] = cl;
+            if (((cl >> 24) & 255) < 0xC0) { // count non-transparent pixels only
+                _sumR += (cl >> 16) & 0xFF;
+                _sumG += (cl >> 8) & 0xFF;
+                _sumB += (cl >> 0) & 0xFF;
+                _countPixels++;
+            }
+        }
+        return true;
+
+    }
+    virtual void OnEndDecode( LVImageSource * obj, bool res)
+    {
+        int dx = _src->GetWidth();
+        int dy = _src->GetHeight();
+        // simple add
+        int ar = (((_add >> 16) & 255) - 0x80) * 2;
+        int ag = (((_add >> 8) & 255) - 0x80) * 2;
+        int ab = (((_add >> 0) & 255) - 0x80) * 2;
+        // fixed point * 256
+        int mr = ((_multiply >> 16) & 255) << 3;
+        int mg = ((_multiply >> 8) & 255) << 3;
+        int mb = ((_multiply >> 0) & 255) << 3;
+
+        int avgR = _countPixels > 0 ? _sumR / _countPixels : 128;
+        int avgG = _countPixels > 0 ? _sumG / _countPixels : 128;
+        int avgB = _countPixels > 0 ? _sumB / _countPixels : 128;
+
+        for (int y = 0; y < dy; y++) {
+            lUInt32 * row = (lUInt32*)_drawbuf->GetScanLine(y);
+            for ( int x=0; x<dx; x++ ) {
+                lUInt32 cl = row[x];
+                lUInt32 a = cl & 0xFF000000;
+                if (a != 0xFF000000) {
+                    int r = (cl >> 16) & 255;
+                    int g = (cl >> 8) & 255;
+                    int b = (cl >> 0) & 255;
+                    r = (((r - avgR) * mr) >> 8) + avgR + ar;
+                    g = (((g - avgG) * mg) >> 8) + avgG + ag;
+                    b = (((b - avgB) * mb) >> 8) + avgB + ab;
+                    row[x] = a | (limit256(r) << 16) | (limit256(g) << 8) | (limit256(b) << 0);
+                }
+            }
+            _callback->OnLineDecoded(obj, y, row);
+        }
+        if (_drawbuf)
+            delete _drawbuf;
+        _drawbuf = NULL;
+        _callback->OnEndDecode(this, res);
+    }
+    virtual ldomNode * GetSourceNode() { return NULL; }
+    virtual LVStream * GetSourceStream() { return NULL; }
+    virtual void   Compact() { }
+    virtual int    GetWidth() { return _src->GetWidth(); }
+    virtual int    GetHeight() { return _src->GetHeight(); }
+    virtual bool   Decode( LVImageDecoderCallback * callback )
+    {
+        _callback = callback;
+        return _src->Decode( this );
+    }
+};
+
+/// creates image source which transforms colors of another image source (add RGB components (c - 0x80) * 2 from addedRGB first, then multiplyed by multiplyRGB fixed point components (0x20 is 1.0f)
+LVImageSourceRef LVCreateColorTransformImageSource(LVImageSourceRef srcImage, lUInt32 addRGB, lUInt32 multiplyRGB) {
+    return LVImageSourceRef(new LVColorTransformImgSource(srcImage, addRGB, multiplyRGB));
+}
+
+class LVAlphaTransformImgSource : public LVImageSource, public LVImageDecoderCallback
+{
+protected:
+    LVImageSourceRef _src;
+    LVImageDecoderCallback * _callback;
+    int _alpha;
+public:
+    LVAlphaTransformImgSource(LVImageSourceRef src, int alpha)
+        : _src( src )
+        , _alpha(255 - alpha)
+    {
+    }
+    virtual ~LVAlphaTransformImgSource() {
+    }
+
+    virtual void OnStartDecode( LVImageSource * )
+    {
+        _callback->OnStartDecode(this);
+    }
+    virtual bool OnLineDecoded( LVImageSource * obj, int y, lUInt32 * data ) {
+        CR_UNUSED(obj);
+        int dx = _src->GetWidth();
+
+        for (int x = 0; x < dx; x++) {
+            lUInt32 cl = data[x];
+            int srcalpha = 255 - (cl >> 24);
+            if (srcalpha > 0) {
+                srcalpha = _alpha * srcalpha;
+                cl = (cl & 0xFFFFFF) | ((255 - _alpha * srcalpha)<<24);
+            }
+            data[x] = cl;
+        }
+        return _callback->OnLineDecoded(obj, y, data);
+    }
+    virtual void OnEndDecode( LVImageSource * obj, bool res)
+    {
+        CR_UNUSED(obj);
+        _callback->OnEndDecode(this, res);
+    }
+    virtual ldomNode * GetSourceNode() { return NULL; }
+    virtual LVStream * GetSourceStream() { return NULL; }
+    virtual void   Compact() { }
+    virtual int    GetWidth() { return _src->GetWidth(); }
+    virtual int    GetHeight() { return _src->GetHeight(); }
+    virtual bool   Decode( LVImageDecoderCallback * callback )
+    {
+        _callback = callback;
+        return _src->Decode( this );
+    }
+};
+
+/// creates image source which applies alpha to another image source (0 is no change, 255 is totally transparent)
+LVImageSourceRef LVCreateAlphaTransformImageSource(LVImageSourceRef srcImage, int alpha) {
+    if (alpha <= 0)
+        return srcImage;
+    return LVImageSourceRef(new LVAlphaTransformImgSource(srcImage, alpha));
 }
 
 class LVUnpackedImgSource : public LVImageSource, public LVImageDecoderCallback
@@ -1898,79 +2230,4 @@ LVImageSourceRef LVCreateUnpackedImageSource( LVImageSourceRef srcImage, int max
 LVImageSourceRef LVCreateDrawBufImageSource( LVColorDrawBuf * buf, bool own )
 {
     return LVImageSourceRef( new LVDrawBufImgSource( buf, own ) );
-}
-
-
-/// draws battery icon in specified rectangle of draw buffer; if font is specified, draws charge %
-// first icon is for charging, the rest - indicate progress icon[1] is lowest level, icon[n-1] is full power
-// if no icons provided, battery will be drawn
-void LVDrawBatteryIcon( LVDrawBuf * drawbuf, const lvRect & batteryRc, int percent, bool charging, LVRefVec<LVImageSource> icons, LVFont * font )
-{
-    lvRect rc( batteryRc );
-    bool drawText = (font != NULL);
-    if ( icons.length()>1 ) {
-        int iconIndex = 0;
-        if ( !charging ) {
-            if ( icons.length()>2 ) {
-                int numTicks = icons.length() - 1;
-                int perTick = 10000/(numTicks -1);
-                //iconIndex = ((numTicks - 1) * percent + (100/numTicks/2) )/ 100 + 1;
-                iconIndex = (percent * 100 + perTick/2)/perTick + 1;
-                if ( iconIndex<1 )
-                    iconIndex = 1;
-                if ( iconIndex>icons.length()-1 )
-                    iconIndex = icons.length()-1;
-            } else {
-                // empty battery icon, for % display
-                iconIndex = 1;
-            }
-        }
-
-        lvPoint sz( icons[0]->GetWidth(), icons[0]->GetHeight() );
-        rc.left += (rc.width() - sz.x)/2;
-        rc.top += (rc.height() - sz.y)/2;
-        rc.right = rc.left + sz.x;
-        rc.bottom = rc.top + sz.y;
-        LVImageSourceRef icon = icons[iconIndex];
-        drawbuf->Draw( icon, rc.left,
-            rc.top,
-            sz.x,
-            sz.y, false );
-        if ( charging )
-            drawText = false;
-        rc.left += 3;
-    } else {
-        // todo: draw w/o icons
-    }
-
-    if ( drawText ) {
-        // rc is rectangle to draw text to
-        lString16 txt;
-        if ( charging )
-            txt = "+++";
-        else
-            txt = lString16::itoa(percent); // + L"%";
-        int w = font->getTextWidth(txt.c_str(), txt.length());
-        int h = font->getHeight();
-        int x = (rc.left + rc.right - w)/2;
-        int y = (rc.top + rc.bottom - h)/2+1;
-        lUInt32 bgcolor = drawbuf->GetBackgroundColor();
-        lUInt32 textcolor = drawbuf->GetTextColor();
-
-        drawbuf->SetBackgroundColor( textcolor );
-        drawbuf->SetTextColor( bgcolor );
-        font->DrawTextString(drawbuf, x-1, y, txt.c_str(), txt.length(), '?', NULL);
-        font->DrawTextString(drawbuf, x+1, y, txt.c_str(), txt.length(), '?', NULL);
-//        font->DrawTextString(drawbuf, x-1, y+1, txt.c_str(), txt.length(), '?', NULL);
-//        font->DrawTextString(drawbuf, x+1, y-1, txt.c_str(), txt.length(), '?', NULL);
-        font->DrawTextString(drawbuf, x, y-1, txt.c_str(), txt.length(), '?', NULL);
-        font->DrawTextString(drawbuf, x, y+1, txt.c_str(), txt.length(), '?', NULL);
-//        font->DrawTextString(drawbuf, x+1, y+1, txt.c_str(), txt.length(), '?', NULL);
-//        font->DrawTextString(drawbuf, x-1, y+1, txt.c_str(), txt.length(), '?', NULL);
-        //drawbuf->SetBackgroundColor( textcolor );
-        //drawbuf->SetTextColor( bgcolor );
-        drawbuf->SetBackgroundColor( bgcolor );
-        drawbuf->SetTextColor( textcolor );
-        font->DrawTextString(drawbuf, x, y, txt.c_str(), txt.length(), '?', NULL);
-    }
 }

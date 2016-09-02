@@ -21,7 +21,7 @@ struct PDBHdr
     lUInt32    nextRecordList;
     lUInt16    recordCount;
     lUInt16    firstEntry;
-    bool read( LvStreamRef stream ) {
+    bool read( LVStreamRef stream ) {
         // TODO: byte order support
         lvsize_t bytesRead = 0;
         if ( stream->Read(this, sizeof(PDBHdr), &bytesRead )!=LVERR_OK )
@@ -60,7 +60,7 @@ struct PDBRecordEntry
     lUInt32 localChunkId;
     lUInt8  attributes[4];
     //lUInt8  uniqueID[3];
-    bool read( LvStreamRef stream ) {
+    bool read( LVStreamRef stream ) {
         // TODO: byte order support
         lvsize_t bytesRead = 0;
         if ( stream->Read(this, sizeof(PDBRecordEntry), &bytesRead )!=LVERR_OK )
@@ -83,7 +83,7 @@ struct PalmDocPreamble
     lUInt32 textLength;  // 4  text length  Uncompressed length of the entire text of the book
     lUInt16 recordCount; // 2  record count  Number of PDB records used for the text of the book.
     lUInt16 recordSize;  // 2  record size  Maximum size of each record containing text, always 4096
-    bool read( LvStreamRef stream ) {
+    bool read( LVStreamRef stream ) {
         // TODO: byte order support
         lvsize_t bytesRead = 0;
         if ( stream->Read(this, sizeof(PalmDocPreamble), &bytesRead )!=LVERR_OK )
@@ -147,7 +147,7 @@ struct MobiPreamble : public PalmDocPreamble
     lUInt32 drmFlags; //    176	4	DRM Flags	Some flags concerning the DRM info.
 
 
-    bool read( LvStreamRef stream, lUInt16 & extraDataFlags ) {
+    bool read( LVStreamRef stream, lUInt16 & extraDataFlags ) {
         extraDataFlags = 0;
         lvsize_t bytesRead = 0;
         if ( stream->Read(this, sizeof(MobiPreamble), &bytesRead )!=LVERR_OK )
@@ -233,7 +233,7 @@ struct EReaderHeader
     lUInt16 sidebarRecordStart; //    50-52	Sidebar record start	The location of the first sidebar record. If there are no sidebars use the value for the Last data record.
     lUInt16 lastDataRecord; //    52-54	Last data record	The location of the last data record
     lUInt16 unknown5[39]; //    54-132	Unknown	Value of 0 is used
-    bool read( LvStreamRef stream ) {
+    bool read( LVStreamRef stream ) {
         lvsize_t bytesRead = 0;
         if ( stream->Read(this, sizeof(EReaderHeader), &bytesRead )!=LVERR_OK )
             return false;
@@ -292,7 +292,7 @@ class PDBFile;
 
 class LVPDBContainerItem : public LVContainerItemInfo {
 protected:
-    LvStreamRef _stream;
+    LVStreamRef _stream;
     PDBFile * _file;
     int _startBlock;
     int _size;
@@ -307,11 +307,11 @@ public:
     virtual const lChar16 * GetName() const { return _name.c_str(); }
     virtual lUInt32         GetFlags() const { return 0; }
     virtual bool            IsContainer() const { return false; }
-    virtual LvStreamRef openStream() {
+    virtual LVStreamRef openStream() {
         // TODO: implement stream creation
-        return LvStreamRef();
+        return LVStreamRef();
     }
-    LVPDBContainerItem( LvStreamRef stream, PDBFile * file, lString16 name, int startBlockIndex, int size )
+    LVPDBContainerItem( LVStreamRef stream, PDBFile * file, lString16 name, int startBlockIndex, int size )
         : _stream(stream), _file(file), _startBlock(startBlockIndex), _size(size), _name(name) {
     }
 };
@@ -320,11 +320,11 @@ class LVPDBRegionContainerItem : public LVPDBContainerItem {
 public:
     /// returns object size (file size or directory entry count)
     virtual lUInt32         GetFlags() const { return 0; }
-    virtual LvStreamRef openStream() {
+    virtual LVStreamRef openStream() {
         // return region of base stream
-        return LvStreamRef( new LVStreamFragment( _stream, _startBlock, _size ) );
+        return LVStreamRef( new LVStreamFragment( _stream, _startBlock, _size ) );
     }
-    LVPDBRegionContainerItem( LvStreamRef stream, PDBFile * file, lString16 name, int startOffset, int size )
+    LVPDBRegionContainerItem( LVStreamRef stream, PDBFile * file, lString16 name, int startOffset, int size )
         : LVPDBContainerItem(stream, file, name, startOffset, size) {
     }
 };
@@ -332,7 +332,7 @@ public:
 class LVPDBContainer : public LVContainer
 {
     LVPtrVector<LVPDBContainerItem> _list;
-    LvStreamRef _stream;
+    LVStreamRef _stream;
 public:
     virtual LVContainer * GetParentContainer() { return NULL; }
 
@@ -353,23 +353,23 @@ public:
 		return LVERR_OK;
     }
 
-    virtual LvStreamRef OpenStream( const lChar16 * fname, lvopen_mode_t mode ) {
+    virtual LVStreamRef OpenStream( const lChar16 * fname, lvopen_mode_t mode ) {
         if ( mode!=LVOM_READ )
-            return LvStreamRef();
+            return LVStreamRef();
         for ( int i=0; i<_list.length(); i++ ) {
             //CRLog::trace("OpenStream(%s) : %s", LCSTR(lString16(fname)), LCSTR(lString16(_list[i]->GetName())) );
             if ( !lStr_cmp(_list[i]->GetName(), fname) )
                 return _list[i]->openStream();
         }
-        return LvStreamRef();
+        return LVStreamRef();
     }
 
-    void setStream( LvStreamRef stream ) {
+    void setStream( LVStreamRef stream ) {
         _stream = stream;
     }
 
     LVPDBContainer( ) {
-        //_contentStream = LvStreamRef((LVStream*)file);
+        //_contentStream = LVStreamRef((LVStream*)file);
     }
     virtual ~LVPDBContainer() { }
 };
@@ -399,7 +399,7 @@ private:
         lUInt32 unpsize;
     };
     LVArray<Record> _records;
-    LvStreamRef _stream;
+    LVStreamRef _stream;
     Format _format;
     int _compression;
     lUInt32 _textSize;
@@ -612,7 +612,7 @@ public:
 //    }
 
 
-//    static PDBFile * create( LvStreamRef stream, int & format ) {
+//    static PDBFile * create( LVStreamRef stream, int & format ) {
 //        format = 0;
 //        PDBFile * res = new PDBFile();
 //        if ( res->open(stream, true, format) ) {
@@ -667,7 +667,7 @@ public:
         return m_doc_props;
     }
 
-    bool open(LvStreamRef stream, LVPDBContainer * container, bool validateContent, doc_format_t & contentFormat) {
+    bool open(LVStreamRef stream, LVPDBContainer * container, bool validateContent, doc_format_t & contentFormat) {
         contentFormat = doc_format_none;
         _format = UNKNOWN;
         stream->SetPos(0);
@@ -748,6 +748,9 @@ public:
         } else if (_format==MOBI ) {
             if ( _records[0].size<sizeof(MobiPreamble) )
                 return false;
+            if (!validateContent)
+                contentFormat = doc_format_mobi;
+
             MobiPreamble preamble;
             stream->SetPos(_records[0].offset);
             if ( !preamble.read(stream, _mobiExtraDataFlags) )
@@ -804,11 +807,9 @@ public:
                                 if (recType == 100) {
                                     lString8 author((const char *)buf2.get(), recLen - 8);
                                     CRLog::trace("MOBI author: %s", author.c_str());
-                                    m_doc_props->setString(DOC_PROP_AUTHORS, Utf8ToUnicode(author));
                                 } else if (recType == 105) {
                                     lString8 s((const char *)buf2.get(), recLen - 8);
                                     CRLog::trace("MOBI subject: %s", s.c_str());
-                                    m_doc_props->setString(DOC_PROP_TITLE, Utf8ToUnicode(s));
                                 }
                             }
                             //================================
@@ -1025,6 +1026,7 @@ public:
         \return lverror_t status: LVERR_OK if success
     */
     virtual lverror_t SetSize( lvsize_t size ) {
+        CR_UNUSED(size);
         return LVERR_NOTIMPL;
     }
 
@@ -1072,6 +1074,7 @@ public:
         \return lverror_t status: LVERR_OK if success
     */
     virtual lverror_t Write( const void * buf, lvsize_t count, lvsize_t * nBytesWritten ) {
+        CR_UNUSED3(buf, count, nBytesWritten);
         return LVERR_NOTIMPL;
     }
 
@@ -1099,18 +1102,18 @@ public:
 };
 
 // open PDB stream from stream
-//LvStreamRef LVOpenPDBStream( LvStreamRef srcstream, int &format )
+//LVStreamRef LVOpenPDBStream( LVStreamRef srcstream, int &format )
 //{
 //    PDBFile * stream = PDBFile::create( srcstream, format );
 //    srcstream->SetPos(0);
 //    if ( stream!=NULL )
 //    {
-//        return LvStreamRef( stream );
+//        return LVStreamRef( stream );
 //    }
-//    return LvStreamRef();
+//    return LVStreamRef();
 //}
 
-bool DetectPDBFormat( LvStreamRef stream, doc_format_t & contentFormat )
+bool DetectPDBFormat( LVStreamRef stream, doc_format_t & contentFormat )
 {
     PDBFile pdb;
     if (!pdb.open(stream, NULL, false, contentFormat))
@@ -1118,7 +1121,7 @@ bool DetectPDBFormat( LvStreamRef stream, doc_format_t & contentFormat )
     return true;
 }
 
-bool isCorrectUtf8Text(LvStreamRef & stream) {
+bool isCorrectUtf8Text(LVStreamRef & stream) {
     char enc_name[32];
     char lang_name[32];
     lvpos_t oldpos = stream->GetPos();
@@ -1142,7 +1145,7 @@ bool isCorrectUtf8Text(LvStreamRef & stream) {
     return res != 0;
 }
 
-LvStreamRef GetPDBCoverpage(LvStreamRef stream)
+LVStreamRef GetPDBCoverpage(LVStreamRef stream)
 {
     doc_format_t contentFormat = doc_format_none;
     PDBFile * pdb = new PDBFile();
@@ -1150,12 +1153,12 @@ LvStreamRef GetPDBCoverpage(LvStreamRef stream)
     if (!pdb->open(stream, container, false, contentFormat)) {
         delete container;
         delete pdb;
-        return LvStreamRef();
+        return LVStreamRef();
     }
-    stream = LvStreamRef(pdb);
+    stream = LVStreamRef(pdb);
     LVContainerRef cnt(container);
     container->setStream(stream);
-    LvStreamRef coverStream;
+    LVStreamRef coverStream;
     lString16 coverName = pdb->getDocProps()->getStringDef(DOC_PROP_COVER_FILE);
     if (!coverName.empty()) {
         coverStream = cnt->OpenStream(coverName.c_str(), LVOM_READ);
@@ -1164,10 +1167,10 @@ LvStreamRef GetPDBCoverpage(LvStreamRef stream)
         CRLog::trace("Found PDB coverpage image");
         return LVCreateMemoryStream(coverStream);
     }
-    return LvStreamRef();
+    return LVStreamRef();
  }
 
-bool ImportPDBDocument( LvStreamRef & stream, CrDom * doc, doc_format_t & contentFormat )
+bool ImportPDBDocument( LVStreamRef & stream, CrDom * doc, doc_format_t & contentFormat )
 {
     contentFormat = doc_format_none;
     PDBFile * pdb = new PDBFile();
@@ -1178,9 +1181,9 @@ bool ImportPDBDocument( LvStreamRef & stream, CrDom * doc, doc_format_t & conten
         return false;
     }
     pdb->getDocProps()->set(doc->getProps());
-    stream = LvStreamRef(pdb);
+    stream = LVStreamRef(pdb);
     container->setStream(stream);
-    doc->setContainer(LVContainerRef(container));
+    doc->setDocParentContainer(LVContainerRef(container));
 
     doc->getProps()->set(pdb->getDocProps());
 
@@ -1244,17 +1247,17 @@ bool ImportPDBDocument( LvStreamRef & stream, CrDom * doc, doc_format_t & conten
         if (fn.empty())
             fn = cs16("pdb_item_") + lString16::itoa(i);
         fn = cs16("/tmp/") + fn;
-        LvStreamRef in = container->OpenStream(item->GetName(), LVOM_READ);
+        LVStreamRef in = container->OpenStream(item->GetName(), LVOM_READ);
         if (in.isNull())
             continue;
-        LvStreamRef out = LVOpenFileStream(fn.c_str(), LVOM_WRITE);
+        LVStreamRef out = LVOpenFileStream(fn.c_str(), LVOM_WRITE);
         if (out.isNull())
             continue;
         CRLog::trace("Dumping stream %s (%d)", LCSTR(fn), (int)item->GetSize());
         LVPumpStream(out.get(), in.get());
     }
     {
-        LvStreamRef out = LVOpenFileStream("/tmp/pdb_main.txt", LVOM_WRITE);
+        LVStreamRef out = LVOpenFileStream("/tmp/pdb_main.txt", LVOM_WRITE);
         if (!out.isNull()) {
             stream->SetPos(0);
             CRLog::trace("Dumping stream /tmp/pdb_main.txt (%d)", (int)stream->GetSize());

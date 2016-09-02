@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <stdarg.h>
 #include <time.h>
 #ifdef LINUX
@@ -29,22 +30,13 @@
 #include <zlib.h>
 #endif
 
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32)
 extern "C" {
 #include <windows.h>
 }
 #endif
 
 #define LS_DEBUG_CHECK
-
-#if defined(_DEBUG) && BUILD_LITE==1
-    int STARTUP_FLAG = 1;
-#define CHECK_STARTUP_STAGE \
-    if ( STARTUP_FLAG ) \
-        crFatalError(-123, "Cannot create global or static CREngine object")
-#else
-#define CHECK_STARTUP_STAGE
-#endif
 
 // set to 1 to enable debugging
 #define DEBUG_STATIC_STRING_ALLOC 0
@@ -88,6 +80,7 @@ const lString8 & cs8(const char * str) {
         }
         index = (index + 1) & CONST_STRING_BUFFER_MASK;
     }
+    return lString8::empty_str;
 }
 
 static const void * const_ptrs_16[CONST_STRING_BUFFER_SIZE] = {NULL};
@@ -116,6 +109,7 @@ const lString16 & cs16(const char * str) {
         }
         index = (index + 1) & CONST_STRING_BUFFER_MASK;
     }
+    return lString16::empty_str;
 }
 
 /// get reference to atomic constant wide string for string literal e.g. cs16(L"abc") -- fast and memory effective
@@ -140,6 +134,7 @@ const lString16 & cs16(const lChar16 * str) {
         }
         index = (index + 1) & CONST_STRING_BUFFER_MASK;
     }
+    return lString16::empty_str;
 }
 
 
@@ -218,88 +213,6 @@ struct lstring_chunk_slice_t {
 
 //#define FIRST_SLICE_SIZE 256
 //#define MAX_SLICE_COUNT  20
-#if (LDOM_USE_OWN_MEM_MAN == 1)
-static lstring_chunk_slice_t * slices[MAX_SLICE_COUNT];
-static int slices_count = 0;
-static bool slices_initialized = false;
-#endif
-
-#if (LDOM_USE_OWN_MEM_MAN == 1)
-static void init_ls_storage()
-{
-    slices[0] = new lstring_chunk_slice_t( FIRST_SLICE_SIZE );
-    slices_count = 1;
-    slices_initialized = true;
-}
-
-void free_ls_storage()
-{
-    if (!slices_initialized)
-        return;
-    for (int i=0; i<slices_count; i++)
-    {
-        delete slices[i];
-    }
-    slices_count = 0;
-    slices_initialized = false;
-}
-
-lstring8_chunk_t * lstring8_chunk_t::alloc()
-{
-    if (!slices_initialized)
-        init_ls_storage();
-    // search for existing slice
-    for (int i=slices_count-1; i>=0; --i)
-    {
-        if (slices[i]->pFree != NULL)
-            return slices[i]->alloc_chunk();
-    }
-    // alloc new slice
-    if (slices_count >= MAX_SLICE_COUNT)
-        crFatalError();
-    lstring_chunk_slice_t * new_slice = new lstring_chunk_slice_t( FIRST_SLICE_SIZE << (slices_count+1) );
-    slices[slices_count++] = new_slice;
-    return slices[slices_count-1]->alloc_chunk();
-}
-
-void lstring8_chunk_t::free( lstring8_chunk_t * pChunk )
-{
-    for (int i=slices_count-1; i>=0; --i)
-    {
-        if (slices[i]->free_chunk(pChunk))
-            return;
-    }
-    crFatalError(); // wrong pointer!!!
-}
-
-lstring16_chunk_t * lstring16_chunk_t::alloc()
-{
-    if (!slices_initialized)
-        init_ls_storage();
-    // search for existing slice
-    for (int i=slices_count-1; i>=0; --i)
-    {
-        if (slices[i]->pFree != NULL)
-            return slices[i]->alloc_chunk16();
-    }
-    // alloc new slice
-    if (slices_count >= MAX_SLICE_COUNT)
-        crFatalError();
-    lstring_chunk_slice_t * new_slice = new lstring_chunk_slice_t( FIRST_SLICE_SIZE << (slices_count+1) );
-    slices[slices_count++] = new_slice;
-    return slices[slices_count-1]->alloc_chunk16();
-}
-
-void lstring16_chunk_t::free( lstring16_chunk_t * pChunk )
-{
-    for (int i=slices_count-1; i>=0; --i)
-    {
-        if (slices[i]->free_chunk16(pChunk))
-            return;
-    }
-    crFatalError(); // wrong pointer!!!
-}
-#endif
 
 ////////////////////////////////////////////////////////////////////////////
 // Utility functions
@@ -534,7 +447,8 @@ int lStr_cmp(const lChar16* dst, const lChar8* src)
 {
     while (*dst == (lChar16)* src)
     {
-        if (! *dst) return 0;
+        if (! *dst )
+            return 0;
         ++dst;
         ++src;
     }
@@ -567,28 +481,14 @@ void lString16::free()
 {
     if (pchunk==EMPTY_STR_16)
         return;
-    CHECK_STARTUP_STAGE;
     //assert(pchunk->buf16[pchunk->len]==0);
     ::free(pchunk->buf16);
-#if (LDOM_USE_OWN_MEM_MAN == 1)
-    for (int i=slices_count-1; i>=0; --i)
-    {
-        if (slices[i]->free_chunk16(pchunk))
-            return;
-    }
-    crFatalError(); // wrong pointer!!!
-#else
     ::free(pchunk);
-#endif
 }
 
 void lString16::alloc(int sz)
 {
-#if (LDOM_USE_OWN_MEM_MAN == 1)
-    pchunk = lstring_chunk_t::alloc();
-#else
     pchunk = (lstring_chunk_t*) ::malloc(sizeof(lstring_chunk_t));
-#endif
     pchunk->buf16 = (lChar16*) ::malloc(sizeof(lChar16) * (sz + 1));
     assert(pchunk->buf16 != NULL);
     pchunk->size = sz;
@@ -597,7 +497,6 @@ void lString16::alloc(int sz)
 
 lString16::lString16(const lChar16 * str)
 {
-    CHECK_STARTUP_STAGE;
     if (!str || !(*str))
     {
         pchunk = EMPTY_STR_16;
@@ -612,7 +511,6 @@ lString16::lString16(const lChar16 * str)
 
 lString16::lString16(const lChar8 * str)
 {
-    CHECK_STARTUP_STAGE;
     if (!str || !(*str))
     {
         pchunk = EMPTY_STR_16;
@@ -627,7 +525,6 @@ lString16::lString16(const lChar8 * str)
 /// constructor from utf8 character array fragment
 lString16::lString16(const lChar8 * str, size_type count)
 {
-    CHECK_STARTUP_STAGE;
     if (!str || !(*str))
     {
         pchunk = EMPTY_STR_16;
@@ -642,7 +539,6 @@ lString16::lString16(const lChar8 * str, size_type count)
 
 lString16::lString16(const value_type * str, size_type count)
 {
-    CHECK_STARTUP_STAGE;
     if ( !str || !(*str) || count<=0 )
     {
         pchunk = EMPTY_STR_16; addref();
@@ -658,7 +554,6 @@ lString16::lString16(const value_type * str, size_type count)
 
 lString16::lString16(const lString16 & str, size_type offset, size_type count)
 {
-    CHECK_STARTUP_STAGE;
     if ( count > str.length() - offset )
         count = str.length() - offset;
     if (count<=0)
@@ -1007,6 +902,20 @@ lString16 & lString16::insert(size_type p0, size_type count, lChar16 ch)
     return *this;
 }
 
+lString16 & lString16::insert(size_type p0, const lString16 & str)
+{
+    if (p0>pchunk->len)
+        p0 = pchunk->len;
+    int count = str.length();
+    reserve( pchunk->len+count );
+    for (size_type i=pchunk->len+count; i>p0; i--)
+        pchunk->buf16[i] = pchunk->buf16[i-1];
+    _lStr_memcpy(pchunk->buf16 + p0, str.c_str(), count);
+    pchunk->len += count;
+    pchunk->buf16[pchunk->len] = 0;
+    return *this;
+}
+
 lString16 lString16::substr(size_type pos, size_type n) const
 {
     if (pos>=length())
@@ -1029,6 +938,46 @@ lString16 & lString16::pack()
             pchunk->buf16 = (lChar16 *) realloc( pchunk->buf16, sizeof(lChar16)*(pchunk->len+1) );
             pchunk->size = pchunk->len;
         }
+    }
+    return *this;
+}
+bool isAlNum(lChar16 ch) {
+    lUInt16 props = lGetCharProps(ch);
+    return (props & (CH_PROP_ALPHA | CH_PROP_DIGIT)) != 0;
+}
+
+/// trims non alpha at beginning and end of string
+lString16 & lString16::trimNonAlpha()
+{
+    int firstns;
+    for (firstns = 0; firstns<pchunk->len && !isAlNum(pchunk->buf16[firstns]); ++firstns)
+        ;
+    if (firstns >= pchunk->len)
+    {
+        clear();
+        return *this;
+    }
+    int lastns;
+    for (lastns = pchunk->len-1; lastns>0 && !isAlNum(pchunk->buf16[lastns]); --lastns)
+        ;
+    int newlen = lastns-firstns+1;
+    if (newlen == pchunk->len)
+        return *this;
+    if (pchunk->nref == 1)
+    {
+        if (firstns>0)
+            lStr_memcpy( pchunk->buf16, pchunk->buf16+firstns, newlen );
+        pchunk->buf16[newlen] = 0;
+        pchunk->len = newlen;
+    }
+    else
+    {
+        lstring_chunk_t * poldchunk = pchunk;
+        release();
+        alloc( newlen );
+        _lStr_memcpy( pchunk->buf16, poldchunk->buf16+firstns, newlen );
+        pchunk->buf16[newlen] = 0;
+        pchunk->len = newlen;
     }
     return *this;
 }
@@ -1589,27 +1538,13 @@ void lString8::free()
 {
     if ( pchunk==EMPTY_STR_8 )
         return;
-    CHECK_STARTUP_STAGE;
     ::free(pchunk->buf8);
-#if (LDOM_USE_OWN_MEM_MAN == 1)
-    for (int i=slices_count-1; i>=0; --i)
-    {
-        if (slices[i]->free_chunk(pchunk))
-            return;
-    }
-    crFatalError(); // wrong pointer!!!
-#else
     ::free(pchunk);
-#endif
 }
 
 void lString8::alloc(int sz)
 {
-#if (LDOM_USE_OWN_MEM_MAN == 1)
-    pchunk = lstring_chunk_t::alloc();
-#else
     pchunk = (lstring_chunk_t*)::malloc(sizeof(lstring_chunk_t));
-#endif
     pchunk->buf8 = (lChar8*) ::malloc( sizeof(lChar8) * (sz+1) );
     assert( pchunk->buf8!=NULL );
     pchunk->size = sz;
@@ -1618,7 +1553,6 @@ void lString8::alloc(int sz)
 
 lString8::lString8(const lChar8 * str)
 {
-    CHECK_STARTUP_STAGE;
     if (!str || !(*str))
     {
         pchunk = EMPTY_STR_8;
@@ -1633,7 +1567,6 @@ lString8::lString8(const lChar8 * str)
 
 lString8::lString8(const lChar16 * str)
 {
-    CHECK_STARTUP_STAGE;
     if (!str || !(*str))
     {
         pchunk = EMPTY_STR_8;
@@ -1663,7 +1596,6 @@ lString8::lString8(const value_type * str, size_type count)
 
 lString8::lString8(const lString8 & str, size_type offset, size_type count)
 {
-    CHECK_STARTUP_STAGE;
     if ( count > str.length() - offset )
         count = str.length() - offset;
     if (count<=0)
@@ -2052,6 +1984,30 @@ int lString8::pos(const lString8 & subStr) const
     return -1;
 }
 
+/// find position of substring inside string starting from right, -1 if not found
+int lString8::rpos(const char * subStr) const
+{
+    if (!subStr || !subStr[0])
+        return -1;
+    int l = lStr_len(subStr);
+    if (l > length())
+        return -1;
+    int dl = length() - l;
+    for (int i=dl; i>=0; i--)
+    {
+        int flg = 1;
+        for (int j=0; j<l; j++)
+            if (pchunk->buf8[i+j] != subStr[j])
+            {
+                flg = 0;
+                break;
+            }
+        if (flg)
+            return i;
+    }
+    return -1;
+}
+
 /// find position of substring inside string, -1 if not found
 int lString8::pos(const char * subStr) const
 {
@@ -2315,7 +2271,7 @@ lString8 & lString8::trim()
             (pchunk->buf8[lastns]==' ' || pchunk->buf8[lastns]=='\t');
             --lastns)
         ;
-    int newlen = lastns-firstns+1;
+    int newlen = (int)(lastns - firstns + 1);
     if (newlen == pchunk->len)
         return *this;
     if (pchunk->nref == 1)
@@ -2356,6 +2312,7 @@ int lString8::atoi() const
     while (*s>='0' && *s<='9')
     {
         n = n * 10 + ( (*s)-'0' );
+        s++;
     }
     return (sgn>0)?n:-n;
 }
@@ -2422,6 +2379,32 @@ lString8 lString8::itoa( unsigned int n )
     }
     lString8 res;
     res.reserve(i);
+    for (int j=i-1; j>=0; j--)
+        res.append(1, buf[j]);
+    return res;
+}
+
+// constructs string representation of integer
+lString8 lString8::itoa( lInt64 n )
+{
+    lChar8 buf[32];
+    int i=0;
+    int negative = 0;
+    if (n==0)
+        return cs8("0");
+    else if (n<0)
+    {
+        negative = 1;
+        n = -n;
+    }
+    for ( ; n; n/=10 )
+    {
+        buf[i++] = '0' + (n%10);
+    }
+    lString8 res;
+    res.reserve(i+negative);
+    if (negative)
+        res.append(1, '-');
     for (int j=i-1; j>=0; j--)
         res.append(1, buf[j]);
     return res;
@@ -2608,7 +2591,7 @@ int TrimDoubleSpaces(lChar16 * buf, int len,  bool allowStartSpace, bool allowEn
             state = 2;
         }
     }
-    return pdst - buf;
+    return (int) (pdst - buf);
 }
 
 lString16 & lString16::trimDoubleSpaces( bool allowStartSpace, bool allowEndSpace, bool removeEolHyphens )
@@ -2827,7 +2810,7 @@ void Utf8ToUnicode(const lUInt8 * src,  int &srclen, lChar16 * dst, int &dstlen)
     while (p < endp && s < ends) {
         ch = *s;
         if ( (ch & 0x80) == 0 ) {
-        	*p++ = (char)ch;
+            *p++ = (char)ch;
             s++;
         } else if ( (ch & 0xE0) == 0xC0 ) {
             if (s + 2 > ends)
@@ -2871,8 +2854,8 @@ void Utf8ToUnicode(const lUInt8 * src,  int &srclen, lChar16 * dst, int &dstlen)
             s += 6;
         }
     }
-    srclen = s - src;
-    dstlen = p - dst;
+    srclen = (int)(s - src);
+    dstlen = (int)(p - dst);
 }
 
 lString16 Utf8ToUnicode(const char* s) {
@@ -2983,7 +2966,7 @@ lString16 ByteToUnicode(const lString8& str, const lChar16* table)
 }
 
 
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32)
 
 lString8 UnicodeToLocal( const lString16 & str )
 {
@@ -4264,6 +4247,22 @@ bool lString16::startsWithNoCase ( const lString16 & substring ) const
 }
 
 /// returns true if string starts with specified substring
+bool lString8::startsWith( const char * substring ) const
+{
+    if (!substring || !substring[0])
+        return true;
+    int len = (int)strlen(substring);
+    if (length() < len)
+        return false;
+    const lChar8 * s1 = c_str();
+    const lChar8 * s2 = substring;
+    for (int i=0; i<len; i++ )
+        if ( s1[i] != s2[i] )
+            return false;
+    return true;
+}
+
+/// returns true if string starts with specified substring
 bool lString8::startsWith( const lString8 & substring ) const
 {
     if ( substring.empty() )
@@ -4284,7 +4283,7 @@ bool lString8::endsWith( const lChar8 * substring ) const
 {
 	if ( !substring || !*substring )
 		return true;
-    int len = strlen(substring);
+    int len = (int)strlen(substring);
     if ( length() < len )
         return false;
     const lChar8 * s1 = c_str() + (length()-len);
@@ -4716,6 +4715,13 @@ bool splitIntegerList( lString16 s, lString16 delim, int &value1, int &value2 )
     return true;
 }
 
+lString8 & lString8::replace(size_type p0, size_type n0, const lString8 & str) {
+    lString8 s1 = substr( 0, p0 );
+    lString8 s2 = length() - p0 - n0 > 0 ? substr( p0+n0, length()-p0-n0 ) : lString8::empty_str;
+    *this = s1 + str + s2;
+    return *this;
+}
+
 lString16 & lString16::replace(size_type p0, size_type n0, const lString16 & str)
 {
     lString16 s1 = substr( 0, p0 );
@@ -4821,5 +4827,54 @@ void limitStringSize(lString16 & str, int maxSize) {
 	int split = lastSpace > 0 ? lastSpace : maxSize;
 	str = str.substr(0, split);
     str += "...";
+}
+
+
+#ifdef _WIN32
+static bool __timerInitialized = false;
+static double __timeTicksPerMillis;
+static lUInt64 __timeStart;
+static lUInt64 __timeAbsolute;
+static lUInt64 __startTimeMillis;
+#endif
+
+void CRReinitTimer() {
+#ifdef _WIN32
+    LARGE_INTEGER tps;
+    QueryPerformanceFrequency(&tps);
+    __timeTicksPerMillis = (double)(tps.QuadPart / 1000L);
+    LARGE_INTEGER queryTime;
+    QueryPerformanceCounter(&queryTime);
+    __timeStart = (lUInt64)(queryTime.QuadPart / __timeTicksPerMillis);
+    __timerInitialized = true;
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    __startTimeMillis = (ft.dwLowDateTime | (((lUInt64)ft.dwHighDateTime) << 32)) / 10000;
+#else
+    // do nothing. it's for win32 only
+#endif
+}
+
+
+lUInt64 GetCurrentTimeMillis() {
+#if defined(LINUX) || defined(ANDROID) || defined(_LINUX)
+    timeval ts;
+    gettimeofday(&ts, NULL);
+    return ts.tv_sec * (lUInt64)1000 + ts.tv_usec / 1000;
+#else
+ #ifdef _WIN32
+    if (!__timerInitialized) {
+        CRReinitTimer();
+        return __startTimeMillis;
+    } else {
+        LARGE_INTEGER queryTime;
+        QueryPerformanceCounter(&queryTime);
+        __timeAbsolute = (lUInt64)(queryTime.QuadPart / __timeTicksPerMillis);
+        return __startTimeMillis + (lUInt64)(__timeAbsolute - __timeStart);
+    }
+ #else
+ #error * You should define GetCurrentTimeMillis() *
+ #endif
+#endif
 }
 

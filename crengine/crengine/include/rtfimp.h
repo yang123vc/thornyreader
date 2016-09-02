@@ -369,7 +369,7 @@ public:
     /// counter for image index
     int nextImageIndex() { return imageIndex++; }
     /// constructor
-    LVRtfParser( LvStreamRef stream, LvXMLParserCallback * callback );
+    LVRtfParser( LVStreamRef stream, LvXMLParserCallback * callback );
     /// returns true if format is recognized by parser
     virtual bool CheckFormat();
     /// parses input stream

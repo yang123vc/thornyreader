@@ -36,6 +36,8 @@ private:
     LVFontGlyphCacheItem * tail;
     int size;
     int max_size;
+    void removeNoLock( LVFontGlyphCacheItem * item );
+    void putNoLock( LVFontGlyphCacheItem * item );
 public:
     LVFontGlobalGlyphCache( int maxSize )
         : head(NULL), tail(NULL), size(0), max_size(maxSize )
@@ -235,14 +237,17 @@ public:
     virtual bool operator ! () const = 0;
     virtual void Clear() = 0;
     virtual ~LVFont() { }
+
+    virtual bool kerningEnabled() { return false; }
+    virtual int getKerningOffset(lChar16 ch1, lChar16 ch2, lChar16 def_char) { CR_UNUSED3(ch1,ch2,def_char); return 0; }
+
     /// set fallback font for this font
-    void setFallbackFont( LVFastRef<LVFont> font ) { }
+    void setFallbackFont( LVProtectedFastRef<LVFont> font ) { CR_UNUSED(font); }
     /// get fallback font for this font
     LVFont * getFallbackFont() { return NULL; }
 };
 
-typedef LVFastRef<LVFont> LVFontRef;
-
+typedef LVProtectedFastRef<LVFont> LVFontRef;
 
 enum font_antialiasing_t
 {
@@ -300,13 +305,15 @@ public:
     /// returns most similar font
     virtual LVFontRef GetFont(int size, int weight, bool italic, css_font_family_t family, lString8 typeface, int documentId = -1) = 0;
     /// set fallback font face (returns true if specified font is found)
-    virtual bool SetFallbackFontFace(lString8 face) { return false; }
+    virtual bool SetFallbackFontFace( lString8 face ) { CR_UNUSED(face); return false; }
     /// get fallback font face (returns empty string if no fallback font is set)
     virtual lString8 GetFallbackFontFace() { return lString8::empty_str; }
     /// returns fallback font for specified size
     virtual LVFontRef GetFallbackFont(int /*size*/) { return LVFontRef(); }
     /// registers font by name
     virtual bool RegisterFont( lString8 name ) = 0;
+    /// registers font by name and face
+    virtual bool RegisterExternalFont(lString16 /*name*/, lString8 /*face*/, bool /*bold*/, bool /*italic*/) { return false; }
     /// registers document font
     virtual bool RegisterDocumentFont(int /*documentId*/, LVContainerRef /*container*/, lString16 /*name*/, lString8 /*face*/, bool /*bold*/, bool /*italic*/) { return false; }
     /// unregisters all document fonts
@@ -337,24 +344,46 @@ public:
     /// returns available typefaces
     virtual void getFaceList( lString16Collection & ) { }
 
+    /// returns first found face from passed list, or return face for font found by family only
+    virtual lString8 findFontFace(lString8 commaSeparatedFaceList, css_font_family_t fallbackByFamily);
+
     /// fills array with list of available gamma levels
-    void GetGammaLevels(LVArray<double> dst);
+    virtual void GetGammaLevels(LVArray<double> dst);
     /// returns current gamma level index
-    int  GetGammaIndex();
+    virtual int  GetGammaIndex();
     /// sets current gamma level index
-    void SetGammaIndex( int gammaIndex );
+    virtual void SetGammaIndex( int gammaIndex );
     /// returns current gamma level
-    double GetGamma();
+    virtual double GetGamma();
     /// sets current gamma level
-    void SetGamma( double gamma );
+    virtual void SetGamma( double gamma );
 
     /// sets current hinting mode
     virtual void SetHintingMode(hinting_mode_t /*mode*/) { }
     /// returns current hinting mode
     virtual hinting_mode_t  GetHintingMode() { return HINTING_MODE_AUTOHINT; }
 
+    virtual bool setalias(lString8 alias,lString8 facename,int id,bool italic,bool bold){
+        CR_UNUSED5(alias, facename, id, italic, bold);
+        return false;
+    }
 };
 
+class LVBaseFont : public LVFont
+{
+protected:
+    lString8 _typeface;
+    css_font_family_t _family;
+public:
+    /// returns font typeface name
+    virtual lString8 getTypeFace() const { return _typeface; }
+    /// returns font family id
+    virtual css_font_family_t getFontFamily() const { return _family; }
+    /// draws text string
+    virtual void DrawTextString( LVDrawBuf * buf, int x, int y, 
+                       const lChar16 * text, int len, 
+                       lChar16 def_char, lUInt32 * palette, bool addHyphen, lUInt32 flags=0, int letter_spacing=0 );
+};
 #if (USE_FREETYPE!=1) && (USE_BITMAP_FONTS==1)
 /* C++ wrapper class */
 class LBitmapFont : public LVFont
@@ -364,9 +393,15 @@ private:
 public:
     LBitmapFont() : m_font(NULL) { }
     virtual bool getGlyphInfo( lUInt16 code, LVFont::glyph_info_t * glyph, lChar16 def_char=0 );
-    virtual lUInt16 measureText(const lChar16* text, int len, lUInt16* widths,
-                        lUInt8* flags, int max_width, lChar16 def_char,
-                        int letter_spacing, bool allow_hyphenation);
+    virtual lUInt16 measureText( 
+                        const lChar16 * text, int len, 
+                        lUInt16 * widths,
+                        lUInt8 * flags,
+                        int max_width,
+                        lChar16 def_char,
+                        int letter_spacing=0,
+                        bool allow_hyphenation=true
+                     );
     /** \brief measure text
         \param text is text string pointer
         \param len is number of characters to measure

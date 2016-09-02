@@ -5,11 +5,11 @@
 #include "../include/lvtinydom.h"
 
 // creates PDB decoder stream for stream
-//LvStreamRef LVOpenPDBStream( LvStreamRef srcstream, int &format );
+//LVStreamRef LVOpenPDBStream( LVStreamRef srcstream, int &format );
 
-bool DetectPDBFormat( LvStreamRef stream, doc_format_t & contentFormat );
-bool ImportPDBDocument( LvStreamRef & stream, CrDom * doc, doc_format_t & contentFormat );
-LvStreamRef GetPDBCoverpage(LvStreamRef stream);
+bool DetectPDBFormat( LVStreamRef stream, doc_format_t & contentFormat );
+bool ImportPDBDocument( LVStreamRef & stream, CrDom * doc, doc_format_t & contentFormat );
+LVStreamRef GetPDBCoverpage(LVStreamRef stream);
 
 
 #endif // PDBFMT_H

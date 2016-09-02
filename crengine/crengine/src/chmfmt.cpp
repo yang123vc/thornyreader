@@ -1,11 +1,7 @@
-#include "../include/crsetup.h"
-#include "../include/lvstream.h"
-//#define CHM_SUPPORT_ENABLED 1
-#if CHM_SUPPORT_ENABLED==1
-#include "../include/chmfmt.h"
-#include "../chmlib/src/chm_lib.h"
-
-#define DUMP_CHM_DOC 0
+#include "crsetup.h"
+#include "lvstream.h"
+#include "chmfmt.h"
+#include <chm_lib.h>
 
 struct crChmExternalFileStream : public chmExternalFileStream {
     /** returns file size, in bytes, if opened successfully */
@@ -14,7 +10,7 @@ struct crChmExternalFileStream : public chmExternalFileStream {
     //LONGINT64 (read)( chmExternalFileStream * instance, unsigned char * buf, LONGUINT64 pos, LONGINT64 len );
     /** closes file */
     //int (close)( chmExternalFileStream * instance );
-    LvStreamRef stream;
+    LVStreamRef stream;
     static LONGUINT64 cr_open( chmExternalFileStream * instance )
     {
         return (LONGINT64)((crChmExternalFileStream*)instance)->stream->GetSize();
@@ -35,7 +31,7 @@ struct crChmExternalFileStream : public chmExternalFileStream {
         ((crChmExternalFileStream*)instance)->stream.Clear();
 		return 0;
     }
-    crChmExternalFileStream( LvStreamRef s )
+    crChmExternalFileStream( LVStreamRef s )
     : stream(s)
     {
         open = cr_open;
@@ -161,6 +157,7 @@ public:
 
     virtual lverror_t SetSize( lvsize_t size )
     {
+        CR_UNUSED(size);
         // support only size grow
         return LVERR_FAIL;
     }
@@ -175,9 +172,9 @@ protected:
     crChmExternalFileStream _stream;
     chmFile* _file;
 public:
-    virtual LvStreamRef OpenStream( const wchar_t * fname, lvopen_mode_t mode )
+    virtual LVStreamRef OpenStream( const wchar_t * fname, lvopen_mode_t mode )
     {
-        LvStreamRef stream;
+        LVStreamRef stream;
         if ( mode!=LVOM_READ )
             return stream;
 
@@ -214,7 +211,7 @@ public:
         *pSize = GetObjectCount();
         return LVERR_OK;
     }
-    LVCHMContainer(LvStreamRef s) : _stream(s), _file(NULL)
+    LVCHMContainer(LVStreamRef s) : _stream(s), _file(NULL)
     {
     }
     virtual ~LVCHMContainer()
@@ -258,7 +255,7 @@ public:
 };
 
 /// opens CHM container
-LVContainerRef LVOpenCHMContainer( LvStreamRef stream )
+LVContainerRef LVOpenCHMContainer( LVStreamRef stream )
 {
     LVCHMContainer * chm = new LVCHMContainer(stream);
     if ( !chm->open() ) {
@@ -269,7 +266,7 @@ LVContainerRef LVOpenCHMContainer( LvStreamRef stream )
     return LVContainerRef( chm );
 }
 
-bool DetectCHMFormat( LvStreamRef stream )
+bool DetectCHMFormat( LVStreamRef stream )
 {
     stream->SetPos(0);
     LVContainerRef cont = LVOpenCHMContainer( stream );
@@ -280,9 +277,9 @@ bool DetectCHMFormat( LvStreamRef stream )
 }
 
 class CHMBinaryReader {
-    LvStreamRef _stream;
+    LVStreamRef _stream;
 public:
-    CHMBinaryReader( LvStreamRef stream ) : _stream(stream) {
+    CHMBinaryReader( LVStreamRef stream ) : _stream(stream) {
     }
     bool setPos( int offset ) {
         return (int)_stream->SetPos(offset) == offset;
@@ -409,7 +406,7 @@ class CHMUrlStr {
     CHMBinaryReader _reader;
     LVPtrVector<CHMUrlStrEntry> _table;
 
-    CHMUrlStr( LVContainerRef container, LvStreamRef stream ) : _container(container), _reader(stream)
+    CHMUrlStr( LVContainerRef container, LVStreamRef stream ) : _container(container), _reader(stream)
     {
 
     }
@@ -437,7 +434,7 @@ class CHMUrlStr {
         const lUInt8 * data = ptr;
         const lUInt8 * maxdata = ptr + size;
         while ( data + 8 < maxdata ) {
-            lUInt32 offset = blockOffset + (data - ptr);
+            lUInt32 offset = (lUInt32)(blockOffset + (data - ptr));
             //lUInt32 urlOffset =
             readInt32(data);
             //lUInt32 frameOffset =
@@ -445,7 +442,7 @@ class CHMUrlStr {
             if ( data < maxdata ) { //urlOffset > offset ) {
                 CHMUrlStrEntry * item = new CHMUrlStrEntry();
                 item->offset = offset;
-                item->url = readString(data, maxdata - data);
+                item->url = readString(data, (int)(maxdata - data));
                 //CRLog::trace("urlstr[offs=%x, url=%s]", item->offset, item->url.c_str());
                 _table.add( item );
             }
@@ -472,7 +469,7 @@ class CHMUrlStr {
     }
 public:
     static CHMUrlStr * open( LVContainerRef container ) {
-        LvStreamRef stream = container->OpenStream(L"#URLSTR", LVOM_READ);
+        LVStreamRef stream = container->OpenStream(L"#URLSTR", LVOM_READ);
         if ( stream.isNull() )
             return NULL;
         CHMUrlStr * res = new CHMUrlStr( container, stream );
@@ -525,7 +522,7 @@ class CHMUrlTable {
     CHMUrlStr * _strings;
 
 
-    CHMUrlTable( LVContainerRef container, LvStreamRef stream ) : _container(container), _reader(stream), _strings(NULL)
+    CHMUrlTable( LVContainerRef container, LVStreamRef stream ) : _container(container), _reader(stream), _strings(NULL)
     {
 
     }
@@ -580,7 +577,7 @@ public:
     }
 
     static CHMUrlTable * open( LVContainerRef container ) {
-        LvStreamRef stream = container->OpenStream(L"#URLTBL", LVOM_READ);
+        LVStreamRef stream = container->OpenStream(L"#URLTBL", LVOM_READ);
         if ( stream.isNull() )
             return NULL;
         CHMUrlTable * res = new CHMUrlTable( container, stream );
@@ -652,7 +649,7 @@ class CHMSystem {
     lString16 _enc_name;
     CHMUrlTable * _urlTable;
 
-    CHMSystem( LVContainerRef container, LvStreamRef stream ) : _container(container), _reader(stream)
+    CHMSystem( LVContainerRef container, LVStreamRef stream ) : _container(container), _reader(stream)
     , _fileVersion(0)
     , _lcid(0)
     , _dbcs(false)
@@ -786,7 +783,7 @@ public:
     }
 
     static CHMSystem * open( LVContainerRef container ) {
-        LvStreamRef stream = container->OpenStream(L"#SYSTEM", LVOM_READ);
+        LVStreamRef stream = container->OpenStream(L"#SYSTEM", LVOM_READ);
         if ( stream.isNull() )
             return NULL;
         CHMSystem * res = new CHMSystem( container, stream );
@@ -854,7 +851,7 @@ public:
     }
 };
 
-CrDom * LVParseCHMHTMLStream( LvStreamRef stream, lString16 defEncodingName )
+CrDom * LVParseCHMHTMLStream( LVStreamRef stream, lString16 defEncodingName )
 {
     if ( stream.isNull() )
         return NULL;
@@ -1091,7 +1088,7 @@ public:
             return true;
         } else {
             _fakeToc = false;
-            LvStreamRef tocStream = cont->OpenStream(hhcName.c_str(), LVOM_READ);
+            LVStreamRef tocStream = cont->OpenStream(hhcName.c_str(), LVOM_READ);
             if ( tocStream.isNull() ) {
                 CRLog::error("CHM: Cannot open .hhc");
                 return false;
@@ -1101,13 +1098,6 @@ public:
                 CRLog::error("CHM: Cannot parse .hhc");
                 return false;
             }
-
-    #if DUMP_CHM_DOC==1
-        LvStreamRef out = LVOpenFileStream(L"/tmp/chm-toc.html", LVOM_WRITE);
-        if ( !out.isNull() )
-            doc->saveToStream( out, NULL, true );
-    #endif
-
             ldomNode * body = doc->getRootNode(); //doc->createXPointer(cs16("/html[1]/body[1]"));
             bool res = false;
             if ( body->isElement() ) {
@@ -1125,8 +1115,6 @@ public:
                     _toc = _toc->getParent();
                 if ( res && _toc->getChildCount()>0 ) {
                     lString16 name = _toc->getChild(0)->getName();
-                    CRPropRef m_doc_props = _doc->getProps();
-                    m_doc_props->setString(DOC_PROP_TITLE, name);
                 }
             }
             delete doc;
@@ -1140,7 +1128,7 @@ public:
         for ( int i=0; i<cnt; i++ ) {
             lString16 fname = _fileList[i];
             CRLog::trace("Import file %s", LCSTR(fname));
-            LvStreamRef stream = _cont->OpenStream(fname.c_str(), LVOM_READ);
+            LVStreamRef stream = _cont->OpenStream(fname.c_str(), LVOM_READ);
             if ( stream.isNull() )
                 continue;
             _appender->setCodeBase(fname);
@@ -1158,7 +1146,7 @@ public:
     }
 };
 
-bool ImportCHMDocument( LvStreamRef stream, CrDom * doc)
+bool ImportCHMDocument(LVStreamRef stream, CrDom* doc)
 {
     stream->SetPos(0);
     LVContainerRef cont = LVOpenCHMContainer( stream );
@@ -1166,18 +1154,19 @@ bool ImportCHMDocument( LvStreamRef stream, CrDom * doc)
         stream->SetPos(0);
         return false;
     }
-    doc->setContainer(cont);
+    doc->setDocParentContainer(cont);
 
     CHMSystem * chm = CHMSystem::open(cont);
-    if ( !chm )
+    if (!chm)
         return false;
     lString16 tocFileName = chm->getContentsFileName();
     lString16 defEncodingName = chm->getEncodingName();
     lString16 mainPageName = chm->getDefaultTopic();
     lString16 title = chm->getTitle();
     lString16 language = chm->getLanguage();
-    CRLog::info("CHM: toc=%s, enc=%s, title=%s", LCSTR(tocFileName), LCSTR(defEncodingName), LCSTR(title));
-    //
+    CRLog::info("CHM: toc=%s, enc=%s, title=%s",
+            LCSTR(tocFileName), LCSTR(defEncodingName), LCSTR(title));
+
     lString16Collection urlList;
     chm->getUrlList(urlList);
     delete chm;
@@ -1189,25 +1178,12 @@ bool ImportCHMDocument( LvStreamRef stream, CrDom * doc)
     writer.OnTagOpenNoAttr(L"", L"body");
     LvDocFragmentWriter appender(&writer, cs16("body"), cs16("DocFragment"), lString16::empty_str );
     CHMTOCReader tocReader(cont, doc, &appender);
-    if ( !tocReader.init(cont, tocFileName, defEncodingName, urlList, mainPageName) )
+    if (!tocReader.init(cont, tocFileName, defEncodingName, urlList, mainPageName) )
         return false;
-
-    if ( !title.empty() )
-        doc->getProps()->setString(DOC_PROP_TITLE, title);
-    if ( !language.empty() )
-        doc->getProps()->setString(DOC_PROP_LANGUAGE, language);
 
     fragmentCount = tocReader.appendFragments();
     writer.OnTagClose(L"", L"body");
     writer.OnStop();
     CRLog::debug("CHM: %d documents merged", fragmentCount);
-#if DUMP_CHM_DOC==1
-    LvStreamRef out = LVOpenFileStream(L"/tmp/chm.html", LVOM_WRITE);
-    if ( !out.isNull() )
-        doc->saveToStream( out, NULL, true );
-#endif
-
     return fragmentCount>0;
 }
-
-#endif

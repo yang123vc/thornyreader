@@ -9,39 +9,15 @@
 #if !defined(__antiword_h)
 #define __antiword_h 1
 
-/*
- * 	Necho.
- * 	I commented this code:
- *
- * #if defined(DEBUG) == defined(NDEBUG)
- * #error Exactly one of the DEBUG and NDEBUG flags MUST be set
- * #endif
- *
- * 	And insert an definition of DEBUG
- * 	based on not defined NDEBUG due to specific of Android build sustem. 
- * 	Details from http://stackoverflow.com/questions/13099931/how-does-app-optim-manifest-in-code:
- * 
- *	In android-ndk-r8b/build/core/add-application.mk we read:
- *
- *	ifeq ($(APP_OPTIM),debug)
- *	  APP_CFLAGS := -O0 -g $(APP_CFLAGS)
- *	else
- *	  APP_CFLAGS := -O2 -DNDEBUG -g $(APP_CFLAGS)
- *	endif
- *	So, to answer your question: in NDK r8b (the latest for today) you can check
- *
- *	#ifdef NDEBUG
- *	// this is "release"
- *	#else
- *	// this is "debug"
- *	#endif
-*/
+#if !defined(DEBUG)
+#ifndef NDEBUG
+#define NDEBUG
+#endif
+#endif
 
-#if !defined(NDEBUG)
-	#if !defined(DEBUG)
-		#define DEBUG
-	#endif /* !DEBUG */
-#endif /* !NDEBUG */
+#if defined(DEBUG) == defined(NDEBUG)
+#error Exactly one of the DEBUG and NDEBUG flags MUST be set
+#endif /* DEBUG == NDEBUG */
 
 #include <stdio.h>
 #include <limits.h>
@@ -171,8 +147,8 @@
 /* Macros */
 #define STREQ(x,y)	(*(x) == *(y) && strcmp(x,y) == 0)
 #define STRNEQ(x,y,n)	(*(x) == *(y) && strncmp(x,y,n) == 0)
-#if defined(__dos) || defined(__EMX__)
-#define STRCEQ(x,y)	(stricmp(x,y) == 0)
+#if defined(__dos) || defined(__EMX__) || defined(_WIN32)
+#define STRCEQ(x,y)	(_stricmp(x,y) == 0)
 #else
 #define STRCEQ(x,y)	(strcasecmp(x,y) == 0)
 #endif /* __dos or __EMX__ */

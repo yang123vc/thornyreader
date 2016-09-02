@@ -28,10 +28,8 @@
 #include <string.h>
 #include "../include/lvxml.h"
 
-#if !defined(__SYMBIAN32__)
 #include <stdio.h>
 #include <wchar.h>
-#endif
 
 #include "../include/lvtypes.h"
 #include "../include/lvstream.h"
@@ -68,7 +66,7 @@ public:
     void addPattern( TexPattern * pattern );
     TexHyph();
     virtual ~TexHyph();
-    bool load( LvStreamRef stream );
+    bool load( LVStreamRef stream );
     bool load( lString16 fileName );
     virtual lUInt32 getHash() { return _hash; }
 };
@@ -85,6 +83,7 @@ class NoHyph : public HyphMethod
 public:
     virtual bool hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags, lUInt16 hyphCharWidth, lUInt16 maxWidth )
     {
+        CR_UNUSED6(str, len, widths, flags, hyphCharWidth, maxWidth);
         return false;
     }
     virtual ~NoHyph() { }
@@ -127,7 +126,7 @@ void HyphMan::uninit()
     _method = &NO_HYPH;
 }
 
-bool HyphMan::activateDictionaryFromStream(LvStreamRef stream)
+bool HyphMan::activateDictionaryFromStream(LVStreamRef stream)
 {
     if ( stream.isNull() )
         return false;
@@ -155,7 +154,7 @@ bool HyphMan::activateDictionaryFromStream(LvStreamRef stream)
     return true;
 }
 
-bool HyphMan::initDictionaries()
+bool HyphMan::init()
 {
     if (_dictList)
         delete _dictList;
@@ -188,7 +187,7 @@ bool HyphDictionary::activate()
             HyphMan::_method = &NO_HYPH;
         }
 		CRLog::trace("Selecting hyphenation dictionary %s", UnicodeToUtf8(_filename).c_str() );
-		LvStreamRef stream = LVOpenFileStream(getFilename().c_str(), LVOM_READ);
+		LVStreamRef stream = LVOpenFileStream(getFilename().c_str(), LVOM_READ);
 		if (stream.isNull()) {
 			CRLog::error("Cannot open hyphenation dictionary %s", UnicodeToUtf8(_filename).c_str() );
 			return false;
@@ -287,27 +286,27 @@ public:
 
     static int hash( const lChar16 * s )
     {
-        return (((s[0] *31 + s[1])*31 + s[2]) * 31 + s[3]) % PATTERN_HASH_SIZE;
+        return ((lUInt32)(((s[0] *31 + s[1])*31 + s[2]) * 31 + s[3])) % PATTERN_HASH_SIZE;
     }
 
     static int hash3( const lChar16 * s )
     {
-        return (((s[0] *31 + s[1])*31 + s[2]) * 31 + 0) % PATTERN_HASH_SIZE;
+        return ((lUInt32)(((s[0] *31 + s[1])*31 + s[2]) * 31 + 0)) % PATTERN_HASH_SIZE;
     }
 
     static int hash2( const lChar16 * s )
     {
-        return (((s[0] *31 + s[1])*31 + 0) * 31 + 0) % PATTERN_HASH_SIZE;
+        return ((lUInt32)(((s[0] *31 + s[1])*31 + 0) * 31 + 0)) % PATTERN_HASH_SIZE;
     }
 
     static int hash1( const lChar16 * s )
     {
-        return (((s[0] *31 + 0)*31 + 0) * 31 + 0) % PATTERN_HASH_SIZE;
+        return ((lUInt32)(((s[0] *31 + 0)*31 + 0) * 31 + 0)) % PATTERN_HASH_SIZE;
     }
 
     int hash()
     {
-        return (((word[0] *31 + word[1])*31 + word[2]) * 31 + word[3]) % PATTERN_HASH_SIZE;
+        return ((lUInt32)(((word[0] *31 + word[1])*31 + word[2]) * 31 + word[3])) % PATTERN_HASH_SIZE;
     }
 
     bool match( const lChar16 * s, char * mask )
@@ -393,6 +392,7 @@ public:
     /// called on opening tag
     virtual ldomNode * OnTagOpen( const lChar16 * nsname, const lChar16 * tagname)
     {
+        CR_UNUSED(nsname);
         if (!lStr_cmp(tagname, "pattern")) {
             insidePatternTag = true;
         }
@@ -401,20 +401,26 @@ public:
     /// called on closing
     virtual void OnTagClose( const lChar16 * nsname, const lChar16 * tagname )
     {
+        CR_UNUSED2(nsname, tagname);
         insidePatternTag = false;
     }
     /// called on element attribute
     virtual void OnAttribute( const lChar16 * nsname, const lChar16 * attrname, const lChar16 * attrvalue )
     {
+        CR_UNUSED3(nsname, attrname, attrvalue);
     }
     /// called on text
     virtual void OnText( const lChar16 * text, int len, lUInt32 flags )
     {
+        CR_UNUSED(flags);
         if ( insidePatternTag )
             data.add( lString16(text, len) );
     }
     /// add named BLOB data to document
-    virtual bool OnBlob(lString16 name, const lUInt8 * data, int size) { return false; }
+    virtual bool OnBlob(lString16 name, const lUInt8 * data, int size) {
+        CR_UNUSED3(name, data, size);
+        return false;
+    }
 
 };
 
@@ -446,12 +452,12 @@ void TexHyph::addPattern( TexPattern * pattern )
     *p = pattern;
 }
 
-bool TexHyph::load( LvStreamRef stream )
+bool TexHyph::load( LVStreamRef stream )
 {
     int w = isCorrectHyphFile(stream.get());
     int patternCount = 0;
     if (w) {
-        _hash = stream->crc32();
+        _hash = stream->getcrc32();
         int        i;
         lvsize_t   dw;
 
@@ -555,7 +561,7 @@ bool TexHyph::load( LvStreamRef stream )
 
 bool TexHyph::load( lString16 fileName )
 {
-    LvStreamRef stream = LVOpenFileStream( fileName.c_str(), LVOM_READ );
+    LVStreamRef stream = LVOpenFileStream( fileName.c_str(), LVOM_READ );
     if ( stream.isNull() )
         return false;
     return load( stream );

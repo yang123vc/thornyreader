@@ -26,7 +26,7 @@ public:
     virtual int GetObjectCount() const;
     /// returns object size (file size or directory entry count)
     virtual lverror_t GetSize(lvsize_t* pSize);
-    virtual LvStreamRef OpenStream(const lChar16* fname, lvopen_mode_t mode);
+    virtual LVStreamRef OpenStream(const lChar16* fname, lvopen_mode_t mode);
     /// returns stream/container name, may be NULL if unknown
     virtual const lChar16* GetName();
     /// sets stream/container name, may be not implemented for some objects
@@ -39,8 +39,8 @@ public:
     bool open();
 };
 
-bool DetectEpubFormat(LvStreamRef stream);
-bool ImportEpubDocument(LvStreamRef stream, CrDom * doc);
+bool DetectEpubFormat(LVStreamRef stream);
+bool ImportEpubDocument(LVStreamRef stream, CrDom * doc);
 lString16 EpubGetRootFilePath(LVContainerRef m_arc);
 
 #endif // EPUBFMT_H

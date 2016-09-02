@@ -51,7 +51,7 @@ static lUInt8 rgbToGray( lUInt32 color, int bpp )
 
 static lUInt16 rgb565(int r, int g, int b) {
 	// rrrr rggg gggb bbbb
-	return (lUInt16)(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((g & 0xF8) >> 3));
+    return (lUInt16)(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3));
 }
 
 static lUInt8 rgbToGrayMask( lUInt32 color, int bpp )
@@ -117,12 +117,12 @@ static void ApplyAlphaGray( lUInt8 &dst, lUInt8 src, lUInt32 alpha, int bpp )
     }
 }
 
-static const short dither_2bpp_4x4[] = {
-    5, 13,  8,  16,
-    9,  1,  12,  4,
-    7, 15,  6,  14,
-    11, 3,  10,  2,
-};
+//static const short dither_2bpp_4x4[] = {
+//    5, 13,  8,  16,
+//    9,  1,  12,  4,
+//    7, 15,  6,  14,
+//    11, 3,  10,  2,
+//};
 
 static const short dither_2bpp_8x8[] = {
 0, 32, 12, 44, 2, 34, 14, 46, 
@@ -210,6 +210,7 @@ private:
     int * xmap;
     int * ymap;
     bool dither;
+    bool isNinePatch;
 public:
     static int * GenMap( int src_len, int dst_len )
     {
@@ -220,15 +221,65 @@ public:
         }
         return map;
     }
+    static int * GenNinePatchMap( int src_len, int dst_len, int frame1, int frame2)
+    {
+        int  * map = new int[ dst_len ];
+        if (frame1 + frame2 > dst_len) {
+            int total = frame1 + frame2;
+            int extra = total - dst_len;
+            int extra1 = frame1 * extra / total;
+            int extra2 = frame2 * extra / total;
+            frame1 -= extra1;
+            frame2 -= extra2;
+        }
+        int srcm = src_len - frame1 - frame2 - 2;
+        int dstm = dst_len - frame1 - frame2;
+        if (srcm < 0)
+            srcm = 0;
+        for (int i=0; i<dst_len; i++)
+        {
+            if (i < frame1) {
+                // start
+                map[ i ] = i + 1;
+            } else if (i >= dst_len - frame2) {
+                // end
+                int rx = i - (dst_len - frame2);
+                map[ i ] = src_len - frame2 + rx - 1;
+            } else {
+                // middle
+                map[ i ] = 1 + frame1 + (i - frame1) * srcm / dstm;
+            }
+//            CRLog::trace("frame[%d, %d] src=%d dst=%d %d -> %d", frame1, frame2, src_len, dst_len, i, map[i]);
+//            if (map[i] >= src_len) {
+//                CRLog::error("Wrong coords");
+//            }
+        }
+        return map;
+    }
     LVImageScaledDrawCallback(LVBaseDrawBuf * dstbuf, LVImageSourceRef img, int x, int y, int width, int height, bool dith )
     : src(img), dst(dstbuf), dst_x(x), dst_y(y), dst_dx(width), dst_dy(height), xmap(0), ymap(0), dither(dith)
     {
         src_dx = img->GetWidth();
         src_dy = img->GetHeight();
-        if ( src_dx != dst_dx )
-            xmap = GenMap( src_dx, dst_dx );
-        if ( src_dy != dst_dy )
-            ymap = GenMap( src_dy, dst_dy );
+        const CR9PatchInfo * np = img->GetNinePatchInfo();
+        isNinePatch = false;
+        lvRect ninePatch;
+        if (np) {
+            isNinePatch = true;
+            ninePatch = np->frame;
+        }
+        if ( src_dx != dst_dx || isNinePatch) {
+            if (isNinePatch)
+                xmap = GenNinePatchMap(src_dx, dst_dx, ninePatch.left, ninePatch.right);
+            else
+                xmap = GenMap( src_dx, dst_dx );
+        }
+        if ( src_dy != dst_dy || isNinePatch) {
+            if (isNinePatch)
+                ymap = GenNinePatchMap(src_dy, dst_dy, ninePatch.top, ninePatch.bottom);
+            else
+                ymap = GenMap( src_dy, dst_dy );
+        }
     }
     virtual ~LVImageScaledDrawCallback()
     {
@@ -243,21 +294,39 @@ public:
     virtual bool OnLineDecoded( LVImageSource *, int y, lUInt32 * data )
     {
         //fprintf( stderr, "l_%d ", y );
-        int yy = y;
-        int yy2 = y+1;
-        if ( ymap ) 
-        {
-            int yy0 = (y - 1) * dst_dy / src_dy;
-            yy = y * dst_dy / src_dy;
-            yy2 = (y+1) * dst_dy / src_dy;
-            if ( yy == yy0 )
-            {
-                //fprintf( stderr, "skip_dup " );
-                //return true; // skip duplicate drawing
-            }
-            if ( yy2 > dst_dy )
-                yy2 = dst_dy;
+        if (isNinePatch) {
+            if (y == 0 || y == src_dy-1) // ignore first and last lines
+                return true;
         }
+        int yy = -1;
+        int yy2 = -1;
+        if (ymap) {
+            for (int i = 0; i < dst_dy; i++) {
+                if (ymap[i] == y) {
+                    if (yy == -1)
+                        yy = i;
+                    yy2 = i + 1;
+                }
+            }
+            if (yy == -1)
+                return true;
+        } else {
+            yy = y;
+            yy2 = y+1;
+        }
+//        if ( ymap )
+//        {
+//            int yy0 = (y - 1) * dst_dy / src_dy;
+//            yy = y * dst_dy / src_dy;
+//            yy2 = (y+1) * dst_dy / src_dy;
+//            if ( yy == yy0 )
+//            {
+//                //fprintf( stderr, "skip_dup " );
+//                //return true; // skip duplicate drawing
+//            }
+//            if ( yy2 > dst_dy )
+//                yy2 = dst_dy;
+//        }
         lvRect clip;
         dst->GetClipRect( &clip );
         for ( ;yy<yy2; yy++ )
@@ -278,8 +347,12 @@ public:
                         continue;
                     if ( !alpha )
                         row[ x ] = cl;
-                    else
-                        ApplyAlphaRGB( row[x], cl, alpha );
+                    else {
+                    	if ((row[x] & 0xFF000000) == 0xFF000000)
+                            row[ x ] = cl; // copy as is if buffer pixel is transparent
+                    	else
+                    		ApplyAlphaRGB( row[x], cl, alpha );
+                    }
                 }
             }
             else if ( bpp == 16 )
@@ -308,7 +381,8 @@ public:
                 row += dst_x;
                 for (int x=0; x<dst_dx; x++)
                 {
-                    lUInt32 cl = data[xmap ? xmap[x] : x];
+                    int srcx = xmap ? xmap[x] : x;
+                    lUInt32 cl = data[srcx];
                     int xx = x + dst_x;
                     lUInt32 alpha = (cl >> 24)&0xFF;
                     if ( xx<clip.left || xx>=clip.right || alpha==0xFF )
@@ -391,7 +465,7 @@ public:
                     lUInt32 cl = data[xmap ? xmap[x] : x];
                     int xx = x + dst_x;
                     lUInt32 alpha = (cl >> 24)&0xFF;
-                    if ( xx<clip.left || xx>=clip.right || alpha&0x80 )
+                    if ( xx<clip.left || xx>=clip.right || (alpha&0x80) )
                         continue;
                     lUInt32 dcl = 0;
                     if ( dither ) {
@@ -1028,6 +1102,10 @@ lUInt32 LVColorDrawBuf::GetPixel( int x, int y )
     return ((lUInt32*)GetScanLine(y))[x];
 }
 
+inline static lUInt32 AA(lUInt32 color) {
+    return (color >> 24) & 0xFF;
+}
+
 inline static lUInt32 RR(lUInt32 color) {
 	return (color >> 16) & 0xFF;
 }
@@ -1042,6 +1120,10 @@ inline static lUInt32 BB(lUInt32 color) {
 
 inline static lUInt32 RRGGBB(lUInt32 r, lUInt32 g, lUInt32 b) {
 	return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+}
+
+inline static lUInt32 AARRGGBB(lUInt32 a, lUInt32 r, lUInt32 g, lUInt32 b) {
+    return ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
 }
 
 
@@ -1065,13 +1147,15 @@ lUInt32 LVBaseDrawBuf::GetInterpolatedColor(int x16, int y16)
     lUInt32 cl01 = GetPixel(x1, y);
     lUInt32 cl10 = GetPixel(x, y1);
     lUInt32 cl11 = GetPixel(x1, y1);
-	lUInt32 r = (((RR(cl00) * nshx + RR(cl01) * shx) * nshy +
+    lUInt32 a = (((AA(cl00) * nshx + AA(cl01) * shx) * nshy +
+                  (AA(cl10) * nshx + AA(cl11) * shx) * shy) >> 8) & 0xFF;
+    lUInt32 r = (((RR(cl00) * nshx + RR(cl01) * shx) * nshy +
                   (RR(cl10) * nshx + RR(cl11) * shx) * shy) >> 8) & 0xFF;
 	lUInt32 g = (((GG(cl00) * nshx + GG(cl01) * shx) * nshy +
                   (GG(cl10) * nshx + GG(cl11) * shx) * shy) >> 8) & 0xFF;
 	lUInt32 b = (((BB(cl00) * nshx + BB(cl01) * shx) * nshy +
                   (BB(cl10) * nshx + BB(cl11) * shx) * shy) >> 8) & 0xFF;
-	return RRGGBB(r, g, b);
+    return AARRGGBB(a, r, g, b);
 }
 
 /// get average pixel value for area (coordinates are fixed floating points *16)
@@ -1242,7 +1326,7 @@ void LVColorDrawBuf::Resize( int dx, int dy )
     // delete old bitmap
     if ( _dx>0 && _dy>0 && _data )
     {
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
         if (_drawbmp)
             DeleteObject( _drawbmp );
         if (_drawdc)
@@ -1264,7 +1348,7 @@ void LVColorDrawBuf::Resize( int dx, int dy )
         _dx = dx;
         _dy = dy;
         _rowsize = dx*(_bpp>>3);
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
         BITMAPINFO bmi;
         memset( &bmi, 0, sizeof(bmi) );
         bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
@@ -1291,7 +1375,7 @@ void LVColorDrawBuf::Resize( int dx, int dy )
 }
 void LVColorDrawBuf::InvertRect(int x0, int y0, int x1, int y1)
 {
-	
+    CR_UNUSED4(x0, y0, x1, y1);
 }
 
 /// draws bitmap (1 byte per pixel) using specified palette
@@ -1412,7 +1496,7 @@ void LVColorDrawBuf::Draw( int x, int y, const lUInt8 * bitmap, int width, int h
     }
 }
 
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
 /// draws buffer content to DC doing color conversion if necessary
 void LVGrayDrawBuf::DrawTo( HDC dc, int x, int y, int options, lUInt32 * palette )
 {
@@ -1477,6 +1561,7 @@ void LVColorDrawBuf::DrawTo( HDC dc, int x, int y, int options, lUInt32 * palett
 /// draws buffer content to another buffer doing color conversion if necessary
 void LVGrayDrawBuf::DrawTo( LVDrawBuf * buf, int x, int y, int options, lUInt32 * palette )
 {
+    CR_UNUSED2(options, palette);
     lvRect clip;
     buf->GetClipRect(&clip);
 
@@ -1706,6 +1791,8 @@ void LVGrayDrawBuf::DrawTo( LVDrawBuf * buf, int x, int y, int options, lUInt32 
 /// draws buffer content to another buffer doing color conversion if necessary
 void LVColorDrawBuf::DrawTo( LVDrawBuf * buf, int x, int y, int options, lUInt32 * palette )
 {
+    CR_UNUSED(options);
+    CR_UNUSED(palette);
     //
     lvRect clip;
     buf->GetClipRect(&clip);
@@ -1841,6 +1928,7 @@ void LVColorDrawBuf::DrawTo( LVDrawBuf * buf, int x, int y, int options, lUInt32
 /// draws rescaled buffer content to another buffer doing color conversion if necessary
 void LVGrayDrawBuf::DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, int options)
 {
+    CR_UNUSED(options);
     if (dx < 1 || dy < 1)
         return;
     lvRect clip;
@@ -1862,8 +1950,11 @@ void LVGrayDrawBuf::DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, 
                     if ( x+xx >= clip.left && x+xx < clip.right ) {
                         int srcx16 = srcdx * xx * 16 / dx;
                         lUInt32 cl = src->GetInterpolatedColor(srcx16, srcy16);
+                        lUInt32 alpha = (cl >> 24) & 255;
                         if (_bpp==1)
                         {
+                            if (alpha >= 128)
+                                continue;
                             int shift = (xx + x) & 7;
                             lUInt8 * dst = dst0 + ((x + xx) >> 3);
                             lUInt32 dithered = Dither1BitColor(cl, xx, yy);
@@ -1874,6 +1965,8 @@ void LVGrayDrawBuf::DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, 
                         }
                         else if (_bpp==2)
                         {
+                            if (alpha >= 128)
+                                continue;
                             lUInt8 * dst = dst0 + ((x + xx) >> 2);
                             int shift = ((x+xx) & 3) * 2;
                             lUInt32 dithered = Dither2BitColor(cl, xx, yy) << 6;
@@ -1884,7 +1977,17 @@ void LVGrayDrawBuf::DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, 
                         {
                             lUInt8 * dst = dst0 + x + xx;
                             lUInt32 dithered = DitherNBitColor(cl, xx, yy, _bpp); // << (8 - _bpp);
-                            *dst = (lUInt8) dithered;
+                            if (alpha < 16)
+                                *dst = (lUInt8)dithered;
+                            else if (alpha < 240) {
+                                lUInt32 nalpha = 255 - alpha;
+                                lUInt32 pixel = *dst;
+                                if (_bpp == 4)
+                                    pixel = ((pixel * alpha + dithered * nalpha) >> 8) & 0xF0;
+                                else
+                                    pixel = ((pixel * alpha + dithered * nalpha) >> 8) & 0xFF;
+                                *dst = (lUInt8)pixel;
+                            }
                         }
                     }
                 }
@@ -1953,6 +2056,7 @@ void LVGrayDrawBuf::DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, 
 /// draws rescaled buffer content to another buffer doing color conversion if necessary
 void LVColorDrawBuf::DrawRescaled(LVDrawBuf * src, int x, int y, int dx, int dy, int options)
 {
+    CR_UNUSED(options);
     if (dx < 1 || dy < 1)
         return;
     lvRect clip;
@@ -2007,7 +2111,7 @@ lUInt8 * LVColorDrawBuf::GetScanLine( int y )
 {
     if (!_data || y<0 || y>=_dy)
         return NULL;
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
     return _data + _rowsize * (_dy-1-y);
 #else
     return _data + _rowsize * y;
@@ -2029,7 +2133,7 @@ lUInt32 LVColorDrawBuf::GetBlackColor()
 /// constructor
 LVColorDrawBuf::LVColorDrawBuf(int dx, int dy, int bpp)
 :     LVBaseDrawBuf()
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
     ,_drawdc(NULL)
     ,_drawbmp(NULL)
 #endif
@@ -2043,7 +2147,7 @@ LVColorDrawBuf::LVColorDrawBuf(int dx, int dy, int bpp)
 /// creates wrapper around external RGBA buffer
 LVColorDrawBuf::LVColorDrawBuf(int dx, int dy, lUInt8 * externalBuffer, int bpp )
 :     LVBaseDrawBuf()
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
     ,_drawdc(NULL)
     ,_drawbmp(NULL)
 #endif
@@ -2062,7 +2166,7 @@ LVColorDrawBuf::~LVColorDrawBuf()
 {
 	if ( !_ownData )
 		return;
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32) && !defined(QT_GL)
     if (_drawdc)
         DeleteDC(_drawdc);
     if (_drawbmp)
@@ -2076,5 +2180,7 @@ LVColorDrawBuf::~LVColorDrawBuf()
 /// convert to 1-bit bitmap
 void LVColorDrawBuf::ConvertToBitmap(bool flgDither)
 {
+    // not implemented
+    CR_UNUSED(flgDither);
 }
 

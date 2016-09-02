@@ -264,8 +264,8 @@ public:
                         // rows of table
                         CCRTableRow * row = new CCRTableRow;
                         row->elem = item;
-						if ( item==NULL )
-							item = item;
+//						if ( item==NULL )
+//							item = item;
                         if ( currentRowGroup ) {
                             // add row to group
                             row->rowgroup = currentRowGroup;
@@ -310,8 +310,8 @@ public:
                         if ( rows.length()==0 ) {
                             CCRTableRow * row = new CCRTableRow;
                             row->elem = item;
-                            if ( item==NULL )
-                                item = item;
+//                            if ( item==NULL )
+//                                item = item;
                             if ( currentRowGroup ) {
                                 // add row to group
                                 row->rowgroup = currentRowGroup;
@@ -465,13 +465,14 @@ public:
                         cells[y0+y][x0+x] = cell;
                     }
                 }
+
                 // calc cell text size
                 lString16 txt = (cell->elem)->getText();
                 int txtlen = txt.length();
                 txtlen = (txtlen+(cell->colspan-1))/(cell->colspan + 1);
                 for (int x=0; x<cell->colspan; x++) {
-                	if ( txtlen > cols[x0+x]->txtlen )
-                		cols[x0+x]->txtlen = txtlen;
+                    if ( txtlen > cols[x0+x]->txtlen )
+                        cols[x0+x]->txtlen = txtlen;
                 }
             }
         }
@@ -818,24 +819,6 @@ bool isSameFontStyle( css_style_rec_t * style1, css_style_rec_t * style2 )
         && (style1->font_weight == style2->font_weight);
 }
 
-//int rend_font_embolden = STYLE_FONT_EMBOLD_MODE_EMBOLD;
-int rend_font_embolden = STYLE_FONT_EMBOLD_MODE_NORMAL;
-
-void LVRendSetFontEmbolden( int addWidth )
-{
-    if ( addWidth < 0 )
-        addWidth = 0;
-    else if ( addWidth>STYLE_FONT_EMBOLD_MODE_EMBOLD )
-        addWidth = STYLE_FONT_EMBOLD_MODE_EMBOLD;
-
-    rend_font_embolden = addWidth;
-}
-
-int LVRendGetFontEmbolden()
-{
-    return rend_font_embolden;
-}
-
 LVFontRef getFont(css_style_rec_t * style, int documentId)
 {
     int sz = style->font_size.value;
@@ -843,14 +826,13 @@ LVFontRef getFont(css_style_rec_t * style, int documentId)
         sz >>= 8;
     if ( sz < 8 )
         sz = 8;
-    if ( sz > 72 )
-        sz = 72;
+    if ( sz > 340 )
+        sz = 340;
     int fw;
     if (style->font_weight>=css_fw_100 && style->font_weight<=css_fw_900)
         fw = ((style->font_weight - css_fw_100)+1) * 100;
     else
         fw = 400;
-    fw += rend_font_embolden;
     if ( fw>900 )
         fw = 900;
     LVFontRef fnt = fontMan->GetFont(
@@ -959,7 +941,7 @@ void SplitLines( const lString16 & str, lString16Collection & lines )
     while ( *start=='\r' || *start=='\n' )
         start++;
     if ( s > start )
-        lines.add( lString16( start, s-start ) );
+        lines.add( lString16( start, (lvsize_t)(s-start) ) );
 }
 
 //=======================================================================
@@ -977,7 +959,7 @@ void renderFinalBlock( ldomNode * enode, LFormattedText * txform, RenderRectAcce
         int flags = styleToTextFmtFlags( enode->getStyle(), baseflags );
         int width = fmt->getWidth();
         css_style_rec_t * style = enode->getStyle().get();
-        if (flags & LTEXT_FLAG_NEWLINE && rm != erm_inline)
+        if ((flags & LTEXT_FLAG_NEWLINE) && rm != erm_inline)
         {
             css_length_t len = style->text_indent;
             switch( len.type )
@@ -1436,8 +1418,8 @@ int renderBlockElement( LVRendPageContext & context, ldomNode * enode, int x, in
 //            CRLog::trace("renderBlockElement() : Footnote body detected! %s", LCSTR(ldomXPointer(enode,0).toString()) );
         //if (!fmt)
         //    crFatalError();
-        if ( enode->getNodeId() == el_empty_line )
-            x = x;
+//        if ( enode->getNodeId() == el_empty_line )
+//            x = x;
         int em = enode->getFont()->getSize();
         int margin_left = lengthToPx( enode->getStyle()->margin[0], width, em ) + DEBUG_TREE_DRAW;
         int margin_right = lengthToPx( enode->getStyle()->margin[1], width, em ) + DEBUG_TREE_DRAW;
@@ -1555,6 +1537,7 @@ int renderBlockElement( LVRendPageContext & context, ldomNode * enode, int x, in
             default:
                 CRLog::error("Unsupported render method %d", m);
                 crFatalError(); // error
+                break;
             }
         }
         if ( flgSplit ) {
@@ -1802,14 +1785,15 @@ void convertLengthToPx( css_length_t & val, int base_px, int base_em )
     }
 }
 
-inline void spreadParent( css_length_t & val, css_length_t & parent_val )
+inline void spreadParent( css_length_t & val, css_length_t & parent_val, bool inherited=true )
 {
-    if ( val.type == css_val_inherited )
+    if ( val.type == css_val_inherited || (val.type == css_val_unspecified && inherited))
         val = parent_val;
 }
 
 void setNodeStyle( ldomNode * enode, css_style_ref_t parent_style, LVFontRef parent_font )
 {
+    CR_UNUSED(parent_font);
     //lvdomElementFormatRec * fmt = node->getRenderData();
     css_style_ref_t style( new css_style_rec_t );
     css_style_rec_t * pstyle = style.get();
@@ -1833,7 +1817,8 @@ void setNodeStyle( ldomNode * enode, css_style_ref_t parent_style, LVFontRef par
     //////////////////////////////////////////////////////
     enode->getDocument()->applyStyle( enode, pstyle );
 
-    if ( enode->getDocument()->getDocFlag(DOC_FLAG_ENABLE_INTERNAL_STYLES) && enode->hasAttribute( LXML_NS_ANY, attr_style ) ) {
+    if (enode->getDocument()->getDocFlag(DOC_FLAG_EMBEDDED_STYLES)
+            && enode->hasAttribute( LXML_NS_ANY, attr_style )) {
         lString16 nodeStyle = enode->getAttributeValue( LXML_NS_ANY, attr_style );
         if ( !nodeStyle.empty() ) {
             nodeStyle = cs16("{") + nodeStyle + "}";
@@ -1902,8 +1887,8 @@ void setNodeStyle( ldomNode * enode, css_style_ref_t parent_style, LVFontRef par
     UPDATE_STYLE_FIELD( vertical_align, css_va_inherit );
     UPDATE_STYLE_FIELD( font_style, css_fs_inherit );
     UPDATE_STYLE_FIELD( font_weight, css_fw_inherit );
-    if (pstyle->font_family == css_ff_inherit) {
-    	UPDATE_STYLE_FIELD(font_name, "");
+    if ( pstyle->font_family == css_ff_inherit ) {
+        UPDATE_STYLE_FIELD( font_name, "" );
     }
     UPDATE_STYLE_FIELD( font_family, css_ff_inherit );
     UPDATE_LEN_FIELD( font_size );
@@ -1977,7 +1962,7 @@ void setNodeStyle( ldomNode * enode, css_style_ref_t parent_style, LVFontRef par
     spreadParent( pstyle->letter_spacing, parent_style->letter_spacing );
     spreadParent( pstyle->line_height, parent_style->line_height );
     spreadParent( pstyle->color, parent_style->color );
-    spreadParent( pstyle->background_color, parent_style->background_color );
+    spreadParent( pstyle->background_color, parent_style->background_color, false );
 
     // set calculated style
     //enode->getDocument()->cacheStyle( style );
@@ -1991,11 +1976,9 @@ void setNodeStyle( ldomNode * enode, css_style_ref_t parent_style, LVFontRef par
     enode->initNodeFont();
 }
 
-#define UNUSED(x)
 int renderTable( LVRendPageContext & context, ldomNode * node, int x, int y, int width )
 {
-    UNUSED(x);
-    UNUSED(y);
+    CR_UNUSED2(x, y);
     CCRTable table( node, width, 10 );
     int h = table.renderCells( context );
 

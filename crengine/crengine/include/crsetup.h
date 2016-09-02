@@ -10,11 +10,37 @@
 #ifndef CRSETUP_H_INCLUDED
 #define CRSETUP_H_INCLUDED
 
+#if defined(_LINUX) || defined (LINUX)
+
+#define USE_LIBJPEG                          1
+#define USE_LIBPNG                           1
+#define USE_GIF                              1
+#define USE_ZLIB                             1
+#define USE_ANSI_FILES                       1
+#define GRAY_INVERSE                         0
+#define USE_FREETYPE                         1
+
+#ifndef ANDROID
+#ifndef MAC
+#ifndef TIZEN
+#ifndef USE_FONTCONFIG
+
+#define USE_FONTCONFIG						 1
+
+#endif
+#endif
+#endif
+#endif
+
+#define ALLOW_KERNING                        1
+#define GLYPH_CACHE_SIZE                     0x40000
+#define ZIP_STREAM_BUFFER_SIZE               0x40000
+#define FILE_STREAM_BUFFER_SIZE              0x20000
+
+#endif //defined(_LINUX) || defined (LINUX)
+
 #if (LBOOK==1)
 
-#ifndef LDOM_USE_OWN_MEM_MAN
-#define LDOM_USE_OWN_MEM_MAN                 1
-#endif
 #define USE_DOM_UTF8_STORAGE                 1
 #ifndef MAX_IMAGE_SCALE_MUL
 #define MAX_IMAGE_SCALE_MUL                  2
@@ -23,15 +49,6 @@
 #define USE_ANSI_FILES                       1
 #define GRAY_INVERSE                         0
 #define ALLOW_KERNING                        1
-#if (BUILD_LITE==1)
-#define USE_LIBJPEG                          0
-#define USE_LIBPNG                           0
-#define USE_GIF                              0
-#define USE_FREETYPE                         0
-#define GLYPH_CACHE_SIZE                     0x1000
-#define ZIP_STREAM_BUFFER_SIZE               0x1000
-#define FILE_STREAM_BUFFER_SIZE              0x1000
-#else
 #define USE_LIBJPEG                          1
 #define USE_LIBPNG                           1
 #define USE_GIF                              1
@@ -39,36 +56,10 @@
 #define GLYPH_CACHE_SIZE                     0x20000
 #define ZIP_STREAM_BUFFER_SIZE               0x80000
 #define FILE_STREAM_BUFFER_SIZE              0x40000
-#endif
 
 #endif // LBOOK==1
 
-
-#if defined(_LINUX) || defined (LINUX)
-
-#ifndef LDOM_USE_OWN_MEM_MAN
-#define LDOM_USE_OWN_MEM_MAN                 1
-#endif
-#define USE_LIBJPEG                          1
-#define USE_LIBPNG                           1
-#define USE_GIF                              1
-#define USE_ZLIB                             1
-#define USE_ANSI_FILES                       1
-#define GRAY_INVERSE                         0
-#define USE_FREETYPE                         1
-#ifndef ANDROID
-#ifndef MAC
-#define USE_FONTCONFIG						 1
-#endif
-#endif
-#define ALLOW_KERNING                        1
-#define GLYPH_CACHE_SIZE                     0x40000
-#define ZIP_STREAM_BUFFER_SIZE               0x40000
-#define FILE_STREAM_BUFFER_SIZE              0x20000
-
-#endif //defined(_LINUX) || defined (LINUX)
-
-#if defined(_WIN32) && !defined(__SYMBIAN32__)
+#if defined(_WIN32)
 /// maximum picture zoom (1, 2, 3)
 #define GRAY_INVERSE						 0
 #ifndef MAX_IMAGE_SCALE_MUL
@@ -84,19 +75,11 @@
 #define ZIP_STREAM_BUFFER_SIZE               0x80000
 #define FILE_STREAM_BUFFER_SIZE              0x40000
 //#define USE_LIBJPEG 0
-#endif // !defined(__SYMBIAN32__) && defined(_WIN32)
+#endif // defined(_WIN32)
 
 #ifndef GLYPH_CACHE_SIZE
 /// freetype font glyph buffer size, in bytes
 #define GLYPH_CACHE_SIZE 0x40000
-#endif
-
-// disable some features for SYMBIAN
-#if defined(__SYMBIAN32__)
-#define USE_LIBJPEG 0
-#define USE_LIBPNG  0
-#define USE_GIF     1
-#define USE_ZLIB    0
 #endif
 
 #ifndef USE_GIF
@@ -148,16 +131,8 @@
 
 #endif
 
-#ifndef CHM_SUPPORT_ENABLED
-#define CHM_SUPPORT_ENABLED 1
-#endif
-
 #ifndef USE_FREETYPE
 #define USE_FREETYPE 0
-#endif
-
-#ifndef LDOM_USE_OWN_MEM_MAN
-#define LDOM_USE_OWN_MEM_MAN 0
 #endif
 
 #ifndef USE_DOM_UTF8_STORAGE
@@ -174,11 +149,6 @@
 
 #endif
 
-/// maximum picture zoom (1, 2, 3)
-#ifndef MAX_IMAGE_SCALE_MUL
-#define MAX_IMAGE_SCALE_MUL 2
-#endif
-
 // max unpacked size of skin image to hold in cache unpacked
 #ifndef MAX_SKIN_IMAGE_CACHE_ITEM_UNPACKED_SIZE
 #define MAX_SKIN_IMAGE_CACHE_ITEM_UNPACKED_SIZE 80*80*4
@@ -189,28 +159,8 @@
 #define MAX_SKIN_IMAGE_CACHE_ITEM_RAM_COPY_PACKED_SIZE 10000
 #endif
 
-// Caching and MMAP options
-
-/// minimal document size to enable caching for
-#ifndef DOCUMENT_CACHING_MIN_SIZE
-#define DOCUMENT_CACHING_MIN_SIZE 0x10000 // 64K
-#endif
-
-/// max ram data block usage, after which swapping to disk should occur
-#ifndef DOCUMENT_CACHING_MAX_RAM_USAGE
-#define DOCUMENT_CACHING_MAX_RAM_USAGE 0x800000 // 10Mb
-#endif
-
 #ifndef ENABLE_ANTIWORD
 #define ENABLE_ANTIWORD 1
-#endif
-
-#ifndef ARBITRARY_IMAGE_SCALE_ENABLED
-#define ARBITRARY_IMAGE_SCALE_ENABLED 1
-#endif
-
-#ifndef MAX_IMAGE_SCALE_MUL
-#define MAX_IMAGE_SCALE_MUL 2
 #endif
 
 #endif//CRSETUP_H_INCLUDED

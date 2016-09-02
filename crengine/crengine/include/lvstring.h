@@ -293,6 +293,8 @@ public:
     int pos(const lString8 & subStr) const;
     /// find position of substring inside string, -1 if not found
     int pos(const char * subStr) const;
+    /// find position of substring inside string starting from right, -1 if not found
+    int rpos(const char * subStr) const;
     /// find position of substring inside string starting from specified position, -1 if not found
     int pos(const lString8 & subStr, int startPos) const;
     /// find position of substring inside string starting from specified position, -1 if not found
@@ -316,6 +318,8 @@ public:
 
     /// returns true if string starts with specified substring
     bool startsWith ( const lString8 & substring ) const;
+    /// returns true if string starts with specified substring
+    bool startsWith ( const char * substring ) const;
 
     /// returns last character
     value_type lastChar() { return empty() ? 0 : at(length()-1); }
@@ -326,8 +330,11 @@ public:
     lUInt32 getHash() const;
 
     /// get character at specified position with range check
-    value_type & at( size_type pos ) { if (pos>pchunk->len) crFatalError(); return modify()[pos]; }
-
+    value_type & at(size_type pos) {
+        if (pos > pchunk->len)
+            crFatalError();
+        return modify()[pos];
+    }
     /// get character at specified position without range check
     value_type operator [] ( size_type pos ) const { return pchunk->buf8[pos]; }
 
@@ -352,6 +359,8 @@ public:
     void  reserve(size_type count = 0);
     /// returns true if string is empty
     bool  empty() const { return pchunk->len==0; }
+    /// returns true if string is empty
+    bool  operator !() const { return pchunk->len==0; }
     /// swaps content of two strings
     void  swap(lString8 & str)
     {
@@ -389,6 +398,8 @@ public:
     static lString8 itoa( int i );
     /// constructs string representation of unsigned integer
     static lString8 itoa( unsigned int i );
+    // constructs string representation of 64 bit integer
+    static lString8 itoa( lInt64 n );
 
     static const lString8 empty_str;
 
@@ -614,7 +625,8 @@ public:
                 pchunk=str.pchunk; str.pchunk=tmp; }
     /// trims all unused space at end of string (sets size to length)
     lString16 & pack();
-
+    /// trims non alpha at beginning and end of string
+    lString16 & trimNonAlpha();
     /// trims spaces at beginning and end of string
     lString16 & trim();
     /// trims duplicate space characters inside string and (optionally) at end and beginning of string
@@ -743,6 +755,9 @@ public:
     lString8Collection()
         : chunks(NULL), count(0), size(0)
     { }
+    lString8Collection(lString8Collection & src)
+        : chunks(NULL), count(0), size(0)
+    { addAll(src); }
     lString8Collection(const lString8 & str, const lString8 & delimiter)
         : chunks(NULL), count(0), size(0)
     {
@@ -750,6 +765,11 @@ public:
     }
     void reserve(int space);
     int add(const lString8 & str);
+    int add(const char * str) { return add(lString8(str)); }
+    void addAll(const lString8Collection & src) {
+    	for (int i = 0; i < src.length(); i++)
+    		add(src[i]);
+    }
     /// split string by delimiters, and add all substrings to collection
     void split(const lString8 & str, const lString8 & delimiter);
     void erase(int offset, int count);
@@ -818,6 +838,14 @@ inline bool operator == (const lString16& s1, const lChar8 * s2 )
 /// returns true if wide strings is equal to wide c-string
 inline bool operator == (const lChar16 * s1, const lString16& s2 )
     { return s2.compare(s1)==0; }
+
+/// returns true if wide strings is equal to wide c-string
+inline bool operator == (const lString16& s1, const lString8& s2 )
+    { return lStr_cmp(s2.c_str(), s1.c_str())==0; }
+/// returns true if wide strings is equal to wide c-string
+inline bool operator == (const lString8& s1, const lString16& s2 )
+    { return lStr_cmp(s2.c_str(), s1.c_str())==0; }
+
 inline bool operator != (const lString16& s1, const lString16& s2 )
     { return s1.compare(s2)!=0; }
 inline bool operator != (const lString16& s1, const lChar16 * s2 )
@@ -865,7 +893,9 @@ template <int BUFSIZE> class lStringBuf16 {
     int pos;
 	lStringBuf16 & operator = (lStringBuf16 & v)
 	{
+        CR_UNUSED(v);
 		// not available
+		return *this;
 	}
 public:
     lStringBuf16( lString16 & s )

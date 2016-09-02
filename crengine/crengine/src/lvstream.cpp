@@ -39,7 +39,7 @@
 #if (USE_UNRAR==1)
 #include <rar.hpp>
 #endif
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32)
 extern "C" {
 #include <windows.h>
 }
@@ -60,13 +60,29 @@ extern "C" {
 #endif
 #ifndef USE_ANSI_FILES
 
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32)
 #define USE_ANSI_FILES 0
 #else
 #define USE_ANSI_FILES 1
 #endif
 
 #endif
+
+
+static LVAssetContainerFactory * _assetContainerFactory = NULL;
+
+/// set container to handle filesystem access for paths started with ASSET_PATH_PREFIX (@ sign)
+void LVSetAssetContainerFactory(LVAssetContainerFactory * asset) {
+	_assetContainerFactory = asset;
+}
+
+lString16 LVExtractAssetPath(lString16 fn) {
+	if (fn.length() < 2 || fn[0] != ASSET_PATH_PREFIX)
+		return lString16();
+	if (fn[1] == '/' || fn[1] == '\\')
+		return fn.substr(2);
+	return fn.substr(1);
+}
 
 // LVStorageObject stubs
 const lChar16* LVStorageObject::GetName()
@@ -97,14 +113,14 @@ lvsize_t LVStorageObject::GetSize( )
 }
 
 /// calculate crc32 code for stream, if possible
-lverror_t LVNamedStream::crc32(lUInt32 & dst)
+lverror_t LVNamedStream::getcrc32( lUInt32 & dst )
 {
     if ( _crc!=0 ) {
         dst = _crc;
         return LVERR_OK;
     } else {
         if ( !_crcFailed ) {
-            lverror_t res = LVStream::crc32(dst);
+            lverror_t res = LVStream::getcrc32( dst );
             if ( res==LVERR_OK ) {
                 _crc = dst;
                 return LVERR_OK;
@@ -139,7 +155,7 @@ void LVNamedStream::SetName(const lChar16* name)
         if (p[-1] == '/' || p[-1]=='\\')
             break;
     }
-    int pos = p-fn;
+    int pos = (int)(p - fn);
     if (p>fn)
         m_path = m_fname.substr(0, pos);
     m_filename = m_fname.substr(pos, m_fname.length() - pos);
@@ -149,7 +165,7 @@ void LVNamedStream::SetName(const lChar16* name)
 // default implementation, with RAM buffer
 class LVDefStreamBuffer : public LVStreamBuffer {
 protected:
-    LvStreamRef m_stream;
+    LVStreamRef m_stream;
     lUInt8 * m_buf;
     lvpos_t m_pos;
     lvsize_t m_size;
@@ -157,7 +173,7 @@ protected:
     bool m_writeonly;
 
 public:
-    static LVStreamBufferRef create(LvStreamRef stream,
+    static LVStreamBufferRef create(LVStreamRef stream,
     		lvpos_t pos, lvsize_t size, bool readonly) {
         LVStreamBufferRef res;
         switch (stream->GetMode()) {
@@ -197,7 +213,7 @@ public:
         return LVStreamBufferRef(buf);
     }
 
-    LVDefStreamBuffer( LvStreamRef stream, lvpos_t pos, lvsize_t size, bool readonly )
+    LVDefStreamBuffer( LVStreamRef stream, lvpos_t pos, lvsize_t size, bool readonly )
     : m_stream( stream ), m_buf( NULL ), m_pos(pos), m_size( size ), m_readonly( readonly )
     {
         m_buf = (lUInt8*)malloc( size );
@@ -253,14 +269,16 @@ public:
 /// Get read buffer - default implementation, with RAM buffer
 LVStreamBufferRef LVStream::GetReadBuffer( lvpos_t pos, lvpos_t size )
 {
-    LVStreamBufferRef res = LVDefStreamBuffer::create( LvStreamRef(this), pos, size, true );
+    LVStreamBufferRef res;
+    res = LVDefStreamBuffer::create( LVStreamRef(this), pos, size, true );
     return res;
 }
 
 /// Get read/write buffer - default implementation, with RAM buffer
 LVStreamBufferRef LVStream::GetWriteBuffer( lvpos_t pos, lvpos_t size )
 {
-    LVStreamBufferRef res = LVDefStreamBuffer::create( LvStreamRef(this), pos, size, false );
+    LVStreamBufferRef res;
+    res = LVDefStreamBuffer::create( LVStreamRef(this), pos, size, false );
     return res;
 }
 
@@ -268,7 +286,7 @@ LVStreamBufferRef LVStream::GetWriteBuffer( lvpos_t pos, lvpos_t size )
 #define CRC_BUF_SIZE 16384
 
 /// calculate crc32 code for stream, if possible
-lverror_t LVStream::crc32(lUInt32 & dst)
+lverror_t LVStream::getcrc32( lUInt32 & dst )
 {
     dst = 0;
     if (GetMode() == LVOM_READ || GetMode() == LVOM_APPEND) {
@@ -317,12 +335,12 @@ private:
     class LVBuffer : public LVStreamBuffer
     {
     protected:
-        LvStreamRef m_stream;
+        LVStreamRef m_stream;
         lUInt8 * m_buf;
         lvsize_t m_size;
         bool m_readonly;
     public:
-        LVBuffer( LvStreamRef stream, lUInt8 * buf, lvsize_t size, bool readonly )
+        LVBuffer( LVStreamRef stream, lUInt8 * buf, lvsize_t size, bool readonly )
         : m_stream( stream ), m_buf( buf ), m_size( size ), m_readonly( readonly )
         {
         }
@@ -361,7 +379,7 @@ public:
             return res;
         if ( (m_mode!=LVOM_APPEND && m_mode!=LVOM_READ) || pos + size > m_size || size==0 )
             return res;
-        return LVStreamBufferRef ( new LVBuffer( LvStreamRef(this), m_map + pos, size, true ) );
+        return LVStreamBufferRef ( new LVBuffer( LVStreamRef(this), m_map + pos, size, true ) );
     }
 
     /// Get read/write buffer (optimal for )
@@ -372,7 +390,7 @@ public:
             return res;
         if ( m_mode!=LVOM_APPEND || pos + size > m_size || size==0 )
             return res;
-        return LVStreamBufferRef ( new LVBuffer( LvStreamRef(this), m_map + pos, size, false ) );
+        return LVStreamBufferRef ( new LVBuffer( LVStreamRef(this), m_map + pos, size, false ) );
     }
 
     virtual lverror_t Seek( lvoffset_t offset, lvseek_origin_t origin, lvpos_t * pNewPos )
@@ -817,7 +835,7 @@ public:
 	\param minSize is minimum file size for R/W mode
     \return reference to opened stream if success, NULL if error
 */
-LvStreamRef LVMapFileStream( const lChar8 * pathname, lvopen_mode_t mode, lvsize_t minSize )
+LVStreamRef LVMapFileStream( const lChar8 * pathname, lvopen_mode_t mode, lvsize_t minSize )
 {
 	lString16 fn = LocalToUnicode( lString8(pathname) );
 	return LVMapFileStream( fn.c_str(), mode, minSize );
@@ -982,6 +1000,7 @@ public:
     /// flushes unsaved data from buffers to file, with optional flush of OS buffers
     virtual lverror_t Flush( bool sync )
     {
+        CR_UNUSED(sync);
 #ifdef _WIN32
         if ( m_hFile==INVALID_HANDLE_VALUE || !FlushFileBuffers( m_hFile ) )
             return LVERR_FAIL;
@@ -1024,7 +1043,7 @@ public:
             m_pos += dwBytesRead;
 	        return LVERR_OK;
         } else {
-			DWORD err = GetLastError();
+			//DWORD err = GetLastError();
 			if (nBytesRead)
 				*nBytesRead = 0;
             return LVERR_FAIL;
@@ -1313,6 +1332,7 @@ public:
         m_mode = (lvopen_mode_t)mode;
         m_size = (lvsize_t) stat.st_size;
 #endif
+        SetName(fname.c_str());
         return LVERR_OK;
     }
 
@@ -1335,7 +1355,7 @@ public:
 #endif
 
 /// Tries to split full path name into archive name and file name inside archive using separator "@/" or "@\"
-bool LvSplitArcName(lString16 fullPathName, lString16& arcPathName, lString16& arcItemPathName)
+bool LVSplitArcName(lString16 fullPathName, lString16& arcPathName, lString16& arcItemPathName)
 {
     int p = fullPathName.pos("@/");
     if (p < 0)
@@ -1347,31 +1367,40 @@ bool LvSplitArcName(lString16 fullPathName, lString16& arcPathName, lString16& a
     return !arcPathName.empty() && !arcItemPathName.empty();
 }
 
-// facility functions
-LvStreamRef LVOpenFileStream(const lChar16* pathname, int mode)
+/// tries to split full path name into archive name and file name inside archive using separator "@/" or "@\"
+bool LVSplitArcName( lString8 fullPathName, lString8 & arcPathName, lString8 & arcItemPathName )
 {
-#if 0
-    //defined(_LINUX) || defined(_WIN32)
-    if ( mode==LVOM_READ ) {
-        LVFileMappedStream * stream = LVFileMappedStream::CreateFileStream( fn, mode, 0 );
-        if ( stream != NULL )
-        {
-            return LvStreamRef( stream );
-        }
-        return LvStreamRef();
+    int p = fullPathName.pos("@/");
+    if ( p<0 )
+        p = fullPathName.pos("@\\");
+    if ( p<0 )
+        return false;
+    arcPathName = fullPathName.substr(0, p);
+    arcItemPathName = fullPathName.substr(p + 2);
+    return !arcPathName.empty() && !arcItemPathName.empty();
+}
+
+// facility functions
+LVStreamRef LVOpenFileStream(const lChar16* pathname, int mode)
+{
+    lString16 fn(pathname);
+    if (fn.length() > 1 && fn[0] == ASSET_PATH_PREFIX) {
+    	if (!_assetContainerFactory || mode != LVOM_READ)
+    		return LVStreamRef();
+    	lString16 assetPath = LVExtractAssetPath(fn);
+    	return _assetContainerFactory->openAssetStream(assetPath);
     }
-#endif
     LVFileStream* stream = LVFileStream::CreateFileStream(lString16(pathname), (lvopen_mode_t) mode);
     if (stream != NULL)
     {
-        return LvStreamRef(stream);
+        return LVStreamRef(stream);
     }
-    return LvStreamRef();
+    return LVStreamRef();
 }
 
-LvStreamRef LVOpenFileStream( const lChar8 * pathname, int mode )
+LVStreamRef LVOpenFileStream( const lChar8 * pathname, int mode )
 {
-    lString16 fn = LocalToUnicode(lString8(pathname));
+    lString16 fn = Utf8ToUnicode(lString8(pathname));
     return LVOpenFileStream( fn.c_str(), mode );
 }
 
@@ -1432,14 +1461,14 @@ class LVDirectoryContainer : public LVNamedContainer
 protected:
     LVDirectoryContainer * m_parent;
 public:
-    virtual LvStreamRef OpenStream( const wchar_t * fname, lvopen_mode_t mode )
+    virtual LVStreamRef OpenStream( const wchar_t * fname, lvopen_mode_t mode )
     {
         int found_index = -1;
         for (int i=0; i<m_list.length(); i++) {
             if ( !lStr_cmp( fname, m_list[i]->GetName() ) ) {
                 if ( m_list[i]->IsContainer() ) {
                     // found directory with same name!!!
-                    return LvStreamRef();
+                    return LVStreamRef();
                 }
                 found_index = i;
                 break;
@@ -1450,7 +1479,7 @@ public:
         fn << fname;
         //const char * fb8 = UnicodeToUtf8( fn ).c_str();
         //printf("Opening directory container file %s : %s fname=%s path=%s\n", UnicodeToUtf8( lString16(fname) ).c_str(), UnicodeToUtf8( fn ).c_str(), UnicodeToUtf8( m_fname ).c_str(), UnicodeToUtf8( m_path ).c_str());
-        LvStreamRef stream( LVOpenFileStream( fn.c_str(), mode ) );
+        LVStreamRef stream( LVOpenFileStream( fn.c_str(), mode ) );
         if (!stream) {
             return stream;
         }
@@ -1512,7 +1541,7 @@ public:
 
         dir->SetName(fn.c_str());
 
-#if !defined(__SYMBIAN32__) && defined(_WIN32)
+#if defined(_WIN32)
         // WIN32 API
         fn << mask;
         WIN32_FIND_DATAW data;
@@ -1677,7 +1706,7 @@ private:
         BufItem() : prev(NULL), next(NULL) { }
     };
 
-    LvStreamRef m_stream;
+    LVStreamRef m_stream;
     int m_bufSize;
     lvsize_t    m_size;
     lvpos_t     m_pos;
@@ -1817,7 +1846,7 @@ private:
     }
 public:
 
-    LVCachedStream( LvStreamRef stream, int bufSize ) : m_stream(stream), m_pos(0),
+    LVCachedStream( LVStreamRef stream, int bufSize ) : m_stream(stream), m_pos(0),
             m_head(NULL), m_tail(NULL), m_bufLen(0)
     {
         m_size = m_stream->GetSize();
@@ -1843,9 +1872,9 @@ public:
     }
 
     /// fastly return already known CRC
-    virtual lverror_t crc32( lUInt32 & dst )
+    virtual lverror_t getcrc32( lUInt32 & dst )
     {
-        return m_stream->crc32( dst );
+        return m_stream->getcrc32( dst );
     }
 
     virtual bool Eof()
@@ -2091,7 +2120,7 @@ struct ZipHd2
 class LVZipDecodeStream : public LVNamedStream
 {
 private:
-    LvStreamRef m_stream;
+    LVStreamRef m_stream;
     lvsize_t    m_start;
     lvsize_t    m_packsize;
     lvsize_t    m_unpacksize;
@@ -2106,7 +2135,7 @@ private:
     lUInt32     m_originalCRC;
 
 
-    LVZipDecodeStream( LvStreamRef stream, lvsize_t start, lvsize_t packsize, lvsize_t unpacksize, lUInt32 crc )
+    LVZipDecodeStream( LVStreamRef stream, lvsize_t start, lvsize_t packsize, lvsize_t unpacksize, lUInt32 crc )
         : m_stream(stream), m_start(start), m_packsize(packsize), m_unpacksize(unpacksize),
         m_inbytesleft(0), m_outbytesleft(0), m_zInitialized(false), m_decodedpos(0),
         m_inbuf(NULL), m_outbuf(NULL), m_CRC(0), m_originalCRC(crc)
@@ -2145,7 +2174,7 @@ private:
     {
         if (m_zstream.avail_in < ARC_INBUF_SIZE / 4 && m_inbytesleft > 0)
         {
-            int inpos = m_zstream.next_in ? (m_zstream.next_in - m_inbuf) : 0;
+            int inpos = (int)(m_zstream.next_in ? (m_zstream.next_in - m_inbuf) : 0);
             if ( inpos > ARC_INBUF_SIZE/2 )
             {
                 // move rest of data to beginning of buffer
@@ -2212,7 +2241,7 @@ private:
     // returns count of available decoded bytes in buffer
     inline int getAvailBytes()
     {
-        return m_zstream.next_out - m_outbuf - m_decodedpos;
+        return (int)(m_zstream.next_out - m_outbuf - m_decodedpos);
     }
     /// decode next portion of data, returns number of decoded bytes available, -1 if error
     int decodeNext()
@@ -2228,7 +2257,7 @@ private:
         if (m_decodedpos > ARC_OUTBUF_SIZE/2 || (m_zstream.avail_out < ARC_OUTBUF_SIZE / 4 && m_outbytesleft > 0) )
         {
 
-            int outpos = m_zstream.next_out - m_outbuf;
+            int outpos = (int)(m_zstream.next_out - m_outbuf);
             if ( m_decodedpos > ARC_OUTBUF_SIZE/2 || outpos > ARC_OUTBUF_SIZE*2/4 || m_zstream.avail_out==0 || m_inbytesleft==0 )
             {
                 // move rest of data to beginning of buffer
@@ -2322,7 +2351,7 @@ private:
 public:
 
     /// fastly return already known CRC
-    virtual lverror_t crc32( lUInt32 & dst )
+    virtual lverror_t getcrc32( lUInt32 & dst )
     {
         dst = m_originalCRC;
         return LVERR_OK;
@@ -2400,7 +2429,7 @@ public:
     {
         return LVERR_NOTIMPL;
     }
-    static LVStream * Create( LvStreamRef stream, lvpos_t pos, lString16 name, lUInt32 srcPackSize, lUInt32 srcUnpSize )
+    static LVStream * Create( LVStreamRef stream, lvpos_t pos, lString16 name, lUInt32 srcPackSize, lUInt32 srcUnpSize )
     {
         ZipLocalFileHdr hdr;
         unsigned hdr_size = 0x1E; //sizeof(hdr);
@@ -2433,7 +2462,7 @@ public:
         else if (hdr.getMethod() == 8)
         {
             // deflate
-            LvStreamRef srcStream( new LVStreamFragment( stream, pos, hdr.getPackSize()) );
+            LVStreamRef srcStream( new LVStreamFragment( stream, pos, hdr.getPackSize()) );
             LVZipDecodeStream * res = new LVZipDecodeStream( srcStream, pos,
                 packSize, unpSize, hdr.getCRC() );
             res->SetName( name.c_str() );
@@ -2447,7 +2476,7 @@ public:
 class LVZipArc : public LVArcContainerBase
 {
 public:
-    virtual LvStreamRef OpenStream( const wchar_t * fname, lvopen_mode_t /*mode*/ )
+    virtual LVStreamRef OpenStream( const wchar_t * fname, lvopen_mode_t /*mode*/ )
     {
         if ( fname[0]=='/' )
             fname++;
@@ -2456,18 +2485,18 @@ public:
             if ( !lStr_cmp( fname, m_list[i]->GetName() ) ) {
                 if ( m_list[i]->IsContainer() ) {
                     // found directory with same name!!!
-                    return LvStreamRef();
+                    return LVStreamRef();
                 }
                 found_index = i;
                 break;
             }
         }
         if (found_index<0)
-            return LvStreamRef(); // not found
+            return LVStreamRef(); // not found
         // make filename
         lString16 fn = fname;
-        LvStreamRef strm = m_stream; // fix strange arm-linux-g++ bug
-        LvStreamRef stream(
+        LVStreamRef strm = m_stream; // fix strange arm-linux-g++ bug
+        LVStreamRef stream(
 		LVZipDecodeStream::Create(
 			strm,
 			m_list[found_index]->GetSrcPos(),
@@ -2484,8 +2513,9 @@ public:
         }
         return stream;
     }
-    LVZipArc( LvStreamRef stream ) : LVArcContainerBase(stream)
+    LVZipArc( LVStreamRef stream ) : LVArcContainerBase(stream)
     {
+        SetName(stream->GetName());
     }
     virtual ~LVZipArc()
     {
@@ -2666,7 +2696,7 @@ public:
         return sz2;
     }
 
-    static LVArcContainerBase * OpenArchieve( LvStreamRef stream )
+    static LVArcContainerBase * OpenArchieve( LVStreamRef stream )
     {
         // read beginning of file
         const lvsize_t hdrSize = 4;
@@ -2697,29 +2727,29 @@ class LVRarArc : public LVArcContainerBase
 {
 public:
 
-    virtual LvStreamRef OpenStream( const wchar_t * fname, lvopen_mode_t mode )
+    virtual LVStreamRef OpenStream( const wchar_t * fname, lvopen_mode_t mode )
     {
         int found_index = -1;
         for (int i=0; i<m_list.length(); i++) {
             if ( !lStr_cmp( fname, m_list[i]->GetName() ) ) {
                 if ( m_list[i]->IsContainer() ) {
                     // found directory with same name!!!
-                    return LvStreamRef();
+                    return LVStreamRef();
                 }
                 found_index = i;
                 break;
             }
         }
         if (found_index<0)
-            return LvStreamRef(); // not found
+            return LVStreamRef(); // not found
 
         // TODO
-        return LvStreamRef(); // not found
+        return LVStreamRef(); // not found
 /*
         // make filename
         lString16 fn = fname;
-        LvStreamRef strm = m_stream; // fix strange arm-linux-g++ bug
-        LvStreamRef stream(
+        LVStreamRef strm = m_stream; // fix strange arm-linux-g++ bug
+        LVStreamRef stream(
 		LVZipDecodeStream::Create(
 			strm,
 			m_list[found_index]->GetSrcPos(), fn ) );
@@ -2730,7 +2760,7 @@ public:
         return stream;
 */
     }
-    LVRarArc( LvStreamRef stream ) : LVArcContainerBase(stream)
+    LVRarArc( LVStreamRef stream ) : LVArcContainerBase(stream)
     {
     }
     virtual ~LVRarArc()
@@ -2756,7 +2786,7 @@ public:
         return m_list.length();
     }
 
-    static LVArcContainerBase * OpenArchieve( LvStreamRef stream )
+    static LVArcContainerBase * OpenArchieve( LVStreamRef stream )
     {
         // read beginning of file
         const lvsize_t hdrSize = 4;
@@ -2955,7 +2985,7 @@ public:
 		return LVERR_OK;
 	}
     /// Creates memory stream as copy of another stream.
-	lverror_t CreateCopy( LvStreamRef srcStream, lvopen_mode_t mode )
+	lverror_t CreateCopy( LVStreamRef srcStream, lvopen_mode_t mode )
 	{
 		Close();
         if ( mode!=LVOM_READ || srcStream.isNull() )
@@ -3032,7 +3062,7 @@ public:
 };
 
 #if (USE_ZLIB==1)
-LVContainerRef LVOpenArchieve( LvStreamRef stream )
+LVContainerRef LVOpenArchieve( LVStreamRef stream )
 {
     LVContainerRef ref;
     if (stream.isNull())
@@ -3055,20 +3085,20 @@ LVContainerRef LVOpenArchieve( LvStreamRef stream )
 #endif
 
 /// Creates memory stream as copy of string contents
-LvStreamRef LVCreateStringStream( lString8 data )
+LVStreamRef LVCreateStringStream( lString8 data )
 {
     LVMemoryStream * stream = new LVMemoryStream();
     stream->CreateCopy( (const lUInt8*)data.c_str(), data.length(), LVOM_READ );
-    return LvStreamRef( stream );
+    return LVStreamRef( stream );
 }
 
 /// Creates memory stream as copy of string contents
-LvStreamRef LVCreateStringStream( lString16 data )
+LVStreamRef LVCreateStringStream( lString16 data )
 {
     return LVCreateStringStream( UnicodeToUtf8( data ) );
 }
 
-LvStreamRef LVCreateMemoryStream( void * buf, int bufSize, bool createCopy, lvopen_mode_t mode )
+LVStreamRef LVCreateMemoryStream( void * buf, int bufSize, bool createCopy, lvopen_mode_t mode )
 {
     LVMemoryStream * stream = new LVMemoryStream();
     if ( !buf )
@@ -3077,36 +3107,36 @@ LvStreamRef LVCreateMemoryStream( void * buf, int bufSize, bool createCopy, lvop
         stream->CreateCopy( (lUInt8*)buf, bufSize, mode );
     else
         stream->Open( (lUInt8*)buf, bufSize );
-    return LvStreamRef( stream );
+    return LVStreamRef( stream );
 }
 
-LvStreamRef LVCreateMemoryStream(LvStreamRef srcStream)
+LVStreamRef LVCreateMemoryStream(LVStreamRef srcStream)
 {
     LVMemoryStream * stream = new LVMemoryStream();
     if (stream->CreateCopy(srcStream, LVOM_READ)==LVERR_OK)
-        return LvStreamRef(stream);
+        return LVStreamRef(stream);
     else
         delete stream;
-    return LvStreamRef();
+    return LVStreamRef();
 }
 
 /// Creates memory stream as copy of file contents.
-LvStreamRef LVCreateMemoryStream( lString16 filename )
+LVStreamRef LVCreateMemoryStream( lString16 filename )
 {
-    LvStreamRef fs = LVOpenFileStream( filename.c_str(), LVOM_READ );
+    LVStreamRef fs = LVOpenFileStream( filename.c_str(), LVOM_READ );
     if ( fs.isNull() )
         return fs;
     return LVCreateMemoryStream( fs );
 }
 
-LvStreamRef LVCreateBufferedStream( LvStreamRef stream, int bufSize )
+LVStreamRef LVCreateBufferedStream( LVStreamRef stream, int bufSize )
 {
     if ( stream.isNull() || bufSize < 512 )
         return stream;
-    return LvStreamRef( new LVCachedStream( stream, bufSize ) );
+    return LVStreamRef( new LVCachedStream( stream, bufSize ) );
 }
 
-lvsize_t LVPumpStream( LvStreamRef out, LvStreamRef in )
+lvsize_t LVPumpStream( LVStreamRef out, LVStreamRef in )
 {
     return LVPumpStream( out.get(), in.get() );
 }
@@ -3135,352 +3165,45 @@ lvsize_t LVPumpStream( LVStream * out, LVStream * in )
     return totalBytesRead;
 }
 
+bool LVDirectoryIsEmpty(const lString8& path) {
+    return LVDirectoryIsEmpty(Utf8ToUnicode(path));
+}
 
-LVContainerRef LVOpenDirectory(const wchar_t * path, const wchar_t * mask)
+bool LVDirectoryIsEmpty(const lString16& path) {
+    LVContainerRef dir = LVOpenDirectory(path);
+    if (dir.isNull())
+        return false;
+    return dir->GetObjectCount() == 0;
+}
+
+LVContainerRef LVOpenDirectory(const lString16& path, const wchar_t * mask) {
+	return LVOpenDirectory(path.c_str(), mask);
+}
+
+LVContainerRef LVOpenDirectory(const lString8& path, const wchar_t * mask) {
+	return LVOpenDirectory(Utf8ToUnicode(path).c_str(), mask);
+}
+
+LVContainerRef LVOpenDirectory( const wchar_t * path, const wchar_t * mask )
 {
+	lString16 pathname(path);
+    if (pathname.length() > 1 && pathname[0] == ASSET_PATH_PREFIX) {
+    	if (!_assetContainerFactory)
+    		return LVContainerRef();
+    	lString16 assetPath = LVExtractAssetPath(pathname);
+    	return _assetContainerFactory->openAssetContainer(assetPath);
+    }
     LVContainerRef dir(LVDirectoryContainer::OpenDirectory(path, mask));
     return dir;
 }
 
-/// Stream base class
-class LVTCRStream : public LVNamedStream {
-    class TCRCode {
-    public:
-        int len;
-        char* str;
-        TCRCode()
-            : len(0), str(NULL)
-        {
-        }
-        void set( const char * s, int sz )
-        {
-            if (sz > 0) {
-                str = (char *)malloc( sz + 1 );
-                memcpy( str, s, sz );
-                str[sz] = 0;
-                len = sz;
-            }
-        }
-        ~TCRCode()
-        {
-            if (str)
-                free(str);
-        }
-    };
-
-    LvStreamRef _stream;
-    TCRCode _codes[256];
-    lvpos_t _packedStart;
-    lvsize_t _packedSize;
-    lvsize_t _unpSize;
-    lUInt32 * _index;
-    lUInt8 * _decoded;
-    int _decodedSize;
-    int _decodedLen;
-    unsigned _partIndex;
-    lvpos_t _decodedStart;
-    int _indexSize;
-    lvpos_t _pos;
-    //int _indexPos;
-    #define TCR_READ_BUF_SIZE 4096
-    lUInt8 _readbuf[TCR_READ_BUF_SIZE];
-
-    LVTCRStream(LvStreamRef stream)
-    		: _stream(stream),
-    		  _packedStart(0),
-    		  _packedSize(0),
-    		  _unpSize(0),
-    		  _index(NULL),
-    		  _decoded(NULL),
-    		  _decodedSize(0),
-    		  _decodedLen(0),
-    		  _partIndex((unsigned)-1),
-    		  _decodedStart(0),
-    		  _indexSize(0),
-    		  _pos(0) {}
-
-    bool decodePart(unsigned index)
-    {
-        if ( _partIndex==index )
-            return true;
-        lvsize_t bytesRead;
-        int bytesToRead = TCR_READ_BUF_SIZE;
-        if ( (index+1)*TCR_READ_BUF_SIZE > _packedSize )
-            bytesToRead = TCR_READ_BUF_SIZE - ((index+1)*TCR_READ_BUF_SIZE - _packedSize);
-        if ( bytesToRead<=0 || bytesToRead>TCR_READ_BUF_SIZE )
-            return false;
-        if ( _stream->SetPos(_packedStart + index * TCR_READ_BUF_SIZE)==(lvpos_t)(~0) )
-            return false;
-        if ( _stream->Read( _readbuf, bytesToRead, &bytesRead )!=LVERR_OK )
-            return false;
-        if ( bytesToRead!=(int)bytesRead )
-            return false;
-        //TODO
-        if ( !_decoded ) {
-            _decodedSize = TCR_READ_BUF_SIZE * 2;
-            _decoded = (lUInt8 *)malloc( _decodedSize );
-        }
-        _decodedLen = 0;
-        for ( unsigned i=0; i<bytesRead; i++ ) {
-            TCRCode * item = &_codes[_readbuf[i]];
-            for ( int j=0; j<item->len; j++ )
-                _decoded[_decodedLen++] = item->str[j];
-            if ( _decodedLen >= _decodedSize - 256 ) {
-                _decodedSize += TCR_READ_BUF_SIZE / 2;
-                _decoded = cr_realloc( _decoded, _decodedSize );
-            }
-        }
-        _decodedStart = _index[index];
-        _partIndex = index;
-        return true;
-    }
-public:
-    ~LVTCRStream()
-    {
-        if ( _index )
-            free(_index);
-    }
-    bool init()
-    {
-        lUInt8 sz;
-        char buf[256];
-        lvsize_t bytesRead;
-        for ( int i=0; i<256; i++ ) {
-            if ( _stream->Read( &sz, 1, &bytesRead )!=LVERR_OK || bytesRead!=1 )
-                return false;
-            if ( sz==0 && i!=0 )
-                return false; // only first entry may be 0
-            if ( sz && (_stream->Read( buf, sz, &bytesRead )!=LVERR_OK || bytesRead!=sz) )
-                return false;
-            _codes[i].set( buf, sz );
-        }
-        _packedStart = _stream->GetPos();
-        if ( _packedStart==(lvpos_t)(~0) )
-            return false;
-        _packedSize = _stream->GetSize() - _packedStart;
-        if ( _packedSize<10 || _packedSize>0x8000000 )
-            return false;
-        _indexSize = (_packedSize + TCR_READ_BUF_SIZE - 1) / TCR_READ_BUF_SIZE;
-        _index = (lUInt32*)malloc( sizeof(lUInt32) * (_indexSize + 1) );
-        lvpos_t pos = 0;
-        lvsize_t size = 0;
-        for (;;) {
-            bytesRead = 0;
-            int res = _stream->Read( _readbuf, TCR_READ_BUF_SIZE, &bytesRead );
-            if ( res!=LVERR_OK && res!=LVERR_EOF )
-                return false;
-            if ( bytesRead>0 ) {
-                for ( unsigned i=0; i<bytesRead; i++ ) {
-                    int sz = _codes[_readbuf[i]].len;
-                    if ( (pos & (TCR_READ_BUF_SIZE-1)) == 0 ) {
-                        // add pos index
-                        int index = pos / TCR_READ_BUF_SIZE;
-                        _index[index] = size;
-                    }
-                    size += sz;
-                    pos ++;
-                }
-            }
-            if ( res==LVERR_EOF || bytesRead==0 ) {
-                if ( _packedStart + pos != _stream->GetSize() )
-                    return false;
-                break;
-            }
-        }
-        _index[ _indexSize ] = size;
-        _unpSize = size;
-        return decodePart( 0 );
-    }
-
-    static LvStreamRef create(LvStreamRef stream, int mode)
-    {
-        LvStreamRef res;
-        if (stream.isNull() || mode != LVOM_READ)
-            return res;
-        static const char* signature = "!!8-Bit!!";
-
-        if (stream->SetPos(0) != 0)
-            return res;
-        char buf[9];
-        lvsize_t bytes_read = 0;
-        if (stream->Read(buf, 9, &bytes_read) != LVERR_OK || bytes_read != 9)
-            return res;
-        if (memcmp(signature, buf, 9) != 0)
-            return res;
-        LVTCRStream * decoder = new LVTCRStream(stream);
-        if (!decoder->init() ) {
-            delete decoder;
-            return res;
-        }
-        return LvStreamRef(decoder);
-    }
-
-    /// Get stream open mode
-    /** \return lvopen_mode_t open mode */
-    virtual lvopen_mode_t GetMode()
-    {
-        return LVOM_READ;
-    }
-
-    /// Seek (change file pos)
-    /**
-        \param offset is file offset (bytes) relateve to origin
-        \param origin is offset base
-        \param pNewPos points to place to store new file position
-        \return lverror_t status: LVERR_OK if success
-    */
-    virtual lverror_t Seek( lvoffset_t offset, lvseek_origin_t origin, lvpos_t * pNewPos )
-    {
-        lvpos_t npos = 0;
-        lvpos_t currpos = _pos;
-        switch (origin) {
-        case LVSEEK_SET:
-            npos = offset;
-            break;
-        case LVSEEK_CUR:
-            npos = currpos + offset;
-            break;
-        case LVSEEK_END:
-            npos = _unpSize + offset;
-            break;
-        }
-        if (npos >= _unpSize)
-            return LVERR_FAIL;
-        _pos = npos;
-        if ( _pos < _decodedStart || _pos >= _decodedStart + _decodedLen ) {
-            // load another part
-            int a = 0;
-            int b = _indexSize;
-            int c;
-            for (;;) {
-                c = (a + b) / 2;
-                if ( a >= b-1 )
-                    break;
-                if ( _index[c] > _pos )
-                    b = c;
-                else if ( _index[c+1] <= _pos )
-                    a = c + 1;
-                else
-                    break;
-            }
-            if ( _index[c]>_pos || _index[c+1]<=_pos )
-                return LVERR_FAIL; // wrong algorithm?
-            if ( !decodePart( c ) )
-                return LVERR_FAIL;
-        }
-        if (pNewPos)
-        {
-            *pNewPos =  _pos;
-        }
-        return LVERR_OK;
-    }
-
-
-    /// Get file position
-    /**
-        \return lvpos_t file position
-    */
-    virtual lvpos_t   GetPos()
-    {
-        return _pos;
-    }
-
-    /// Get file size
-    /**
-        \return lvsize_t file size
-    */
-    virtual lvsize_t  GetSize()
-    {
-        return _unpSize;
-    }
-
-    virtual lverror_t GetSize( lvsize_t * pSize )
-    {
-        *pSize = _unpSize;
-        return LVERR_OK;
-    }
-
-    /// Set file size
-    /**
-        \param size is new file size
-        \return lverror_t status: LVERR_OK if success
-    */
-    virtual lverror_t SetSize( lvsize_t )
-    {
-        return LVERR_FAIL;
-    }
-
-    /// Read
-    /**
-        \param buf is buffer to place bytes read from stream
-        \param count is number of bytes to read from stream
-        \param nBytesRead is place to store real number of bytes read from stream
-        \return lverror_t status: LVERR_OK if success
-    */
-    virtual lverror_t Read( void * buf, lvsize_t count, lvsize_t * nBytesRead )
-    {
-        // TODO
-        if ( nBytesRead )
-            *nBytesRead = 0;
-        lUInt8 * dst = (lUInt8*) buf;
-        while (count) {
-            int bytesLeft = _decodedLen - (int)(_pos - _decodedStart);
-            if ( bytesLeft<=0 || bytesLeft>_decodedLen ) {
-                SetPos(_pos);
-                bytesLeft = _decodedLen - (int)(_pos - _decodedStart);
-                if ( bytesLeft==0 && _pos==_decodedStart+_decodedLen) {
-                    return *nBytesRead ? LVERR_OK : LVERR_EOF;
-                }
-                if ( bytesLeft<=0 || bytesLeft>_decodedLen )
-                    return LVERR_FAIL;
-            }
-            lUInt8 * src = _decoded + (_pos - _decodedStart);
-            unsigned n = count;
-            if ( n > (unsigned)bytesLeft )
-                n = bytesLeft;
-            for (unsigned i=0; i<n; i++) {
-                *dst++ = *src++;
-            }
-            count -= n;
-            bytesLeft -= n;
-            if ( nBytesRead )
-                *nBytesRead += n;
-            _pos += n;
-        }
-        return LVERR_OK;
-    }
-
-    /// Write
-    /**
-        \param buf is data to write to stream
-        \param count is number of bytes to write
-        \param nBytesWritten is place to store real number of bytes written to stream
-        \return lverror_t status: LVERR_OK if success
-    */
-    virtual lverror_t Write( const void *, lvsize_t, lvsize_t *)
-    {
-        return LVERR_FAIL;
-    }
-
-    /// Check whether end of file is reached
-    /**
-        \return true if end of file reached
-    */
-    virtual bool Eof()
-    {
-        //TODO
-        return false;
-    }
-};
-
-/// creates TCR decoder stream for stream
-LvStreamRef LVCreateTCRDecoderStream(LvStreamRef stream)
-{
-    return LVTCRStream::create(stream, LVOM_READ);
+/// returns path part of pathname (appended with / or \ delimiter)
+lString8 LVExtractPath( lString8 pathName, bool appendEmptyPath) {
+    return UnicodeToUtf8(LVExtractPath(Utf8ToUnicode(pathName), appendEmptyPath));
 }
 
 /// returns path part of pathname (appended with / or \ delimiter)
-lString16 LVExtractPath(lString16 pathName, bool appendEmptyPath)
+lString16 LVExtractPath( lString16 pathName, bool appendEmptyPath )
 {
     int last_delim_pos = -1;
     for ( int i=0; i<pathName.length(); i++ )
@@ -3496,7 +3219,12 @@ lString16 LVExtractPath(lString16 pathName, bool appendEmptyPath)
 }
 
 /// returns filename part of pathname
-lString16 LVExtractFilename(lString16 pathName)
+lString8 LVExtractFilename( lString8 pathName ) {
+    return UnicodeToUtf8(LVExtractFilename(Utf8ToUnicode(pathName)));
+}
+
+/// returns filename part of pathname
+lString16 LVExtractFilename( lString16 pathName )
 {
     int last_delim_pos = -1;
     for (int i=0; i<pathName.length(); i++)
@@ -3562,11 +3290,38 @@ lString16 LVExtractFirstPathElement( lString16 & pathName )
 /// appends path delimiter character to end of path, if absent
 void LVAppendPathDelimiter( lString16 & pathName )
 {
-    if ( pathName.empty() )
+    if ( pathName.empty() || (pathName.length() == 1 && pathName[0] == ASSET_PATH_PREFIX))
         return;
     lChar16 delim = LVDetectPathDelimiter( pathName );
     if ( pathName[pathName.length()-1]!=delim )
         pathName << delim;
+}
+
+/// appends path delimiter character to end of path, if absent
+void LVAppendPathDelimiter( lString8 & pathName )
+{
+    if ( pathName.empty() || (pathName.length() == 1 && pathName[0] == ASSET_PATH_PREFIX))
+        return;
+    lChar8 delim = LVDetectPathDelimiter(pathName);
+    if ( pathName[pathName.length()-1]!=delim )
+        pathName << delim;
+}
+
+/// removes path delimiter from end of path, if present
+void LVRemoveLastPathDelimiter( lString16 & pathName ) {
+    if (pathName.empty() || (pathName.length() == 1 && pathName[0] == ASSET_PATH_PREFIX))
+        return;
+    if (pathName.endsWith("/") || pathName.endsWith("\\"))
+        pathName = pathName.substr(0, pathName.length() - 1);
+}
+
+/// removes path delimiter from end of path, if present
+void LVRemoveLastPathDelimiter( lString8 & pathName )
+{
+    if (pathName.empty() || (pathName.length() == 1 && pathName[0] == ASSET_PATH_PREFIX))
+        return;
+    if (pathName.endsWith("/") || pathName.endsWith("\\"))
+        pathName = pathName.substr(0, pathName.length() - 1);
 }
 
 /// replaces any found / or \\ separator with specified one
@@ -3670,6 +3425,18 @@ lChar16 LVDetectPathDelimiter( lString16 pathName )
 #endif
 }
 
+/// returns path delimiter character
+char LVDetectPathDelimiter( lString8 pathName ) {
+    for ( int i=0; i<pathName.length(); i++ )
+        if ( pathName[i]=='/' || pathName[i]=='\\' )
+            return pathName[i];
+#ifdef _LINUX
+        return '/';
+#else
+        return '\\';
+#endif
+}
+
 /// returns full path to file identified by pathName, with base directory == basePath
 lString16 LVMakeRelativeFilename( lString16 basePath, lString16 pathName )
 {
@@ -3681,9 +3448,9 @@ lString16 LVMakeRelativeFilename( lString16 basePath, lString16 pathName )
     lString16 dstpath = LVExtractPath( pathName );
     while ( !dstpath.empty() ) {
         lString16 element = LVExtractFirstPathElement( dstpath );
-        if (element == ".")
-            ;
-        else if (element == "..")
+        if (element == ".") {
+            // do nothing
+        } else if (element == "..")
             LVExtractLastPathElement( path );
         else
             path << element << delim;
@@ -3697,18 +3464,39 @@ lString16 LVMakeRelativeFilename( lString16 basePath, lString16 pathName )
 void LVRemovePathDelimiter( lString16 & pathName )
 {
     int len = pathName.length();
-    if ( len>0 ) {
+    if ( len>0 && pathName != "/" && pathName != "\\" && !pathName.endsWith(":\\") && !pathName.endsWith("\\\\")) {
         if ( pathName.lastChar() == '/' || pathName.lastChar() == '\\' )
             pathName.erase( pathName.length()-1, 1 );
     }
 }
 
+/// removes path delimiter character from end of path, if exists
+void LVRemovePathDelimiter( lString8 & pathName )
+{
+    int len = pathName.length();
+    if ( len>0 && pathName != "/" && pathName != "\\" && !pathName.endsWith(":\\") && !pathName.endsWith("\\\\")) {
+        if ( pathName.lastChar() == '/' || pathName.lastChar() == '\\' )
+            pathName.erase( pathName.length()-1, 1 );
+    }
+}
+
+/// returns true if specified file exists
+bool LVFileExists( const lString8 & pathName ) {
+    return LVFileExists(Utf8ToUnicode(pathName));
+}
 
 /// returns true if specified file exists
 bool LVFileExists( const lString16 & pathName )
 {
+    lString16 fn(pathName);
+    if (fn.length() > 1 && fn[0] == ASSET_PATH_PREFIX) {
+    	if (!_assetContainerFactory)
+    		return false;
+    	lString16 assetPath = LVExtractAssetPath(fn);
+    	return !_assetContainerFactory->openAssetStream(assetPath).isNull();
+    }
 #ifdef _WIN32
-	LvStreamRef stream = LVOpenFileStream( pathName.c_str(), LVOM_READ );
+	LVStreamRef stream = LVOpenFileStream( pathName.c_str(), LVOM_READ );
 	return !stream.isNull();
 #else
     FILE * f = fopen(UnicodeToUtf8(pathName).c_str(), "rb");
@@ -3720,11 +3508,53 @@ bool LVFileExists( const lString16 & pathName )
 #endif
 }
 
+/// returns true if directory exists and your app can write to directory
+bool LVDirectoryIsWritable(const lString16 & pathName) {
+    lString16 fn = pathName;
+    LVAppendPathDelimiter(fn);
+    fn << ".cr3_directory_write_test";
+    bool res = false;
+    bool created = false;
+    {
+        LVStreamRef stream = LVOpenFileStream(fn.c_str(), LVOM_WRITE);
+        if (!stream.isNull()) {
+            created = true;
+            lvsize_t bytesWritten = 0;
+            if (stream->Write("TEST", 4, &bytesWritten) == LVERR_OK && bytesWritten == 4) {
+                res = true;
+            }
+        }
+    }
+    if (created)
+        LVDeleteFile(fn);
+    return res;
+}
+
 /// returns true if specified directory exists
 bool LVDirectoryExists( const lString16 & pathName )
 {
-	// TODO: optimize
+    lString16 fn(pathName);
+    if (fn.length() > 1 && fn[0] == ASSET_PATH_PREFIX) {
+    	if (!_assetContainerFactory)
+    		return false;
+    	lString16 assetPath = LVExtractAssetPath(fn);
+    	return !_assetContainerFactory->openAssetContainer(assetPath).isNull();
+    }
     LVContainerRef dir = LVOpenDirectory( pathName.c_str() );
+    return !dir.isNull();
+}
+
+/// returns true if specified directory exists
+bool LVDirectoryExists( const lString8 & pathName )
+{
+    lString16 fn(Utf8ToUnicode(pathName));
+    if (fn.length() > 1 && fn[0] == ASSET_PATH_PREFIX) {
+    	if (!_assetContainerFactory)
+    		return false;
+    	lString16 assetPath = LVExtractAssetPath(fn);
+    	return !_assetContainerFactory->openAssetContainer(assetPath).isNull();
+    }
+    LVContainerRef dir = LVOpenDirectory(fn);
     return !dir.isNull();
 }
 
@@ -3735,6 +3565,10 @@ bool LVCreateDirectory( lString16 path )
     //LVRemovePathDelimiter(path);
     if ( path.length() <= 1 )
         return false;
+    if (path[0] == ASSET_PATH_PREFIX) {
+    	// cannot create directory in asset
+    	return false;
+    }
     LVContainerRef dir = LVOpenDirectory( path.c_str() );
     if ( dir.isNull() ) {
         CRLog::trace("Directory %s not found", UnicodeToUtf8(path).c_str());
@@ -3769,19 +3603,19 @@ bool LVCreateDirectory( lString16 path )
         \param minSize is minimum file size for R/W mode
     \return reference to opened stream if success, NULL if error
 */
-LvStreamRef LVMapFileStream( const lChar16 * pathname, lvopen_mode_t mode, lvsize_t minSize )
+LVStreamRef LVMapFileStream( const lChar16 * pathname, lvopen_mode_t mode, lvsize_t minSize )
 {
 #if !defined(_WIN32) && !defined(_LINUX)
         // STUB for systems w/o mmap
     LVFileStream * stream = LVFileStream::CreateFileStream( pathname, mode );
     if ( stream!=NULL )
     {
-        return LvStreamRef( stream );
+        return LVStreamRef( stream );
     }
-    return LvStreamRef();
+    return LVStreamRef();
 #else
         LVFileMappedStream * stream = LVFileMappedStream::CreateFileStream( lString16(pathname), mode, (int)minSize );
-        return LvStreamRef(stream);
+        return LVStreamRef(stream);
 #endif
 }
 
@@ -3797,11 +3631,52 @@ bool LVDeleteFile( lString16 filename )
 #endif
 }
 
+/// rename file
+bool LVRenameFile(lString16 oldname, lString16 newname) {
+    return LVRenameFile(UnicodeToUtf8(oldname), UnicodeToUtf8(newname));
+}
+
+/// rename file
+bool LVRenameFile(lString8 oldname, lString8 newname) {
+#ifdef _WIN32
+    CRLog::trace("Renaming %s to %s", oldname.c_str(), newname.c_str());
+    bool res = MoveFileW(Utf8ToUnicode(oldname).c_str(), Utf8ToUnicode(newname).c_str()) != 0;
+    if (!res) {
+        CRLog::error("Renaming result: %s for renaming of %s to %s", res ? "success" : "failed", oldname.c_str(), newname.c_str());
+        CRLog::error("Last Error: %d", GetLastError());
+    }
+    return res;
+#else
+    return !rename(oldname.c_str(), newname.c_str());
+#endif
+}
+
+/// delete file, return true if file found and successfully deleted
+bool LVDeleteFile( lString8 filename ) {
+    return LVDeleteFile(Utf8ToUnicode(filename));
+}
+
+/// delete directory, return true if directory is found and successfully deleted
+bool LVDeleteDirectory( lString16 filename ) {
+#ifdef _WIN32
+    return RemoveDirectoryW( filename.c_str() ) ? true : false;
+#else
+    if ( unlink( UnicodeToUtf8( filename ).c_str() ) )
+        return false;
+    return true;
+#endif
+}
+
+/// delete directory, return true if directory is found and successfully deleted
+bool LVDeleteDirectory( lString8 filename ) {
+    return LVDeleteDirectory(Utf8ToUnicode(filename));
+}
+
 #define TRACE_BLOCK_WRITE_STREAM 0
 
 class LVBlockWriteStream : public LVNamedStream
 {
-    LvStreamRef _baseStream;
+    LVStreamRef _baseStream;
     int _blockSize;
     int _blockCount;
     lvpos_t _pos;
@@ -4075,7 +3950,7 @@ public:
     virtual lvopen_mode_t GetMode()
             { return _baseStream->GetMode(); }
 
-    LVBlockWriteStream( LvStreamRef baseStream, int blockSize, int blockCount )
+    LVBlockWriteStream( LVStreamRef baseStream, int blockSize, int blockCount )
     : _baseStream( baseStream ), _blockSize( blockSize ), _blockCount( blockCount ), _firstBlock(NULL), _count(0)
     {
         _pos = _baseStream->GetPos();
@@ -4241,11 +4116,11 @@ public:
     }
 };
 
-LvStreamRef LVCreateBlockWriteStream( LvStreamRef baseStream, int blockSize, int blockCount )
+LVStreamRef LVCreateBlockWriteStream( LVStreamRef baseStream, int blockSize, int blockCount )
 {
     if ( baseStream.isNull() || baseStream->GetMode()==LVOM_READ )
         return baseStream;
-    return LvStreamRef( new LVBlockWriteStream(baseStream, blockSize, blockCount) );
+    return LVStreamRef( new LVBlockWriteStream(baseStream, blockSize, blockCount) );
 }
 
 

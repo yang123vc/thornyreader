@@ -21,14 +21,16 @@
 class HyphMethod
 {
 public:
-    virtual bool hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags, lUInt16 hyphCharWidth, lUInt16 maxWidth ) = 0;
+    virtual bool hyphenate(const lChar16* str,
+						   int len,
+                           lUInt16* widths,
+                           lUInt8* flags,
+                           lUInt16 hyphCharWidth,
+                           lUInt16 maxWidth) = 0;
     virtual ~HyphMethod() { }
 };
 
-
-#define WORD_LENGTH   64
-#define MAX_REAL_WORD 24
-
+#define WORD_LENGTH   2048
 
 enum HyphDictType
 {
@@ -45,8 +47,14 @@ class HyphDictionary
 	lString16 _id;
 	lString16 _filename;
 public:
-	HyphDictionary( HyphDictType type, lString16 title, lString16 id, lString16 filename )
-		: _type(type), _title(title), _id( id ), _filename( filename ) { }
+	HyphDictionary(HyphDictType type,
+                   lString16 title,
+                   lString16 id,
+                   lString16 filename)
+		: _type(type),
+          _title(title),
+          _id(id),
+          _filename(filename) { }
 	HyphDictType getType() { return _type; }
 	lString16 getTitle() { return _title; }
 	lString16 getId() { return _id; }
@@ -60,14 +68,15 @@ public:
 #define HYPH_DICT_ID_ALGORITHM L"@algorithm"
 #define HYPH_DICT_ID_DICTIONARY L"@dictionary"
 
-
 class HyphDictionaryList
 {
 	LVPtrVector<HyphDictionary> _list;
 public:
     void add(HyphDictionary * dict) { _list.add(dict); }
 	int length() { return _list.length(); }
-	HyphDictionary * get( int index ) { return (index>=0 && index<+_list.length()) ? _list[index] : NULL; }
+	HyphDictionary* get(int index) {
+        return (index>=0 && index<+_list.length()) ? _list[index] : NULL;
+    }
 	HyphDictionaryList();
 	HyphDictionary * find(lString16 id);
 	bool activate(lString16 id);
@@ -76,7 +85,6 @@ public:
 class HyphDictionary;
 class HyphDictionaryList;
 
-/// hyphenation manager
 class HyphMan
 {
 	friend class HyphDictionary;
@@ -85,18 +93,23 @@ class HyphMan
 	static HyphDictionaryList * _dictList;
 public:
 	static void uninit();
-    static bool activateDictionaryFromStream( LvStreamRef stream );
+    static bool activateDictionaryFromStream( LVStreamRef stream );
 	static HyphDictionaryList * getDictList() { return _dictList; }
     static bool activateDictionary( lString16 id ) { return _dictList->activate(id); }
-    static bool initDictionaries();
+    static bool init();
 	static HyphDictionary * getSelectedDictionary() { return _selectedDictionary; }
 
     HyphMan();
     ~HyphMan();
 
-    inline static bool hyphenate( const lChar16 * str, int len, lUInt16 * widths, lUInt8 * flags, lUInt16 hyphCharWidth, lUInt16 maxWidth )
+    inline static bool hyphenate(const lChar16* str,
+                                 int len,
+                                 lUInt16* widths,
+                                 lUInt8* flags,
+                                 lUInt16 hyphCharWidth,
+                                 lUInt16 maxWidth)
     {
-        return _method->hyphenate( str, len, widths, flags, hyphCharWidth, maxWidth );
+        return _method->hyphenate(str, len, widths, flags, hyphCharWidth, maxWidth);
     }
 };
 

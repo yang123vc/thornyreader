@@ -62,10 +62,6 @@ public:
     {
         setString( propName, lString8( value ) );
     }
-    /// do validation and corrections
-    virtual void limitValueList( const char * propName, const char * values[] );
-    /// do validation and corrections
-    virtual void limitValueList( const char * propName, int values[], int value_count );
 
     /// get int property by name, returns false if not found
     virtual bool getInt( const char * propName, int &result ) const;
@@ -75,6 +71,7 @@ public:
     virtual void setInt( const char * propName, int value );
     /// set int property by name, if it's not set already
     virtual void setIntDef( const char * propName, int value );
+
     /// set int property as hex
     virtual void setHex( const char * propName, int value );
     /// set int property as hex, if not exist
@@ -91,13 +88,7 @@ public:
     /// set bool property by name
     virtual void setBool( const char * propName, bool value );
 
-    /// get lInt64 property by name, returns false if not found
-    virtual bool getInt64( const char * propName, lInt64 &result ) const;
-    /// get lInt64 property by name, returns default value if not found
-    virtual lInt64 getInt64Def( const char * propName, lInt64 defValue=0 ) const;
-    /// set lInt64 property by name
-    virtual void setInt64( const char * propName, lInt64 value );
-
+    static bool parseColor(lString16 value, lUInt32 & result);
     /// get argb color (#xxxxxx) property by name, returns false if not found
     virtual bool getColor( const char * propName, lUInt32 &result ) const;
     /// get argb color (#xxxxxx) property by name, returns default value if not found
@@ -107,37 +98,10 @@ public:
     /// set argb color (#xxxxxx) property by name
     virtual void setColor( const char * propName, lUInt32 value );
 
-    /// get rect property by name, returns false if not found
-    virtual bool getRect( const char * propName, lvRect &result ) const;
-    /// get rect property by name, returns default value if not found
-    virtual lvRect getRectDef( const char * propName, const lvRect & defValue ) const;
-    /// set rect property by name
-    virtual void setRect( const char * propName, const lvRect & value );
-
-    /// get point property by name, returns false if not found
-    virtual bool getPoint( const char * propName, lvPoint &result ) const;
-    /// get point property by name, returns default value if not found
-    virtual lvPoint getPointDef( const char * propName, const lvPoint & defValue ) const;
-    /// set point property by name
-    virtual void setPoint( const char * propName, const lvPoint & value );
-
-
-    /// get subpath container (only items with names started with path)
-    virtual CRPropRef getSubProps( const char * path ) = 0;
-    /// get copy of property list
-    virtual CRPropRef clone() const = 0;
     /// set contents from specified properties
     virtual void set( const CRPropRef & v );
-    /// read from stream
-    virtual bool loadFromStream( LVStream * stream );
-    /// save to stream
-    virtual bool saveToStream( LVStream * stream );
     /// virtual destructor
     virtual ~CRPropAccessor();
-    /// serialize to byte buffer
-    virtual void serialize( SerialBuf & buf );
-    /// deserialize from byte buffer
-    virtual bool deserialize( SerialBuf & buf );
 };
 
 
@@ -159,6 +123,5 @@ inline CRPropRef LVClonePropsContainer( CRPropRef props )
     result->set( props );
     return result;
 }
-
 
 #endif //PROPS_H_INCLUDED

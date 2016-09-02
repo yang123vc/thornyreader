@@ -34,7 +34,7 @@ public:
     }
 };
 
-bool DetectEpubFormat(LvStreamRef stream) {
+bool DetectEpubFormat(LVStreamRef stream) {
     LVContainerRef m_arc = LVOpenArchieve(stream);
     if (m_arc.isNull()) {
     	//Not a ZIP archive
@@ -43,7 +43,7 @@ bool DetectEpubFormat(LvStreamRef stream) {
     //Read "mimetype" file contents from root of archive
     lString16 mimeType;
     {
-        LvStreamRef mtStream = m_arc->OpenStream(L"mimetype", LVOM_READ );
+        LVStreamRef mtStream = m_arc->OpenStream(L"mimetype", LVOM_READ );
         if ( !mtStream.isNull() ) {
             int size = mtStream->GetSize();
             if ( size>4 && size<100 ) {
@@ -109,7 +109,7 @@ lString16 EpubGetRootFilePath(LVContainerRef m_arc)
     lString16 rootfileMediaType;
     // read container.xml
     {
-        LvStreamRef container_stream = m_arc->OpenStream(L"META-INF/container.xml", LVOM_READ);
+        LVStreamRef container_stream = m_arc->OpenStream(L"META-INF/container.xml", LVOM_READ);
         if ( !container_stream.isNull() ) {
             CrDom * doc = LVParseXMLStream( container_stream );
             if ( doc ) {
@@ -132,7 +132,7 @@ lString16 EpubGetRootFilePath(LVContainerRef m_arc)
 class FontDemanglingStream : public StreamProxy {
     LVArray<lUInt8> & _key;
 public:
-    FontDemanglingStream(LvStreamRef baseStream, LVArray<lUInt8> & key) : StreamProxy(baseStream), _key(key) {
+    FontDemanglingStream(LVStreamRef baseStream, LVArray<lUInt8> & key) : StreamProxy(baseStream), _key(key) {
     }
 
     virtual lverror_t Read( void * buf, lvsize_t count, lvsize_t * nBytesRead ) {
@@ -166,6 +166,7 @@ class EncCallback : public LvXMLParserCallback {
 public:
     /// called on opening tag <
     virtual ldomNode * OnTagOpen( const lChar16 * nsname, const lChar16 * tagname) {
+        CR_UNUSED(nsname);
         if (!lStr_cmp(tagname, "encryption"))
             insideEncryption = true;
         else if (!lStr_cmp(tagname, "EncryptedData"))
@@ -180,6 +181,7 @@ public:
     }
     /// called on tag close
     virtual void OnTagClose( const lChar16 * nsname, const lChar16 * tagname ) {
+        CR_UNUSED(nsname);
         if (!lStr_cmp(tagname, "encryption"))
             insideEncryption = false;
         else if (!lStr_cmp(tagname, "EncryptedData") && insideEncryptedData) {
@@ -196,6 +198,7 @@ public:
     }
     /// called on element attribute
     virtual void OnAttribute( const lChar16 * nsname, const lChar16 * attrname, const lChar16 * attrvalue ) {
+        CR_UNUSED2(nsname, attrvalue);
         if (!lStr_cmp(attrname, "URI") && insideCipherReference)
             insideEncryption = false;
         else if (!lStr_cmp(attrname, "Algorithm") && insideEncryptionMethod)
@@ -203,10 +206,13 @@ public:
     }
     /// called on text
     virtual void OnText( const lChar16 * text, int len, lUInt32 flags ) {
-
+        CR_UNUSED3(text,len,flags);
     }
     /// add named BLOB data to document
-    virtual bool OnBlob(lString16 name, const lUInt8 * data, int size) { return false; }
+    virtual bool OnBlob(lString16 name, const lUInt8 * data, int size) {
+        CR_UNUSED3(name,data,size);
+        return false;
+    }
 
     virtual void OnStop() { }
     /// called after > of opening tag (when entering tag body)
@@ -241,13 +247,13 @@ int EncryptedDataContainer::GetObjectCount() const { return _container->GetObjec
 /// returns object size (file size or directory entry count)
 lverror_t EncryptedDataContainer::GetSize( lvsize_t * pSize ) { return _container->GetSize(pSize); }
 
-LvStreamRef EncryptedDataContainer::OpenStream(const lChar16 * fname, lvopen_mode_t mode)
+LVStreamRef EncryptedDataContainer::OpenStream(const lChar16 * fname, lvopen_mode_t mode)
 {
-	LvStreamRef res = _container->OpenStream(fname, mode);
+	LVStreamRef res = _container->OpenStream(fname, mode);
 	if (res.isNull())
 		return res;
 	if (isEncryptedItem(fname))
-		return LvStreamRef(new FontDemanglingStream(res, _fontManglingKey));
+		return LVStreamRef(new FontDemanglingStream(res, _fontManglingKey));
 	return res;
 }
 
@@ -324,7 +330,7 @@ bool EncryptedDataContainer::hasUnsupportedEncryption()
 
 bool EncryptedDataContainer::open()
 {
-	LvStreamRef stream = _container->OpenStream(L"META-INF/encryption.xml", LVOM_READ);
+	LVStreamRef stream = _container->OpenStream(L"META-INF/encryption.xml", LVOM_READ);
 	if (stream.isNull())
 		return false;
 	EncCallback enccallback(this);
@@ -380,6 +386,7 @@ class EmbeddedFontStyleParser {
     bool _italic;
     bool _bold;
     lString16 _url;
+    lString8 islocal;
 public:
     EmbeddedFontStyleParser(LVEmbeddedFontList & fontList) : _fontList(fontList) { }
     void onToken(char token) {
@@ -422,10 +429,23 @@ public:
                 if (!_url.empty()) {
 //                    CRLog::trace("@font { face: %s; bold: %s; italic: %s; url: %s", _face.c_str(), _bold ? "yes" : "no",
 //                                 _italic ? "yes" : "no", LCSTR(_url));
+                    if (islocal.length() == 5) {
+                        _url = (_url.substr((_basePath.length()+1),(_url.length()-_basePath.length())));
+                    }
                     _fontList.add(_url, _face, _bold, _italic);
                 }
             }
             _state = 0;
+            break;
+		case ',':
+            if (_state == 2) {
+                if (!_url.empty())
+                {
+                    if (islocal.length()==5) _url=(_url.substr((_basePath.length()+1),(_url.length()-_basePath.length())));
+                    _fontList.add(_url, _face, _bold, _italic);
+                }
+                _state = 11;
+            }
             break;
         case '(':
             if (_state == 12) {
@@ -472,7 +492,15 @@ public:
             _state = 2;
         } else if (_state == 11) {
             if (t == "url")
+            {
                 _state = 12;
+                islocal=t;
+            }
+            else if (t=="local")
+            {
+                _state=12;
+                islocal=t;
+            }
             else
                 _state = 2;
         }
@@ -481,7 +509,11 @@ public:
         //CRLog::trace("state==%d: \"%s\"", _state, token.c_str());
         if (_state == 11 || _state == 13) {
             if (!token.empty()) {
-                _url = LVCombinePaths(_basePath, Utf8ToUnicode(token));
+                lString16 ltoken = Utf8ToUnicode(token);
+                if (ltoken.startsWithNoCase(lString16("res://")) || ltoken.startsWithNoCase(lString16("file://")) )
+                    _url = ltoken;
+                else
+                    _url = LVCombinePaths(_basePath, ltoken);
             }
             _state = 2;
         } else if (_state == 5) {
@@ -518,7 +550,7 @@ public:
                 onToken(token);
             } else if (ch == '@' || ch=='-' || ch=='_' || ch=='.' || (ch>='a' && ch <='z') || (ch>='A' && ch <='Z') || (ch>='0' && ch <='9')) {
                 token << ch;
-            } else if (ch == ':' || ch=='{' || ch == '}' || ch=='(' || ch == ')' || ch == ';') {
+            } else if (ch == ':' || ch=='{' || ch == '}' || ch=='(' || ch == ')' || ch == ';' || ch == ',') {
                 onToken(token);
                 onToken(ch);
             } else if (ch == '\'' || ch == '\"') {
@@ -529,7 +561,7 @@ public:
     }
 };
 
-bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
+bool ImportEpubDocument(LVStreamRef stream, CrDom* m_doc)
 {
     LVContainerRef arc = LVOpenArchieve( stream );
     if (arc.isNull())
@@ -553,7 +585,7 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
         return true;
     }
 
-    m_doc->setContainer(m_arc);
+    m_doc->setDocParentContainer(m_arc);
 
     // read content.opf
     EpubItems epubItems;
@@ -566,7 +598,7 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
         CRLog::trace("codeBase=%s", LCSTR(codeBase));
     }
 
-    LvStreamRef content_stream = m_arc->OpenStream(rootfilePath.c_str(), LVOM_READ);
+    LVStreamRef content_stream = m_arc->OpenStream(rootfilePath.c_str(), LVOM_READ);
     if ( content_stream.isNull() )
         return false;
 
@@ -585,22 +617,18 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
 
 //        // for debug
 //        {
-//            LvStreamRef out = LVOpenFileStream("/tmp/content.xml", LVOM_WRITE);
+//            LVStreamRef out = LVOpenFileStream("/tmp/content.xml", LVOM_WRITE);
 //            doc->saveToStream(out, NULL, true);
 //        }
 
         CRPropRef m_doc_props = m_doc->getProps();
-        lString16 author = doc->textFromXPath( cs16("package/metadata/creator"));
-        lString16 title = doc->textFromXPath( cs16("package/metadata/title"));
-        lString16 language = doc->textFromXPath( cs16("package/metadata/language"));
-        m_doc_props->setString(DOC_PROP_TITLE, title);
-        m_doc_props->setString(DOC_PROP_LANGUAGE, language);
-        m_doc_props->setString(DOC_PROP_AUTHORS, author );
 
-        for ( int i=1; i<50; i++ ) {
-            ldomNode * item = doc->nodeFromXPath(lString16("package/metadata/identifier[") << fmt::decimal(i) << "]");
-            if (!item)
+        for (int i=1; i < 50; i++) {
+            ldomNode * item = doc->nodeFromXPath(
+                    lString16("package/metadata/identifier[") << fmt::decimal(i) << "]");
+            if (!item) {
                 break;
+            }
             lString16 key = item->getText();
             if (decryptor->setManglingKey(key)) {
                 CRLog::debug("Using font mangling key %s", LCSTR(key));
@@ -609,24 +637,29 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
         }
 
         for ( int i=1; i<20; i++ ) {
-            ldomNode * item = doc->nodeFromXPath(lString16("package/metadata/meta[") << fmt::decimal(i) << "]");
-            if ( !item )
+            ldomNode * item = doc->nodeFromXPath(
+                    lString16("package/metadata/meta[") << fmt::decimal(i) << "]");
+            if (!item) {
                 break;
+            }
             lString16 name = item->getAttributeValue("name");
             lString16 content = item->getAttributeValue("content");
-            if (name == "cover")
+            if (name == "cover") {
                 coverId = content;
-            else if (name == "calibre:series")
-                m_doc_props->setString(DOC_PROP_SERIES_NAME, content );
-            else if (name == "calibre:series_index")
-                m_doc_props->setInt(DOC_PROP_SERIES_NUMBER, content.atoi() );
+            } else if (name == "calibre:series") {
+                // Nothing to do
+            } else if (name == "calibre:series_index") {
+                // Nothing to do
+            }
         }
 
         // items
-        for ( int i=1; i<50000; i++ ) {
-            ldomNode * item = doc->nodeFromXPath(lString16("package/manifest/item[") << fmt::decimal(i) << "]");
-            if ( !item )
+        for (int i = 1; i < 50000; i++) {
+            ldomNode * item = doc->nodeFromXPath(
+                    lString16("package/manifest/item[") << fmt::decimal(i) << "]");
+            if (!item) {
                 break;
+            }
             lString16 href = item->getAttributeValue("href");
             lString16 mediaType = item->getAttributeValue("media-type");
             lString16 id = item->getAttributeValue("id");
@@ -636,7 +669,7 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
                     // coverpage file
                     lString16 coverFileName = codeBase + href;
                     CRLog::trace("EPUB coverpage file: %s", LCSTR(coverFileName));
-                    LvStreamRef stream = m_arc->OpenStream(coverFileName.c_str(), LVOM_READ);
+                    LVStreamRef stream = m_arc->OpenStream(coverFileName.c_str(), LVOM_READ);
                     if ( !stream.isNull() ) {
                         LVImageSourceRef img = LVCreateStreamImageSource(stream);
                         if ( !img.isNull() ) {
@@ -645,12 +678,11 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
                         }
                     }
                 }
-                EpubItem * epubItem = new EpubItem;
+                EpubItem* epubItem = new EpubItem;
                 epubItem->href = href;
                 epubItem->id = id;
                 epubItem->mediaType = mediaType;
-                epubItems.add( epubItem );
-
+                epubItems.add(epubItem);
 //                // register embedded document fonts
 //                if (mediaType == L"application/vnd.ms-opentype"
 //                        || mediaType == L"application/x-font-otf"
@@ -661,7 +693,7 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
             }
             if (mediaType == "text/css") {
                 lString16 name = LVCombinePaths(codeBase, href);
-                LvStreamRef cssStream = m_arc->OpenStream(name.c_str(), LVOM_READ);
+                LVStreamRef cssStream = m_arc->OpenStream(name.c_str(), LVOM_READ);
                 if (!cssStream.isNull()) {
                     lString8 cssFile = UnicodeToUtf8(LVReadTextFile(cssStream));
                     lString16 base = name;
@@ -671,38 +703,38 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
                 }
             }
         }
-
         // spine == itemrefs
         if ( epubItems.length()>0 ) {
             ldomNode * spine = doc->nodeFromXPath( cs16("package/spine") );
             if ( spine ) {
-
                 EpubItem * ncx = epubItems.findById( spine->getAttributeValue("toc") ); //TODO
                 //EpubItem * ncx = epubItems.findById(cs16("ncx"));
-                if ( ncx!=NULL )
+                if (ncx != NULL) {
                     ncxHref = codeBase + ncx->href;
-
+                }
                 for ( int i=1; i<50000; i++ ) {
-                    ldomNode * item = doc->nodeFromXPath(lString16("package/spine/itemref[") << fmt::decimal(i) << "]");
-                    if ( !item )
+                    ldomNode * item = doc->nodeFromXPath(
+                            lString16("package/spine/itemref[") << fmt::decimal(i) << "]");
+                    if (!item) {
                         break;
+                    }
                     EpubItem * epubItem = epubItems.findById( item->getAttributeValue("idref") );
-                    if ( epubItem ) {
+                    if (epubItem) {
                         // TODO: add to document
-                        spineItems.add( epubItem );
+                        spineItems.add(epubItem);
                     }
                 }
             }
         }
         delete doc;
     }
-
-    if ( spineItems.length()==0 )
+    if (spineItems.length() == 0) {
         return false;
+    }
 
     lUInt32 saveFlags = m_doc->getDocFlags();
     m_doc->setDocFlags( saveFlags );
-    m_doc->setContainer( m_arc );
+    m_doc->setDocParentContainer( m_arc );
 
     LvDomWriter writer(m_doc);
 #if 0
@@ -712,7 +744,11 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
 #endif
     //m_doc->setCodeBase( codeBase );
 
-    LvDocFragmentWriter appender(&writer, cs16("body"), cs16("DocFragment"), lString16::empty_str );
+    LvDocFragmentWriter appender(
+            &writer,
+            cs16("body"),
+            cs16("DocFragment"),
+            lString16::empty_str);
     writer.OnStart(NULL);
     writer.OnTagOpenNoAttr(L"", L"body");
     int fragmentCount = 0;
@@ -728,8 +764,8 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
         if (spineItems[i]->mediaType == "application/xhtml+xml") {
             lString16 name = codeBase + spineItems[i]->href;
             {
-                CRLog::debug("Checking fragment: %s", LCSTR(name));
-                LvStreamRef stream = m_arc->OpenStream(name.c_str(), LVOM_READ);
+                //CRLog::debug("Checking fragment: %s", LCSTR(name));
+                LVStreamRef stream = m_arc->OpenStream(name.c_str(), LVOM_READ);
                 if ( !stream.isNull() ) {
                     appender.setCodeBase( name );
                     lString16 base = name;
@@ -744,7 +780,8 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
                         //CRLog::trace("style: %s", headCss.c_str());
                         styleParser.parse(base, headCss);
                     } else {
-                        CRLog::error("Document type is not XML/XHTML for fragment %s", LCSTR(name));
+                        CRLog::error("Document type is not XML/XHTML for fragment %s",
+                                LCSTR(name));
                     }
                 }
             }
@@ -752,7 +789,7 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
     }
 
     if ( !ncxHref.empty() ) {
-        LvStreamRef stream = m_arc->OpenStream(ncxHref.c_str(), LVOM_READ);
+        LVStreamRef stream = m_arc->OpenStream(ncxHref.c_str(), LVOM_READ);
         lString16 codeBase = LVExtractPath( ncxHref );
         if ( codeBase.length()>0 && codeBase.lastChar()!='/' )
             codeBase.append(1, L'/');
@@ -782,32 +819,24 @@ bool ImportEpubDocument(LvStreamRef stream, CrDom* m_doc)
         return false;
     }
 #if 0 // set stylesheet
-    //m_doc->getStyleSheet()->clear();
-    m_doc->setStyleSheet( NULL, true );
-    //m_doc->getStyleSheet()->parse(m_stylesheet.c_str());
-    if ( !css.empty() && m_doc->getDocFlag(DOC_FLAG_ENABLE_INTERNAL_STYLES) ) {
-
-        m_doc->setStyleSheet( "p.p { text-align: justify }\n"
+    //m_doc->getStylesheet()->clear();
+    m_doc->setStylesheet( NULL, true );
+    //m_doc->getStylesheet()->parse(m_stylesheet.c_str());
+    if (!css.empty() && m_doc->getDocFlag(DOC_FLAG_ENABLE_INTERNAL_STYLES)) {
+        m_doc->setStylesheet( "p.p { text-align: justify }\n"
             "svg { text-align: center }\n"
             "i { display: inline; font-style: italic }\n"
             "b { display: inline; font-weight: bold }\n"
             "abbr { display: inline }\n"
             "acronym { display: inline }\n"
             "address { display: inline }\n"
-            "p.title-p { hyphenate: none }\n"
-//abbr, acronym, address, blockquote, br, cite, code, dfn, div, em, h1, h2, h3, h4, h5, h6, kbd, p, pre, q, samp, span, strong, var
-        , false);
-        m_doc->setStyleSheet( UnicodeToUtf8(css).c_str(), false );
-        //m_doc->getStyleSheet()->parse(UnicodeToUtf8(css).c_str());
+            "p.title-p { hyphenate: none }\n", false);
+        m_doc->setStylesheet(UnicodeToUtf8(css).c_str(), false);
+        //m_doc->getStylesheet()->parse(UnicodeToUtf8(css).c_str());
     } else {
-        //m_doc->getStyleSheet()->parse(m_stylesheet.c_str());
-        //m_doc->setStyleSheet( m_stylesheet.c_str(), false );
+        //m_doc->getStylesheet()->parse(m_stylesheet.c_str());
+        //m_doc->setStylesheet( m_stylesheet.c_str(), false );
     }
-#endif
-#ifdef SAVE_COPY_OF_LOADED_EPUB_DOCUMENT
-    if ( !stream.isNull() )
-    	m_doc->saveToStream( out, "utf-8" );
-    	m_doc->saveToStream(LVOpenFileStream("test_xml_export.xml", LVOM_WRITE), NULL, true);
 #endif
     return true;
 }

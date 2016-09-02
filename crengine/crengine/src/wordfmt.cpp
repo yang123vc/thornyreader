@@ -7,7 +7,6 @@
 //#define ENABLE_ANTIWORD 1
 //#endif
 
-
 #if ENABLE_ANTIWORD==1
 #if defined(_DEBUG) && !defined(DEBUG)
 #define DEBUG
@@ -24,7 +23,7 @@
 #ifdef _WIN32
 extern "C" {
 	int strcasecmp(const char *s1, const char *s2) {
-		return stricmp(s1,s2);
+		return _stricmp(s1,s2);
 	}
 //char	*optarg = NULL;
 //	int	optind = 0;
@@ -179,6 +178,7 @@ void
 vImagePrologue(diagram_type *pDiag, const imagedata_type *pImg)
 {
     TRACE("antiword::vImagePrologue()");
+    CR_UNUSED2(pDiag, pImg);
     //vImageProloguePS(pDiag, pImg);
 } /* end of vImagePrologue */
 
@@ -188,6 +188,7 @@ vImagePrologue(diagram_type *pDiag, const imagedata_type *pImg)
 void
 vImageEpilogue(diagram_type *pDiag)
 {
+    CR_UNUSED(pDiag);
     TRACE("antiword::vImageEpilogue()");
     //vImageEpiloguePS(pDiag);
 } /* end of vImageEpilogue */
@@ -200,6 +201,7 @@ vImageEpilogue(diagram_type *pDiag)
 BOOL
 bAddDummyImage(diagram_type *pDiag, const imagedata_type *pImg)
 {
+    CR_UNUSED2(pDiag, pImg);
     TRACE("antiword::vImageEpilogue()");
     //return bAddDummyImagePS(pDiag, pImg);
 	return FALSE;
@@ -251,6 +253,7 @@ void
 vPrologue2(diagram_type *pDiag, int iWordVersion)
 {
     TRACE("antiword::vDestroyDiagram()");
+    CR_UNUSED2(pDiag, iWordVersion);
 //    vCreateBookIntro(pDiag, iWordVersion);
 //    vCreateInfoDictionary(pDiag, iWordVersion);
 //    vAddFontsPDF(pDiag);
@@ -283,7 +286,7 @@ vSubstring2Diagram(diagram_type *pDiag,
     UCHAR ucFontColor, USHORT usFontstyle, drawfile_fontref tFontRef,
     USHORT usFontSize, USHORT usMaxFontSize)
 {
-    lString16 s(szString, tStringLength);
+    lString16 s(szString, (int) tStringLength);
     s.trimDoubleSpaces(!last_space_char, true, false);
     last_space_char = (s.lastChar()==' ');
 //    vSubstringXML(pDiag, szString, tStringLength, lStringWidth,
@@ -569,7 +572,7 @@ bAddTableRow(diagram_type *pDiag, char **aszColTxt,
 static LVStream * antiword_stream = NULL;
 class AntiwordStreamGuard {
 public:
-    AntiwordStreamGuard(LvStreamRef stream) {
+    AntiwordStreamGuard(LVStreamRef stream) {
         antiword_stream = stream.get();
     }
     ~AntiwordStreamGuard() {
@@ -623,7 +626,8 @@ bReadBytes(UCHAR *aucBytes, size_t tMemb, ULONG ulOffset, FILE *pFile)
             return FALSE;
         }
         lvsize_t bytesRead=0;
-        if ( stream->Read(aucBytes, tMemb*sizeof(UCHAR), &bytesRead)!=LVERR_OK || bytesRead!=tMemb ) {
+        if (stream->Read(aucBytes, tMemb*sizeof(UCHAR), &bytesRead) != LVERR_OK
+                || bytesRead != (lvsize_t) tMemb) {
             return FALSE;
         }
     } else {
@@ -674,8 +678,8 @@ bTranslateImage(diagram_type *pDiag, FILE *pFile, BOOL bMinimalInformation,
     case imagetype_is_jpeg:
     case imagetype_is_png:
         {
-            lUInt32 offset = ulFileOffsetImage + pImg->tPosition;
-            lUInt32 len = pImg->tLength - pImg->tPosition;
+            lUInt32 offset = (lUInt32)(ulFileOffsetImage + pImg->tPosition);
+            lUInt32 len = (lUInt32) (pImg->tLength - pImg->tPosition);
 
             if (!bSetDataOffset(pFile, offset)) {
                 return FALSE;
@@ -722,7 +726,7 @@ bTranslateImage(diagram_type *pDiag, FILE *pFile, BOOL bMinimalInformation,
 } /* end of bTranslateImage */
 
 
-bool DetectWordFormat( LvStreamRef stream )
+bool DetectWordFormat( LVStreamRef stream )
 {
     AntiwordStreamGuard file(stream);
 
@@ -745,7 +749,7 @@ bool DetectWordFormat( LvStreamRef stream )
     return true;
 }
 
-bool ImportWordDocument(LvStreamRef stream,	CrDom * m_doc)
+bool ImportWordDocument(LVStreamRef stream,	CrDom * m_doc)
 {
     AntiwordStreamGuard file(stream);
 

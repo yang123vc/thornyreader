@@ -54,7 +54,7 @@ LVFileFormatParser::~LVFileFormatParser()
 {
 }
 
-LVFileParserBase::LVFileParserBase( LvStreamRef stream )
+LVFileParserBase::LVFileParserBase( LVStreamRef stream )
     : m_stream(stream)
     , m_buf(NULL)
     , m_buf_size(0)
@@ -63,9 +63,6 @@ LVFileParserBase::LVFileParserBase( LvStreamRef stream )
     , m_buf_pos(0)
     , m_buf_fpos(0)
     , m_stopped(false)
-    , m_lastProgressTime((time_t)0)
-    , m_progressLastPercent(0)
-    , m_progressUpdateCounter(0)
     , m_firstPageTextCounter(-1)
 
 {
@@ -95,7 +92,7 @@ lString16 LVFileParserBase::getFileName()
     return name;
 }
 
-LVTextFileBase::LVTextFileBase( LvStreamRef stream )
+LVTextFileBase::LVTextFileBase( LVStreamRef stream )
     : LVFileParserBase(stream)
     , m_enc_type( ce_8bit_cp )
     , m_conv_table(NULL)
@@ -2380,7 +2377,7 @@ lString16 LVTextFileBase::ReadLine( int maxLineSize, lUInt32 & flags )
 // Text file parser
 
 /// constructor
-LVTextParser::LVTextParser( LvStreamRef stream, LvXMLParserCallback * callback, bool isPreFormatted )
+LVTextParser::LVTextParser( LVStreamRef stream, LvXMLParserCallback * callback, bool isPreFormatted )
     : LVTextFileBase(stream)
     , m_callback(callback)
     , m_isPreFormatted( isPreFormatted )
@@ -2625,21 +2622,29 @@ bool LvXmlParser::CheckFormat() {
     bool res = false;
     if (charsDecoded > 30) {
         lString16 s( chbuf, charsDecoded );
-        bool flg = !m_fb2Only || s.pos("<FictionBook") >= 0;
-        if (flg && (((s.pos("<?xml") >= 0 || s.pos(" xmlns=") > 0)
-        		&& s.pos("version=") >= 6) ||
-                 (m_allowHtml && s.pos("<html xmlns=\"http://www.w3.org/1999/xhtml\"") >= 0)))
-        {
-            res = true;
-            int encpos=s.pos("encoding=\"");
-            if ( encpos>=0 ) {
+        res = s.pos("<FictionBook") >= 0;
+        if ( s.pos("<?xml") >= 0 && s.pos("version=") >= 6 ) {
+            res = res || !m_fb2Only;
+            int encpos;
+            if ( res && (encpos=s.pos("encoding=\"")) >= 0 ) {
                 lString16 encname = s.substr( encpos+10, 20 );
                 int endpos = s.pos("\"");
                 if ( endpos>0 ) {
                     encname.erase( endpos, encname.length() - endpos );
                     SetCharset( encname.c_str() );
                 }
-            } else {
+            }
+        } else if ( !res && s.pos("<html xmlns=\"http://www.w3.org/1999/xhtml\"") >= 0) {
+            res = m_allowHtml;
+        } else if (!res && !m_fb2Only) {
+            // not XML or XML without declaration;
+            int lt_pos = s.pos("<");
+            if ( lt_pos >= 0 && s.pos("xmlns") > lt_pos ) {
+                // contains xml namespace declaration probably XML
+                res = true;
+                // check that only whitespace chars before <
+                for ( int i=0; i<lt_pos && res; i++)
+                    res = IsSpaceChar( chbuf[i] );
             }
         }
     }
@@ -3496,7 +3501,7 @@ bool LvXmlParser::ReadIdent(lString16 & ns, lString16 & name)
         }
     }
     lChar16 ch = PeekCharFromBuffer();
-    return (!name.empty()) && (ch==' ' || ch=='/' || ch=='>' || ch=='?' || ch=='=' || ch==0);
+    return (!name.empty()) && (ch==' ' || ch=='/' || ch=='>' || ch=='?' || ch=='=' || ch==0 || ch == '\r' || ch == '\n');
 }
 
 void LvXmlParser::SetSpaceMode(bool flgTrimSpaces)
@@ -3504,7 +3509,7 @@ void LvXmlParser::SetSpaceMode(bool flgTrimSpaces)
     m_trimspaces = flgTrimSpaces;
 }
 
-LvXmlParser::LvXmlParser(LvStreamRef stream, LvXMLParserCallback* callback,
+LvXmlParser::LvXmlParser(LVStreamRef stream, LvXMLParserCallback* callback,
 		bool allowHtml, bool fb2Only)
     : LVTextFileBase(stream)
     , callback_(callback)
@@ -3585,7 +3590,7 @@ bool LvHtmlParser::CheckFormat()
     return res;
 }
 
-LvHtmlParser::LvHtmlParser(LvStreamRef stream, LvXMLParserCallback* callback)
+LvHtmlParser::LvHtmlParser(LVStreamRef stream, LvXMLParserCallback* callback)
 		: LvXmlParser(stream, callback) {
     possible_capitalized_tags_ = true;
 }
@@ -3602,11 +3607,11 @@ bool LvHtmlParser::Parse()
 /// read file contents to string
 lString16 LvReadTextFile(lString16 filename)
 {
-	LvStreamRef stream = LVOpenFileStream(filename.c_str(), LVOM_READ);
+	LVStreamRef stream = LVOpenFileStream(filename.c_str(), LVOM_READ);
 	return LVReadTextFile(stream);
 }
 
-lString16 LVReadTextFile(LvStreamRef stream)
+lString16 LVReadTextFile(LVStreamRef stream)
 {
 	if (stream.isNull())
         return lString16::empty_str;
@@ -4043,27 +4048,27 @@ public:
     virtual ~FB2CoverpageParserCallback()
     {
     }
-    LvStreamRef getStream() {
+    LVStreamRef getStream() {
         static lUInt8 fake_data[1] = {0};
         if (data.length() == 0) {
             return LVCreateMemoryStream(fake_data, 0, false);
         }
-        LvStreamRef stream = LvStreamRef(new LVBase64Stream(data));
-        LvStreamRef res = LVCreateMemoryStream(stream);
+        LVStreamRef stream = LVStreamRef(new LVBase64Stream(data));
+        LVStreamRef res = LVCreateMemoryStream(stream);
         return res;
     }
 };
 
-LvStreamRef GetFB2Coverpage(LvStreamRef stream)
+LVStreamRef GetFB2Coverpage(LVStreamRef stream)
 {
     FB2CoverpageParserCallback callback;
     LvXmlParser parser(stream, &callback, false, true);
     if (!parser.CheckFormat()) {
         stream->SetPos(0);
-		return LvStreamRef();
+		return LVStreamRef();
 	}
     parser.Parse();
-    LvStreamRef res = callback.getStream();
+    LVStreamRef res = callback.getStream();
     stream->SetPos(0);
     return res;
 }

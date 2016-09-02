@@ -1,25 +1,24 @@
-LOCAL_PATH:= $(call my-dir)
+LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 SAVED_NDK_APP_DST_DIR := $(NDK_APP_DST_DIR)
-NDK_APP_DST_DIR := assets/plugins
-LOCAL_MODULE := cre
+NDK_APP_DST_DIR := assets/thornyreader/$(TARGET_ARCH_ABI)
+LOCAL_MODULE := crengine
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
 LOCAL_STATIC_LIBRARIES := standalone
-LOCAL_LDLIBS := -llog -lz -ldl #-Wl,-Map=crengine.map
-LOCAL_LDFLAGS += -rdynamic -pie
-LOCAL_CFLAGS := -fvisibility=default
-LOCAL_CFLAGS += \
-	-DLINUX=1 \
-	-D_LINUX=1 \
-	-DFT2_BUILD_LIBRARY=1 \
-    -DDOC_DATA_COMPRESSION_LEVEL=1 \
-    -DDOC_BUFFER_SIZE=0xA00000 \
-    -DLDOM_USE_OWN_MEM_MAN=0 \
-    -DCR3_ANTIWORD_PATCH=1 \
-    -DENABLE_ANTIWORD=1 \
-    -DMAX_IMAGE_SCALE_MUL=2 \
-	-Wall
+
+LOCAL_CPP_FEATURES  := exceptions
+
+LOCAL_LDLIBS        := -llog -lz -ldl #-Wl,-Map=crengine.map
+
+LOCAL_LDFLAGS 		+= -rdynamic -pie # runpie
+LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie
+
+LOCAL_CFLAGS        += -DHAVE_CONFIG_H
+LOCAL_CFLAGS        += -DLINUX=1
+LOCAL_CFLAGS        += -D_LINUX=1
+LOCAL_CFLAGS        += -DFT2_BUILD_LIBRARY=1
+LOCAL_CFLAGS        += -DCR3_ANTIWORD_PATCH=1
 
 LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/crengine/include \
@@ -29,37 +28,44 @@ LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/antiword \
     $(LOCAL_PATH)/chmlib/src \
 	$(LOCAL_PATH)/../standalone/include
-	
+
 CRENGINE_SRC_FILES := \
+	crengine/src/css/crcss_chm.cpp \
+	crengine/src/css/crcss_def.cpp \
+	crengine/src/css/crcss_doc.cpp \
+	crengine/src/css/crcss_epub.cpp \
+	crengine/src/css/crcss_fb2.cpp \
+	crengine/src/css/crcss_htm.cpp \
+	crengine/src/css/crcss_rtf.cpp \
+	crengine/src/css/crcss_txt.cpp \
+	crengine/src/bookmark.cpp \
+	crengine/src/chmfmt.cpp \
     crengine/src/cp_stats.cpp \
-    crengine/src/lvstring.cpp \
-    crengine/src/props.cpp \
-    crengine/src/lstridmap.cpp \
-    crengine/src/rtfimp.cpp \
-    crengine/src/lvmemman.cpp \
-    crengine/src/lvstyles.cpp \
     crengine/src/crtxtenc.cpp \
-    crengine/src/lvtinydom.cpp \
-    crengine/src/lvstream.cpp \
-    crengine/src/lvxml.cpp \
-    crengine/src/chmfmt.cpp \
     crengine/src/epubfmt.cpp \
-    crengine/src/pdbfmt.cpp \
-    crengine/src/wordfmt.cpp \
-    crengine/src/lvstsheet.cpp \
-    crengine/src/txtselector.cpp \
-    crengine/src/lvbmpbuf.cpp \
-    crengine/src/lvfnt.cpp \
     crengine/src/hyphman.cpp \
+    crengine/src/lstridmap.cpp \
+    crengine/src/lvbmpbuf.cpp \
+    crengine/src/lvdocview.cpp \
+    crengine/src/lvdrawbuf.cpp \
+    crengine/src/lvfnt.cpp \
     crengine/src/lvfntman.cpp \
     crengine/src/lvimg.cpp \
-    crengine/src/lvdrawbuf.cpp \
-    crengine/src/lvdocview.cpp \
+    crengine/src/lvmemman.cpp \
     crengine/src/lvpagesplitter.cpp \
-    crengine/src/lvtextfm.cpp \
     crengine/src/lvrend.cpp \
-    crengine/src/wolutil.cpp \
-    crengine/src/bookmark.cpp
+    crengine/src/lvstream.cpp \
+    crengine/src/lvstring.cpp \
+    crengine/src/lvstsheet.cpp \
+    crengine/src/lvstyles.cpp \
+    crengine/src/lvtextfm.cpp \
+    crengine/src/lvtinydom.cpp \
+    crengine/src/lvxml.cpp \
+    crengine/src/pdbfmt.cpp \
+    crengine/src/props.cpp \
+    crengine/src/rtfimp.cpp \
+    crengine/src/txtselector.cpp \
+    crengine/src/wordfmt.cpp
 
 PNG_SRC_FILES := \
     libpng/pngerror.c  \
@@ -214,15 +220,16 @@ ANTIWORD_SRC_FILES := \
     antiword/wordole.c \
     antiword/wordwin.c \
     antiword/xmalloc.c
-	
+
 LOCAL_SRC_FILES := \
-	CreBridge.cpp \
-    $(CRENGINE_SRC_FILES) \
     $(FREETYPE_SRC_FILES) \
     $(PNG_SRC_FILES) \
     $(JPEG_SRC_FILES) \
     $(CHM_SRC_FILES) \
-    $(ANTIWORD_SRC_FILES)
+    $(ANTIWORD_SRC_FILES) \
+    $(CRENGINE_SRC_FILES) \
+	CreBridge.cpp \
+	CreMain.cpp
 
 include $(BUILD_EXECUTABLE)
 NDK_APP_DST_DIR := $(SAVED_NDK_APP_DST_DIR)

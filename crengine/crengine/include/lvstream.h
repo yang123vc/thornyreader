@@ -261,9 +261,9 @@ public:
     lverror_t Write( LVArray<lUInt32> & array );
 
     /// calculate crc32 code for stream, if possible
-    virtual lverror_t crc32(lUInt32 & dst);
+    virtual lverror_t getcrc32( lUInt32 & dst );
     /// calculate crc32 code for stream, returns 0 for error or empty stream
-    inline lUInt32 crc32() { lUInt32 res = 0; crc32(res); return res; }
+    inline lUInt32 getcrc32() { lUInt32 res = 0; getcrc32( res ); return res; }
 
     /// set write bytes limit to call flush(true) automatically after writing of each sz bytes
     virtual void setAutoSyncSize(lvsize_t /*sz*/) { }
@@ -276,14 +276,14 @@ public:
 };
 
 /// Stream reference
-typedef LVFastRef<LVStream> LvStreamRef;
+typedef LVFastRef<LVStream> LVStreamRef;
 
 /// base proxy class for streams: redirects all calls to base stream
 class StreamProxy : public LVStream {
 protected:
-    LvStreamRef _base;
+	LVStreamRef _base;
 public:
-    StreamProxy(LvStreamRef baseStream) : _base(baseStream) { }
+    StreamProxy(LVStreamRef baseStream) : _base(baseStream) { }
     virtual ~StreamProxy() { }
 
     /// Seek (change file pos)
@@ -448,7 +448,7 @@ public:
         return (lvopen_mode_t)(m_mode & LVOM_MASK);
     }
     /// calculate crc32 code for stream, if possible
-    virtual lverror_t crc32( lUInt32 & dst );
+    virtual lverror_t getcrc32( lUInt32 & dst );
 };
 
 
@@ -517,7 +517,7 @@ public:
     virtual const LVContainerItemInfo * GetObjectInfo(int index) = 0;
     virtual const LVContainerItemInfo * operator [] (int index) { return GetObjectInfo(index); }
     virtual int GetObjectCount() const = 0;
-    virtual LvStreamRef OpenStream( const lChar16 * fname, lvopen_mode_t mode ) = 0;
+    virtual LVStreamRef OpenStream( const lChar16 * fname, lvopen_mode_t mode ) = 0;
     LVContainer() {}
     virtual ~LVContainer() { }
 };
@@ -606,8 +606,8 @@ public:
                 break;
             }
         }
-        int pos = p-fn;
-        if (p>fn)
+        int pos = (int)(p - fn);
+        if (p > fn)
             m_path = m_fname.substr(0, pos);
         m_filename = m_fname.substr(pos, m_fname.length() - pos);
     }
@@ -637,11 +637,11 @@ class LVArcContainerBase : public LVNamedContainer
 {
 protected:
     LVContainer * m_parent;
-    LvStreamRef m_stream;
+    LVStreamRef m_stream;
 public:
-    virtual LvStreamRef OpenStream( const wchar_t *, lvopen_mode_t )
+    virtual LVStreamRef OpenStream( const wchar_t *, lvopen_mode_t )
     {
-        return LvStreamRef();
+        return LVStreamRef();
     }
     virtual LVContainer * GetParentContainer()
     {
@@ -671,7 +671,7 @@ public:
         *pSize = GetObjectCount();
         return LVERR_OK;
     }
-    LVArcContainerBase( LvStreamRef stream ) : m_parent(NULL), m_stream(stream)
+    LVArcContainerBase( LVStreamRef stream ) : m_parent(NULL), m_stream(stream)
     {
     }
     virtual ~LVArcContainerBase()
@@ -686,12 +686,12 @@ public:
 class LVStreamFragment : public LVNamedStream
 {
 private:
-    LvStreamRef m_stream;
+    LVStreamRef m_stream;
     lvsize_t    m_start;
     lvsize_t    m_size;
     lvpos_t     m_pos;
 public:
-    LVStreamFragment( LvStreamRef stream, lvsize_t start, lvsize_t size )
+    LVStreamFragment( LVStreamRef stream, lvsize_t start, lvsize_t size )
         : m_stream(stream), m_start(start), m_size(size), m_pos(0)
     {
     }
@@ -754,15 +754,15 @@ typedef LVFastRef<LVContainer> LVContainerRef;
     \param mode is mode file should be opened in
     \return reference to opened stream if success, NULL if error
 */
-LvStreamRef LVOpenFileStream( const lChar16 * pathname, int mode );
+LVStreamRef LVOpenFileStream( const lChar16 * pathname, int mode );
 
 /// Open file stream
 /**
-    \param pathname is file name to open (local codepage)
+    \param pathname is file name to open (utf8 codepage)
     \param mode is mode file should be opened in
     \return reference to opened stream if success, NULL if error
 */
-LvStreamRef LVOpenFileStream( const lChar8 * pathname, int mode );
+LVStreamRef LVOpenFileStream( const lChar8 * pathname, int mode );
 
 /// Open memory mapped file
 /**
@@ -771,7 +771,7 @@ LvStreamRef LVOpenFileStream( const lChar8 * pathname, int mode );
 	\param minSize is minimum file size for R/W mode
     \return reference to opened stream if success, NULL if error
 */
-LvStreamRef LVMapFileStream( const lChar16 * pathname, lvopen_mode_t mode, lvsize_t minSize );
+LVStreamRef LVMapFileStream( const lChar16 * pathname, lvopen_mode_t mode, lvsize_t minSize );
 
 /// Open memory mapped file
 /**
@@ -780,7 +780,7 @@ LvStreamRef LVMapFileStream( const lChar16 * pathname, lvopen_mode_t mode, lvsiz
 	\param minSize is minimum file size for R/W mode
     \return reference to opened stream if success, NULL if error
 */
-LvStreamRef LVMapFileStream( const lChar8 * pathname, lvopen_mode_t mode, lvsize_t minSize );
+LVStreamRef LVMapFileStream( const lChar8 * pathname, lvopen_mode_t mode, lvsize_t minSize );
 
 
 /// Open archieve from stream
@@ -789,7 +789,7 @@ LvStreamRef LVMapFileStream( const lChar8 * pathname, lvopen_mode_t mode, lvsize
     \return reference to opened archieve if success, NULL reference if error
 */
 #if (USE_ZLIB==1)
-LVContainerRef LVOpenArchieve( LvStreamRef stream );
+LVContainerRef LVOpenArchieve( LVStreamRef stream );
 #endif
 
 /// Creates memory stream
@@ -800,54 +800,81 @@ LVContainerRef LVOpenArchieve( LvStreamRef stream );
     \param mode is open mode
     \return reference to opened stream if success, NULL reference if error
 */
-LvStreamRef LVCreateMemoryStream( void * buf = NULL, int bufSize = 0, bool createCopy = false, lvopen_mode_t mode = LVOM_READ );
+LVStreamRef LVCreateMemoryStream( void * buf = NULL, int bufSize = 0, bool createCopy = false, lvopen_mode_t mode = LVOM_READ );
 /// Creates memory stream as copy of another stream.
-LvStreamRef LVCreateMemoryStream( LvStreamRef srcStream );
+LVStreamRef LVCreateMemoryStream( LVStreamRef srcStream );
 /// Creates memory stream as copy of file contents.
-LvStreamRef LVCreateMemoryStream( lString16 filename );
+LVStreamRef LVCreateMemoryStream( lString16 filename );
 /// Creates memory stream as copy of string contents
-LvStreamRef LVCreateStringStream( lString8 data );
+LVStreamRef LVCreateStringStream( lString8 data );
 /// Creates memory stream as copy of string contents
-LvStreamRef LVCreateStringStream( lString16 data );
+LVStreamRef LVCreateStringStream( lString16 data );
 
 /// creates cache buffers for stream, to write data by big blocks to optimize Flash drives writing performance
-LvStreamRef LVCreateBlockWriteStream( LvStreamRef baseStream, int blockSize, int blockCount );
+LVStreamRef LVCreateBlockWriteStream( LVStreamRef baseStream, int blockSize, int blockCount );
 
 LVContainerRef LVOpenDirectory( const lChar16 * path, const wchar_t * mask = L"*.*" );
+LVContainerRef LVOpenDirectory(const lString16& path, const wchar_t * mask = L"*.*" );
+LVContainerRef LVOpenDirectory(const lString8& path, const wchar_t * mask = L"*.*" );
+
+bool LVDirectoryIsEmpty(const lString8& path);
+bool LVDirectoryIsEmpty(const lString16& path);
 
 /// Create directory if not exist
 bool LVCreateDirectory( lString16 path );
 /// delete file, return true if file found and successfully deleted
 bool LVDeleteFile( lString16 filename );
+/// delete file, return true if file found and successfully deleted
+bool LVDeleteFile( lString8 filename );
+/// delete directory, return true if directory is found and successfully deleted
+bool LVDeleteDirectory( lString16 filename );
+/// delete directory, return true if directory is found and successfully deleted
+bool LVDeleteDirectory( lString8 filename );
+/// rename file
+bool LVRenameFile(lString16 oldname, lString16 newname);
+/// rename file
+bool LVRenameFile(lString8 oldname, lString8 newname);
 
 /// copies content of in stream to out stream
-lvsize_t LVPumpStream( LvStreamRef out, LvStreamRef in );
+lvsize_t LVPumpStream( LVStreamRef out, LVStreamRef in );
 /// copies content of in stream to out stream
 lvsize_t LVPumpStream( LVStream * out, LVStream * in );
 
 /// creates buffered stream object for stream
-LvStreamRef LVCreateBufferedStream( LvStreamRef stream, int bufSize );
-/// creates TCR decoder stream for stream
-LvStreamRef LVCreateTCRDecoderStream( LvStreamRef stream );
+LVStreamRef LVCreateBufferedStream( LVStreamRef stream, int bufSize );
 
 /// returns path part of pathname (appended with / or \ delimiter)
 lString16 LVExtractPath( lString16 pathName, bool appendEmptyPath=true );
+/// returns path part of pathname (appended with / or \ delimiter)
+lString8 LVExtractPath( lString8 pathName, bool appendEmptyPath=true );
 /// removes first path part from pathname and returns it
 lString16 LVExtractFirstPathElement( lString16 & pathName );
 /// removes last path part from pathname and returns it
 lString16 LVExtractLastPathElement( lString16 & pathName );
 /// returns filename part of pathname
 lString16 LVExtractFilename( lString16 pathName );
+/// returns filename part of pathname
+lString8 LVExtractFilename( lString8 pathName );
 /// returns filename part of pathname without extension
 lString16 LVExtractFilenameWithoutExtension( lString16 pathName );
 /// appends path delimiter character to end of path, if absent
 void LVAppendPathDelimiter( lString16 & pathName );
+/// appends path delimiter character to end of path, if absent
+void LVAppendPathDelimiter( lString8 & pathName );
+/// removes path delimiter from end of path, if present
+void LVRemoveLastPathDelimiter( lString8 & pathName );
+/// removes path delimiter from end of path, if present
+void LVRemoveLastPathDelimiter( lString16 & pathName );
 /// replaces any found / or \\ separator with specified one
 void LVReplacePathSeparator( lString16 & pathName, lChar16 separator );
 /// removes path delimiter character from end of path, if exists
 void LVRemovePathDelimiter( lString16 & pathName );
+/// removes path delimiter character from end of path, if exists
+void LVRemovePathDelimiter( lString8 & pathName );
 /// returns path delimiter character
 lChar16 LVDetectPathDelimiter( lString16 pathName );
+/// returns path delimiter character
+char LVDetectPathDelimiter( lString8 pathName );
 /// returns true if absolute path is specified
 bool LVIsAbsolutePath( lString16 pathName );
 /// returns full path to file identified by pathName, with base directory == basePath
@@ -856,11 +883,33 @@ lString16 LVMakeRelativeFilename( lString16 basePath, lString16 pathName );
 lString16 LVCombinePaths( lString16 basePath, lString16 newPath );
 
 /// tries to split full path name into archive name and file name inside archive using separator "@/" or "@\"
-bool LvSplitArcName( lString16 fullPathName, lString16 & arcPathName, lString16 & arcItemPathName );
+bool LVSplitArcName(lString16 fullPathName, lString16 & arcPathName, lString16 & arcItemPathName);
+/// tries to split full path name into archive name and file name inside archive using separator "@/" or "@\"
+bool LVSplitArcName(lString8 fullPathName, lString8 & arcPathName, lString8 & arcItemPathName);
 
 /// returns true if specified file exists
 bool LVFileExists( const lString16 & pathName );
+/// returns true if specified file exists
+bool LVFileExists( const lString8 & pathName );
 /// returns true if specified directory exists
 bool LVDirectoryExists( const lString16 & pathName );
+/// returns true if specified directory exists
+bool LVDirectoryExists( const lString8 & pathName );
+/// returns true if directory exists and your app can write to directory
+bool LVDirectoryIsWritable(const lString16 & pathName);
+
+
+/// factory to handle filesystem access for paths started with ASSET_PATH_PREFIX (@ sign)
+class LVAssetContainerFactory {
+public:
+	virtual LVContainerRef openAssetContainer(lString16 path) = 0;
+	virtual LVStreamRef openAssetStream(lString16 path) = 0;
+	LVAssetContainerFactory() {}
+	virtual ~LVAssetContainerFactory() {}
+};
+
+#define ASSET_PATH_PREFIX '@'
+/// set container to handle filesystem access for paths started with ASSET_PATH_PREFIX (@ sign)
+void LVSetAssetContainerFactory(LVAssetContainerFactory * asset);
 
 #endif // __LVSTREAM_H_INCLUDED__

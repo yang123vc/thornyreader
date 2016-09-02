@@ -128,7 +128,7 @@ class LVFileParserBase : public LVFileFormatParser
 {
 
 protected:
-    LvStreamRef m_stream;
+    LVStreamRef m_stream;
     lUInt8* m_buf;
     int      m_buf_size;
     lvsize_t m_stream_size;
@@ -136,9 +136,6 @@ protected:
     int      m_buf_pos;
     lvpos_t  m_buf_fpos;
     bool     m_stopped; // true if Stop() is called
-    time_t   m_lastProgressTime;
-    int      m_progressLastPercent;
-    int      m_progressUpdateCounter;
     int      m_firstPageTextCounter;
     /// fills buffer, to provide specified number of bytes for read
     bool FillBuffer(int bytesToRead);
@@ -149,11 +146,11 @@ protected:
 
 public:
     /// constructor
-    LVFileParserBase(LvStreamRef stream);
+    LVFileParserBase(LVStreamRef stream);
     /// virtual destructor
     virtual ~LVFileParserBase();
     /// returns source stream
-    LvStreamRef getStream() { return m_stream; }
+    LVStreamRef getStream() { return m_stream; }
     /// return stream file name
     lString16 getFileName();
     /// returns true if end of fle is reached, and there is no data left in buffer
@@ -281,7 +278,7 @@ public:
     virtual lChar16 * GetCharsetTable( ) { return m_conv_table; }
 
     /// constructor
-    LVTextFileBase( LvStreamRef stream );
+    LVTextFileBase( LVStreamRef stream );
     /// destructor
     virtual ~LVTextFileBase();
 };
@@ -322,7 +319,7 @@ public:
     /// parses input stream
     virtual bool Parse();
     /// constructor
-    LVXMLTextCache( LvStreamRef stream, lUInt32 max_itemcount, lUInt32 max_charcount )
+    LVXMLTextCache( LVStreamRef stream, lUInt32 max_itemcount, lUInt32 max_charcount )
         : LVTextFileBase( stream ), m_head(NULL)
         , m_max_itemcount(max_itemcount)
         , m_max_charcount(max_charcount)
@@ -342,7 +339,7 @@ protected:
     bool m_isPreFormatted;
 public:
     /// constructor
-    LVTextParser( LvStreamRef stream, LvXMLParserCallback * callback, bool isPreFormatted );
+    LVTextParser( LVStreamRef stream, LvXMLParserCallback * callback, bool isPreFormatted );
     /// descructor
     virtual ~LVTextParser();
     /// returns true if format is recognized by parser
@@ -375,7 +372,7 @@ public:
     /// resets parsing, moves to beginning of stream
     virtual void Reset();
     /// constructor
-    LvXmlParser( LvStreamRef stream, LvXMLParserCallback * callback, bool allowHtml=true, bool fb2Only=false );
+    LvXmlParser( LVStreamRef stream, LvXMLParserCallback * callback, bool allowHtml=true, bool fb2Only=false );
     /// changes space mode
     virtual void SetSpaceMode( bool flgTrimSpaces );
     /// returns space mode
@@ -392,15 +389,15 @@ public:
     /// Returns true if format is recognized by parser
     virtual bool CheckFormat();
     virtual bool Parse();
-    LvHtmlParser(LvStreamRef stream, LvXMLParserCallback * callback);
+    LvHtmlParser(LVStreamRef stream, LvXMLParserCallback * callback);
     virtual ~LvHtmlParser();
 };
 
 /// read stream contents to string
-lString16 LVReadTextFile( LvStreamRef stream );
+lString16 LVReadTextFile( LVStreamRef stream );
 /// read file contents to string
 lString16 LvReadTextFile( lString16 filename );
 
-LvStreamRef GetFB2Coverpage(LvStreamRef stream);
+LVStreamRef GetFB2Coverpage(LVStreamRef stream);
 
 #endif // __LVXML_H_INCLUDED__

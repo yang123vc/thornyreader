@@ -1120,8 +1120,8 @@ bool parse_attr_value( const char * &str, char * buf )
 
 LVCssSelectorRule * parse_attr( const char * &str, CrXmlDom * doc )
 {
-    char attrname[64];
-    char attrvalue[64];
+    char attrname[512];
+    char attrvalue[512];
     LVCssSelectorRuleType st = cssrt_universal;
     if (*str=='.') {
         // E.class
@@ -1207,7 +1207,7 @@ void LVCssSelector::insertRuleAfterStart( LVCssSelectorRule * rule )
     _rules->setNext( rule );
 }
 
-bool LVCssSelector::parse( const char * &str, CrXmlDom * doc )
+bool LVCssSelector::parse(const char* &str, CrXmlDom* doc )
 {
     if (!str || !*str)
         return false;
@@ -1422,7 +1422,7 @@ lUInt32 LVStyleSheet::getHash()
     return hash;
 }
 
-bool LVStyleSheet::parse( const char * str )
+bool LVStyleSheet::parse(const char* str)
 {
     LVCssSelector * selector = NULL;
     LVCssSelector * prev_selector;
@@ -1516,7 +1516,7 @@ bool LVStyleSheet::parse( const char * str )
 }
 
 /// extract @import filename from beginning of CSS
-bool LVProcessStyleSheetImport( const char * &str, lString8 & import_file )
+bool LVProcessStyleSheetImport(const char * &str, lString8 & import_file)
 {
     const char * p = str;
     import_file.clear();
@@ -1568,12 +1568,13 @@ bool LVProcessStyleSheetImport( const char * &str, lString8 & import_file )
 }
 
 /// load stylesheet from file, with processing of import
-bool LVLoadStylesheetFile( lString16 pathName, lString8 & css )
+bool LVLoadStylesheetFile(lString16 pathName, lString8 & css)
 {
-    LvStreamRef file = LVOpenFileStream( pathName.c_str(), LVOM_READ );
-    if ( file.isNull() )
+    LVStreamRef file = LVOpenFileStream(pathName.c_str(), LVOM_READ);
+    if (file.isNull()) {
         return false;
-    lString8 txt = UnicodeToUtf8( LVReadTextFile( file ) );
+    }
+    lString8 txt = UnicodeToUtf8(LVReadTextFile(file));
     lString8 txt2;
     const char * s = txt.c_str();
     lString8 import_file;
@@ -1582,7 +1583,7 @@ bool LVLoadStylesheetFile( lString16 pathName, lString8 & css )
         //lString8 ifn = UnicodeToLocal(importFilename);
         //const char * ifns = ifn.c_str();
         if ( !importFilename.empty() ) {
-            LvStreamRef file2 = LVOpenFileStream( importFilename.c_str(), LVOM_READ );
+            LVStreamRef file2 = LVOpenFileStream( importFilename.c_str(), LVOM_READ );
             if ( !file2.isNull() )
                 txt2 = UnicodeToUtf8( LVReadTextFile( file2 ) );
         }

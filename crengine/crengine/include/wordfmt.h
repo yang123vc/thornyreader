@@ -5,9 +5,9 @@
 #include "lvtinydom.h"
 
 // MS WORD format support using AntiWord library
-bool DetectWordFormat( LvStreamRef stream );
+bool DetectWordFormat( LVStreamRef stream );
 
-bool ImportWordDocument( LvStreamRef stream, CrDom * m_doc);
+bool ImportWordDocument( LVStreamRef stream, CrDom * m_doc);
 
 
 #endif // ENABLE_ANTIWORD==1
