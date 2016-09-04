@@ -14,7 +14,7 @@
 //C- but WITHOUT ANY WARRANTY; without even the implied warranty of
 //C- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //C- GNU General Public License for more details.
-//C-
+//C- 
 //C- DjVuLibre-3.5 is derived from the DjVu(r) Reference Library from
 //C- Lizardtech Software.  Lizardtech Software has authorized us to
 //C- replace the original DjVu(r) Reference Library notice by the following
@@ -35,16 +35,16 @@
 //C- | The computer code originally released by LizardTech under this
 //C- | license and unmodified by other parties is deemed "the LIZARDTECH
 //C- | ORIGINAL CODE."  Subject to any third party intellectual property
-//C- | claims, LizardTech grants recipient a worldwide, royalty-free,
-//C- | non-exclusive license to make, use, sell, or otherwise dispose of
-//C- | the LIZARDTECH ORIGINAL CODE or of programs derived from the
-//C- | LIZARDTECH ORIGINAL CODE in compliance with the terms of the GNU
-//C- | General Public License.   This grant only confers the right to
-//C- | infringe patent claims underlying the LIZARDTECH ORIGINAL CODE to
-//C- | the extent such infringement is reasonably necessary to enable
-//C- | recipient to make, have made, practice, sell, or otherwise dispose
-//C- | of the LIZARDTECH ORIGINAL CODE (or portions thereof) and not to
-//C- | any greater extent that may be necessary to utilize further
+//C- | claims, LizardTech grants recipient a worldwide, royalty-free, 
+//C- | non-exclusive license to make, use, sell, or otherwise dispose of 
+//C- | the LIZARDTECH ORIGINAL CODE or of programs derived from the 
+//C- | LIZARDTECH ORIGINAL CODE in compliance with the terms of the GNU 
+//C- | General Public License.   This grant only confers the right to 
+//C- | infringe patent claims underlying the LIZARDTECH ORIGINAL CODE to 
+//C- | the extent such infringement is reasonably necessary to enable 
+//C- | recipient to make, have made, practice, sell, or otherwise dispose 
+//C- | of the LIZARDTECH ORIGINAL CODE (or portions thereof) and not to 
+//C- | any greater extent that may be necessary to utilize further 
 //C- | modifications or combinations.
 //C- |
 //C- | The LIZARDTECH ORIGINAL CODE is provided "AS IS" WITHOUT WARRANTY
@@ -136,7 +136,7 @@ protected:
 
   void ChangeMeta( DjVuFile &dfile, const lt_XMLTags &map);
 
-  void ChangeTextOCR( const GUTF8String &value,
+  void ChangeTextOCR( const GUTF8String &value, 
     const int width, const int height,
     const GP<DjVuFile> &dfile);
 
@@ -146,7 +146,7 @@ protected:
   GMap<GUTF8String,GP<DjVuFile> > m_files;
   GMap<GUTF8String,GP<DjVuDocument> > m_docs;
 
-  GURL m_codebase;
+  GURL m_codebase; 
   GCriticalSection xmlparser_lock;
 };
 
@@ -175,7 +175,7 @@ lt_XMLParser::create(void)
 }
 
 // helper function for args
-static void
+static void 
 intList(GUTF8String coords, GList<int> &retval)
 {
   int pos=0;
@@ -194,7 +194,7 @@ intList(GUTF8String coords, GList<int> &retval)
   }
 }
 
-void
+void 
 lt_XMLParser::Impl::empty(void)
 {
   GCriticalSectionLock lock(&xmlparser_lock);
@@ -202,7 +202,7 @@ lt_XMLParser::Impl::empty(void)
   m_docs.empty();
 }
 
-void
+void 
 lt_XMLParser::Impl::save(void)
 {
   GCriticalSectionLock lock(&xmlparser_lock);
@@ -210,7 +210,7 @@ lt_XMLParser::Impl::save(void)
   {
     const GP<DjVuDocument> doc(m_docs[pos]);
     const GURL url=doc->get_init_url();
-
+    
     DEBUG_MSG("Saving "<<(const char *)url<<" with new text and annotations\n");
     const bool bundle=doc->is_bundled()||(doc->get_doc_type()==DjVuDocument::SINGLE_PAGE);
     doc->save_as(url,bundle);
@@ -224,12 +224,12 @@ lt_XMLParser::Impl::parse(const GP<ByteStream> &bs, GURL *pdjvufile)
   const GP<lt_XMLTags> tags(lt_XMLTags::create(bs));
   parse(*tags, pdjvufile);
 }
-
+  
 static const GMap<GUTF8String,GMapArea::BorderType> &
 BorderTypeMap(void)
 {
   static GMap<GUTF8String,GMapArea::BorderType> typeMap;
-  if (! typeMap.size())
+  if (! typeMap.size()) 
     {
       typeMap["none"]=GMapArea::NO_BORDER;
       typeMap["xor"]=GMapArea::XOR_BORDER;
@@ -249,7 +249,7 @@ convertToColor(const GUTF8String &s)
   unsigned long retval=0;
   if(s.length())
   {
-    int endpos = 0;
+    int endpos = -1;
     if(s[0] == '#')
     {
       retval=s.substr(1,-1).toULong(0,endpos,16);
@@ -294,7 +294,7 @@ lt_XMLParser::Impl::ChangeInfo(DjVuFile &dfile,const int dpi,const double gamma)
 void
 lt_XMLParser::Impl::ChangeAnno(
   const int width, const int height,
-  DjVuFile &dfile,
+  DjVuFile &dfile, 
   const lt_XMLTags &map )
 {
   dfile.resume_decode(true);
@@ -324,11 +324,11 @@ lt_XMLParser::Impl::ChangeAnno(
     double hs=1.0;
     if(width && width != w)
     {
-      ws=((double)w)/((double)width);
+      ws=((double)w)/((double)width); 
     }
     if(height && height != h)
     {
-      hs=((double)h)/((double)height);
+      hs=((double)h)/((double)height); 
     }
     if(!anno.ant)
     {
@@ -399,7 +399,7 @@ lt_XMLParser::Impl::ChangeAnno(
           {
             G_THROW( ERR_MSG("XMLAnno.bad_rect") );
           }
-          int xmin,xmax;
+          int xmin,xmax; 
           if(xx[0]>xx[2])
           {
             xmax=xx[0];
@@ -409,7 +409,7 @@ lt_XMLParser::Impl::ChangeAnno(
             xmin=xx[0];
             xmax=xx[2];
           }
-          int ymin,ymax;
+          int ymin,ymax; 
           if(xx[1]>xx[3])
           {
             ymax=xx[1];
@@ -453,7 +453,7 @@ lt_XMLParser::Impl::ChangeAnno(
           {
             G_THROW( ERR_MSG("XMLAnno.bad_oval") );
           }
-          int xmin,xmax;
+          int xmin,xmax; 
           if(xx[0]>xx[2])
           {
             xmax=xx[0];
@@ -463,7 +463,7 @@ lt_XMLParser::Impl::ChangeAnno(
             xmin=xx[0];
             xmax=xx[2];
           }
-          int ymin,ymax;
+          int ymin,ymax; 
           if(xx[1]>xx[3])
           {
             ymax=xx[1];
@@ -564,11 +564,11 @@ lt_XMLParser::Impl::get_file(const GURL &url,GUTF8String id)
     }
     if(id.is_int())
     {
-      const int xpage=id.toInt(); //atoi((char const *)page);
+      const int xpage=id.toInt(); //atoi((char const *)page); 
       if(xpage>0)
         id=doc->page_to_id(xpage-1);
     }else if(!id.length())
-    {
+    { 
       id=doc->page_to_id(0);
     }
   }
@@ -592,13 +592,13 @@ lt_XMLParser::Impl::get_file(const GURL &url,GUTF8String id)
   }
   return dfile;
 }
-
+  
 void
 lt_XMLParser::Impl::parse(const lt_XMLTags &tags, GURL *pdjvufile)
 {
   const GPList<lt_XMLTags> Body(tags.get_Tags(bodytag));
   GPosition pos=Body;
-
+ 
   if(!pos || (pos != Body.lastpos()))
   {
     G_THROW( ERR_MSG("XMLAnno.extra_body") );
@@ -649,10 +649,11 @@ lt_XMLParser::Impl::parse(const lt_XMLTags &tags, GURL *pdjvufile)
       GPosition typePos(args.contains("type"));
       if(typePos)
         {
+          if(args[typePos] != mimetype)
           continue;
         }
-      const GURL url = (pdjvufile) ? *pdjvufile
-        : GURL::UTF8(args[datapos],
+      const GURL url = (pdjvufile) ? *pdjvufile 
+        : GURL::UTF8(args[datapos], 
                      (args[datapos][0] == '/') ? codebase.base() : codebase);
       int width;
       {
@@ -789,7 +790,7 @@ make_child_layer(
   bool retval=true;
   // the plugin thinks there are only Pages, Lines and Words
   // so we don't make Paragraphs, Regions and Columns zones
-  // if we did the plugin is not able to search the text but
+  // if we did the plugin is not able to search the text but 
   // DjVuToText writes out all the text anyway
   DjVuTXT::Zone *self_ptr;
   char sepchar;
@@ -798,7 +799,7 @@ make_child_layer(
   {
     self_ptr=parent.append_child();
     self_ptr->ztype = DjVuTXT::CHARACTER;
-    sepchar=0;
+    sepchar=0;  
   }else if(name == wordtag)
   {
     self_ptr=parent.append_child();
@@ -832,7 +833,7 @@ make_child_layer(
   }
   DjVuTXT::Zone &self = *self_ptr;
   self.text_start = bs.tell();
-  int &xmin=self.rect.xmin, &ymin=self.rect.ymin,
+  int &xmin=self.rect.xmin, &ymin=self.rect.ymin, 
     &xmax=self.rect.xmax, &ymax=self.rect.ymax;
   GRect default_rect;
   default_rect.xmin=max(parent.rect.xmax,parent.rect.xmin);
@@ -975,7 +976,7 @@ make_child_layer(
   return retval;
 }
 
-void
+void 
 lt_XMLParser::Impl::ChangeTextOCR(
   const GUTF8String &value,
   const int width,
@@ -993,7 +994,7 @@ lt_XMLParser::Impl::ChangeTextOCR(
   }
 }
 
-void
+void 
 lt_XMLParser::Impl::ChangeMeta(
   DjVuFile &dfile, const lt_XMLTags &tags )
 {
@@ -1012,19 +1013,19 @@ lt_XMLParser::Impl::ChangeMeta(
   }
 }
 
-void
+void 
 lt_XMLParser::Impl::ChangeText(
   const int width, const int height,
   DjVuFile &dfile, const lt_XMLTags &tags )
 {
   dfile.resume_decode(true);
-
+  
   GP<DjVuText> text = DjVuText::create();
   GP<DjVuTXT> txt = text->txt = DjVuTXT::create();
-
+  
   // to store the new text
-  GP<ByteStream> textbs = ByteStream::create();
-
+  GP<ByteStream> textbs = ByteStream::create(); 
+  
   GP<DjVuInfo> info=(dfile.info);
   if(info)
   {
@@ -1052,7 +1053,7 @@ lt_XMLParser::Impl::ChangeText(
     txt->page_zone.text_length = len;
     textbs->seek(0,SEEK_SET);
     textbs->read(txt->textUTF8.getbuf(len), len);
-
+  
     dfile.change_text(txt,false);
   }
 }
@@ -1067,7 +1068,7 @@ lt_XMLParser::Impl::parse_text(
   GPosition textPos = GObject.contains(hiddentexttag);
   if(textPos)
   {
-    // loop through the hidden text - there should only be one
+    // loop through the hidden text - there should only be one 
     // if there are more ??only the last one will be saved??
     GPList<lt_XMLTags> textTags = GObject[textPos];
     GPosition pos = textTags;
@@ -1083,7 +1084,7 @@ lt_XMLParser::Impl::parse_meta(
   GPosition metaPos = GObject.contains(metadatatag);
   if(metaPos)
   {
-    // loop through the hidden text - there should only be one
+    // loop through the hidden text - there should only be one 
     // if there are more ??only the last one will be saved??
     GPList<lt_XMLTags> metaTags = GObject[metaPos];
     GPosition pos = metaTags;

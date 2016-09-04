@@ -187,22 +187,22 @@ void parseLink(ddjvu_document_t *doc, int pageNo, ddjvu_pageinfo_t *pi, miniexp_
 
     if (targetPage != -1)
     {
-        response.add(PAGE_LINK, targetPage);
-        response.add(data[0]);
-        response.add(data[1]);
-        response.add(data[2]);
-        response.add(data[3]);
-        response.add((float) 0);
-        response.add((float) 0);
+        response.addWords(PAGE_LINK, targetPage);
+        response.addFloat(data[0]);
+        response.addFloat(data[1]);
+        response.addFloat(data[2]);
+        response.addFloat(data[3]);
+        response.addFloat(.0f);
+        response.addFloat(.0f);
     }
     else
     {
-        response.add(PAGE_LINK, 0);
-        response.add(url_target != NULL ? url : EMPTY_URL, false);
-        response.add(data[0]);
-        response.add(data[1]);
-        response.add(data[2]);
-        response.add(data[3]);
+        response.addWords(PAGE_LINK, 0);
+        response.addIpcString(url_target != NULL ? url : EMPTY_URL, false);
+        response.addFloat(data[0]);
+        response.addFloat(data[1]);
+        response.addFloat(data[2]);
+        response.addFloat(data[3]);
     }
 }
 

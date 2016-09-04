@@ -68,11 +68,11 @@ void djvu_get_djvu_words(miniexp_t expr, const char* pattern, ddjvu_pageinfo_t *
 
             float t = 1.0 - coords[1] / height;
             float b = 1.0 - coords[3] / height;
-            response.add(coords[0] / width);
-            response.add(t < b ? t : b);
-            response.add(coords[2] / width);
-            response.add(t > b ? t : b);
-            response.add(text, true);
+            response.addFloat(coords[0] / width);
+            response.addFloat(t < b ? t : b);
+            response.addFloat(coords[2] / width);
+            response.addFloat(t > b ? t : b);
+            response.addIpcString(text, true);
         }
         else if (miniexp_consp(head))
         {

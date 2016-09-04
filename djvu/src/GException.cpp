@@ -68,7 +68,6 @@
 #include "DjVuMessageLite.h"
 #include "debug.h"
 
-#include "DjvuDroidTrace.h"
 
 #ifdef HAVE_NAMESPACES
 namespace DJVU {
@@ -109,8 +108,6 @@ GException::GException (const char *xcause, const char *file, int line,
 {
   // good place to set a breakpoint and DEBUG message too. 
   // It'd hard to track exceptions which seem to go from nowhere
-  DEBUG_PRINT("GException::GException(): cause= %s ", (xcause ? xcause : "unknown"));
-
 #ifdef DEBUG_MSG
   DEBUG_MSG("GException::GException(): cause=" << (xcause ? xcause : "unknown") << "\n");
 #endif
@@ -206,53 +203,6 @@ GException::cmp_cause(const char s2[]) const
   return cmp_cause(cause,s2);
 }
 
-#ifdef USE_EXCEPTION_EMULATION
-
-GExceptionHandler *GExceptionHandler::head = 0;
-
-void
-GExceptionHandler::emthrow(const GException &gex)
-{
-  if (head)
-    {
-      head->current = gex;
-      longjmp(head->jump, -1);
-    }
-  else
-    {
-      DjVuPrintErrorUTF8("\n*** Unhandled exception");
-      gex.perror();
-      abort();
-    }
-}
-
-#else // ! USE_EXCEPTION_EMULATION
-
-static int abort_on_exception = 0;
-
-void 
-#ifndef NO_LIBGCC_HOOKS
-GExceptionHandler::exthrow(const GException &ex)
-#else
-GExceptionHandler::exthrow(const GException ex)
-#endif /* NO_LIBGCC_HOOKS */
-{
-  if (abort_on_exception) 
-    abort();
-  throw ex;
-}
-
-void 
-GExceptionHandler::rethrow(void)
-{
-  if (abort_on_exception) 
-    abort();
-  throw;
-}
-
-#endif
-
-
 
 // ------ MEMORY MANAGEMENT HANDLER
 
@@ -260,21 +210,16 @@ GExceptionHandler::rethrow(void)
 // This is not activated when C++ memory management
 // is overidden.  The overriding functions handle
 // memory exceptions by themselves.
-# if defined(_MSC_VER)
-// Microsoft is different!
-static int throw_memory_error(size_t) { G_THROW(GException::outofmemory); return 0; }
-static int (*old_handler)(size_t) = _set_new_handler(throw_memory_error);
-# else // !_MSC_VER
-// Standard C++
 static void throw_memory_error() { G_THROW(GException::outofmemory); }
-#  if !defined(WIN32) && !defined(__CYGWIN32__) && !defined(OS2)
+# if defined(_WIN32) || defined(__CYGWIN32__) || defined(OS2)
+static void (*old_handler)() = std::set_new_handler(throw_memory_error);
+# else 
 #   ifdef HAVE_STDINCLUDES
-//static void (*old_handler)() = std::set_new_handler(throw_memory_error);
+static void (*old_handler)() = std::set_new_handler(throw_memory_error);
 #   else
 static void (*old_handler)() = set_new_handler(throw_memory_error);
-#   endif // HAVE_STDINCLUDES
-#  endif // ! WIN32
-# endif // !_MSC_VER
+#  endif // HAVE_STDINCLUDES
+# endif // ! WIN32
 #endif // !NEED_DJVU_MEMORY
 
 

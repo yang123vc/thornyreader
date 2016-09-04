@@ -119,12 +119,11 @@ DjvuOutlineItem::~DjvuOutlineItem()
 
 void DjvuOutlineItem::toResponse(CmdResponse& response)
 {
-    response.add((uint32_t) this->level);
-    response.add(this->title != NULL ? this->title : EMPTY_TITLE, false);
-    response.add((uint16_t) PAGE_LINK, (uint16_t) this->pageNo);
-    response.add((float)0).add((float)0);
+	response.addWords((uint16_t) PAGE_LINK, (uint16_t) this->pageNo);
+	response.addInt((uint32_t) this->level);
 
-    DEBUG_L(L_DEBUG_OUTLINE, LCTX, "[%d:%d] %d", this->level, this->index, response.dataCount);
+	response.addIpcString(this->title != NULL ? this->title : EMPTY_TITLE, false);
+    response.addFloat(.0f).addFloat(.0f);
 
     if (firstChild != NULL)
     {
@@ -172,7 +171,6 @@ DjvuOutline::~DjvuOutline()
 
 void DjvuOutline::toResponse(CmdResponse& response)
 {
-    response.add((uint32_t) firstPageIndex);
     if (firstItem != NULL)
     {
         firstItem->toResponse(response);

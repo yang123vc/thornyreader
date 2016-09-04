@@ -75,9 +75,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "DjvuDroidTrace.h"
-
-#ifdef WIN32
+#ifdef _WIN32
 # include <windows.h>  // OutputDebugString
 #endif 
 
@@ -91,7 +89,7 @@ namespace DJVU {
 
 
 #ifndef UNIX
-#ifndef WIN32
+#ifndef _WIN32
 #ifndef macintosh
 #define UNIX
 #endif
@@ -108,16 +106,12 @@ static int              debug_id;
 static FILE            *debug_file;
 static int              debug_file_count;
 
-#if THREADMODEL==NOTHREADS
-static DjVuDebug debug_obj;
-#else
 static GMap<long, DjVuDebug> &
 debug_map(void)
 {
   static GMap<long, DjVuDebug> xmap;
   return xmap;
 }
-#endif
 
 DjVuDebug::DjVuDebug()
   : block(0), indent(0)
@@ -151,14 +145,12 @@ DjVuDebug::format(const char *fmt, ... )
       GUTF8String buffer(fmt,ap);
       va_end(ap);
       GCriticalSectionLock glock(&debug_lock);
-      DEBUG_PRINT("%s", (const char *)buffer);
-      
       if (debug_file)
         {
           fprintf(debug_file,"%s", (const char*)buffer);
           fflush(debug_file);
         }
-#ifdef WIN32
+#ifdef _WIN32
       else
         {
           OutputDebugStringA((const char *)buffer);
@@ -193,16 +185,10 @@ DjVuDebug::lock(int lvl, int noindent)
 {
   int threads_num=1;
   debug_lock.lock();
-  // Find Debug object
-#if THREADMODEL==NOTHREADS
-  // Get no-threads debug object
-  DjVuDebug &dbg = debug_obj;
-#else
   // Get per-thread debug object
   long threadid = (long) GThread::current();
   DjVuDebug &dbg = debug_map()[threadid];
   threads_num=debug_map().size();
-#endif
   // Check level
   dbg.block = (lvl > debug_level);
   // Output thread id and indentation

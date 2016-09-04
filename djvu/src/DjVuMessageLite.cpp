@@ -75,8 +75,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
-// #include <stdio.h>
-#ifdef WIN32
+#ifdef _WIN32
 #include <tchar.h>
 #include <windows.h>
 #include <winreg.h>

@@ -18,21 +18,26 @@
 
 #include "StLog.h"
 #include "StProtocol.h"
-
+#include "StSocket.h"
+#include "StConfig.h"
 #include "DjvuBridge.h"
 
-#define LCTX "EBookDroid.DJVU.Decoder"
-#define L_DEBUG false
+#include "abitmap-utils.h"
+
+#define LCTX "DjvuBridge"
+#define L_DEBUG true
 
 #define RES_DJVU_FAIL       255
 
 
-DjvuBridge::DjvuBridge() : StBridge("EBookDroid.DJVU")
+DjvuBridge::DjvuBridge() : StBridge("DjvuBridge")
 {
     context = NULL;
     doc = NULL;
     pageCount = 0;
     pages = NULL;
+    info = NULL;
+    outline = NULL;
 }
 
 DjvuBridge::~DjvuBridge()
@@ -105,6 +110,9 @@ void DjvuBridge::process(CmdRequest& request, CmdResponse& response)
     case CMD_REQ_PAGE_FREE:
         processPageFree(request, response);
         break;
+    case CMD_REQ_SMART_CROP:
+        processSmartCrop(request, response);
+        break;
     case CMD_REQ_PAGE_TEXT:
         processPageText(request, response);
         break;
@@ -138,26 +146,45 @@ void DjvuBridge::processOpen(CmdRequest& request, CmdResponse& response)
         return;
     }
 
-    uint8_t* fileName = NULL;
-    uint32_t pageNo = 0;
+    uint8_t* socketName = NULL;
 
     CmdDataIterator iter(request.first);
-    iter.required(&fileName).integer(&pageNo);
+    iter.getByteArray(&socketName);
 
-    if ((!iter.isValid()) || (!fileName))
+    if ((!iter.isValid()) || (!socketName))
     {
-        ERROR_L(LCTX, "Bad request data: %u %u %u %08X %p %u", request.cmd, request.dataCount, iter.getCount(),
-            iter.getErrors(), fileName, pageNo);
+        ERROR_L(LCTX, "Bad request data: %u %u %u %p",
+			request.cmd, request.dataCount, iter.getCount(), socketName);
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+
+    DEBUG_L(L_DEBUG, LCTX, "Socket name: %s", socketName);
+    StSocketConnection connection((const char*)socketName);
+    if (!connection.isValid())
+    {
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+
+    DEBUG_L(L_DEBUG, LCTX, "client: connected!");
+    int fd;
+    bool received = connection.receiveFileDescriptor(fd);
+
+    DEBUG_L(L_DEBUG, LCTX, "File descriptor:  %d", fd);
+    if (!received)
+    {
         response.result = RES_BAD_REQ_DATA;
         return;
     }
 
     if (doc == NULL)
     {
-        DEBUG_L(L_DEBUG, LCTX, "Opening document: %p", fileName);
-
         context = ddjvu_context_create(LCTX);
-        doc = ddjvu_document_create_by_filename(context, (const char*) fileName, FALSE);
+        char url[1024];
+        sprintf(url, "fd:%d", fd);
+        DEBUG_L(L_DEBUG, LCTX, "Opening url: %s", url);
+        doc = ddjvu_document_create_by_filename(context, url, FALSE);
         if (!doc)
         {
             ERROR_L(LCTX, "DJVU file not found or corrupted.");
@@ -186,17 +213,7 @@ void DjvuBridge::processOpen(CmdRequest& request, CmdResponse& response)
 
         outline = new DjvuOutline(doc);
     }
-
-    response.add(pageCount);
-
-    if (pageCount > 0)
-    {
-        if (pageNo < pageCount)
-        {
-            getPageInfo(pageNo);
-            getPage(pageNo, true);
-        }
-    }
+    response.addInt(pageCount);
 }
 
 void DjvuBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
@@ -210,7 +227,7 @@ void DjvuBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
     }
 
     uint32_t pageNo = 0;
-    if (!CmdDataIterator(request.first).integer(&pageNo).isValid())
+    if (!CmdDataIterator(request.first).getInt(&pageNo).isValid())
     {
         ERROR_L(LCTX, "Bad request data");
         response.result = RES_BAD_REQ_DATA;
@@ -234,7 +251,7 @@ void DjvuBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
     data[0] = i->width;
     data[1] = i->height;
 
-    response.add(2, data, true);
+    response.addFloatArray(2, data, true);
 }
 
 void DjvuBridge::processPage(CmdRequest& request, CmdResponse& response)
@@ -249,7 +266,7 @@ void DjvuBridge::processPage(CmdRequest& request, CmdResponse& response)
 
     uint32_t pageNumber = 0;
     CmdDataIterator iter(request.first);
-    if (!iter.integer(&pageNumber).isValid())
+    if (!iter.getInt(&pageNumber).isValid())
     {
         ERROR_L(LCTX, "Bad request data");
         response.result = RES_BAD_REQ_DATA;
@@ -293,7 +310,7 @@ void DjvuBridge::processPageFree(CmdRequest& request, CmdResponse& response)
 
     uint32_t pageNumber = 0;
     CmdDataIterator iter(request.first);
-    if (!iter.integer(&pageNumber).isValid())
+    if (!iter.getInt(&pageNumber).isValid())
     {
         ERROR_L(LCTX, "Bad request data");
         response.result = RES_BAD_REQ_DATA;
@@ -330,13 +347,13 @@ void DjvuBridge::processPageRender(CmdRequest& request, CmdResponse& response)
     }
 
     uint32_t pageNumber, targetWidth, targetHeight;
-    float pageSliceX, pageSliceY, pageSliceWidth, pageSliceHeight;
-    uint32_t rendermode;
+    float *temp_config;
 
     CmdDataIterator iter(request.first);
-    iter.integer(&pageNumber).integer(&targetWidth).integer(&targetHeight);
-    iter.floater(&pageSliceX).floater(&pageSliceY).floater(&pageSliceWidth).floater(&pageSliceHeight);
-    iter.integer(&rendermode);
+    iter.getInt(&pageNumber)
+            .getInt(&targetWidth)
+            .getInt(&targetHeight)
+            .getFloatArray(&temp_config, 6);
 
     if (!iter.isValid())
     {
@@ -350,6 +367,11 @@ void DjvuBridge::processPageRender(CmdRequest& request, CmdResponse& response)
         response.result = RES_DUP_OPEN;
         return;
     }
+
+    float pageSliceX = temp_config[0];
+    float pageSliceY = temp_config[1];
+    float pageSliceWidth = temp_config[2];
+    float pageSliceHeight = temp_config[3];
 
     ddjvu_page_t* p = getPage(pageNumber, true);
 
@@ -371,11 +393,17 @@ void DjvuBridge::processPageRender(CmdRequest& request, CmdResponse& response)
     ddjvu_format_set_y_direction(pixelFormat, TRUE);
 
     int size = targetRect.w * targetRect.h * 4;
-    CmdData* resp = new CmdData(size);
-    char* pixels = (char*)resp->external;
+    CmdData* resp = new CmdData();
+    char* pixels = (char*)resp->newByteArray(size);
 
-    int result = ddjvu_page_render(pages[pageNumber], (ddjvu_render_mode_t) rendermode, &pageRect, &targetRect,
-        pixelFormat, targetWidth * 4, pixels);
+    int result = ddjvu_page_render(
+            pages[pageNumber],
+            (ddjvu_render_mode_t) HARDCONFIG_DJVU_RENDERING_MODE,
+            &pageRect,
+            &targetRect,
+            pixelFormat,
+            targetWidth * 4,
+            pixels);
 
     ddjvu_format_release(pixelFormat);
 
@@ -386,7 +414,7 @@ void DjvuBridge::processPageRender(CmdRequest& request, CmdResponse& response)
     }
     else
     {
-        response.add(resp);
+        response.addData(resp);
     }
 }
 
@@ -406,6 +434,7 @@ void DjvuBridge::processOutline(CmdRequest& request, CmdResponse& response)
         outline = new DjvuOutline(doc);
     }
 
+    response.addInt(0);
     outline->toResponse(response);
 }
 
@@ -424,7 +453,7 @@ void DjvuBridge::processPageText(CmdRequest& request, CmdResponse& response)
     uint8_t* pattern = NULL;
 
     CmdDataIterator iter(request.first);
-    iter.integer(&pageNo)/*.required(&pattern) */;
+    iter.getInt(&pageNo)/*.required(&pattern) */;
 
     if (!iter.isValid())
     {
@@ -510,3 +539,74 @@ void DjvuBridge::handleMessages()
     }
 }
 
+void DjvuBridge::processSmartCrop(CmdRequest& request, CmdResponse& response)
+{
+    response.cmd = CMD_RES_SMART_CROP;
+    if (request.dataCount == 0) {
+        ERROR_L(LCTX, "No request data found");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    if (doc == NULL || pages == NULL) {
+        ERROR_L(LCTX, "Document not yet opened");
+        response.result = RES_DUP_OPEN;
+        return;
+    }
+
+    uint32_t page_index;
+    float origin_w;
+    float origin_h;
+    float slice_l;
+    float slice_t;
+    float slice_r;
+    float slice_b;
+    CmdDataIterator iter(request.first);
+    iter.getInt(&page_index).getFloat(&origin_w).getFloat(&origin_h)
+            .getFloat(&slice_l).getFloat(&slice_t).getFloat(&slice_r).getFloat(&slice_b);
+    if (!iter.isValid()) {
+        ERROR_L(LCTX, "Bad request data");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+
+    float slice_w = slice_r - slice_l;
+    float slice_h = slice_b - slice_t;
+
+    ddjvu_page_t* p = getPage(page_index, true);
+
+    ddjvu_rect_t pageRect;
+    pageRect.x = 0;
+    pageRect.y = 0;
+    pageRect.w = SMART_CROP_W / slice_w;
+    pageRect.h = SMART_CROP_H / slice_h;
+    ddjvu_rect_t targetRect;
+    targetRect.x = slice_l * SMART_CROP_W / slice_w;
+    targetRect.y = slice_t * SMART_CROP_H / slice_h;
+    targetRect.w = SMART_CROP_W;
+    targetRect.h = SMART_CROP_H;
+
+    unsigned int masks[] = { 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000 };
+    ddjvu_format_t* pixelFormat = ddjvu_format_create(DDJVU_FORMAT_RGBMASK32, 4, masks);
+
+    ddjvu_format_set_row_order(pixelFormat, TRUE);
+    ddjvu_format_set_y_direction(pixelFormat, TRUE);
+
+    int size = targetRect.w * targetRect.h * 4;
+    char* pixels = (char*) malloc(size);
+
+    //TODO DDJVU_RENDER_BLACK?
+    int result = ddjvu_page_render(pages[page_index], DDJVU_RENDER_COLOR, &pageRect, &targetRect,
+                                   pixelFormat, SMART_CROP_W * 4, pixels);
+
+    ddjvu_format_release(pixelFormat);
+
+    if (result) {
+        float smart_crop[4];
+        CalcBitmapSmartCrop(smart_crop, (uint8_t*) pixels, SMART_CROP_W, SMART_CROP_H,
+                            slice_l, slice_t, slice_r, slice_b);
+        response.addFloatArray(4, smart_crop, true);
+    } else {
+        response.result = RES_DJVU_FAIL;
+    }
+    free(pixels);
+}

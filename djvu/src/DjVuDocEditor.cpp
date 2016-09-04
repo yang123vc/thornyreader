@@ -555,7 +555,7 @@ DjVuDocEditor::insert_file(const GURL &file_url, bool is_page,
                                          can_compress_flag);
   }
 
-   // Oh. It does exist... Check that it has IFF structure
+  // Oh. It does exist... Check that it has IFF structure
   {
     const GP<IFFByteStream> giff(
        IFFByteStream::create(file_pool->get_stream()));
@@ -696,11 +696,11 @@ DjVuDocEditor::insert_file(const GP<DataPool> &file_pool,
             int length;
             while((length=iff_in.read(buffer, 1024)))
                name+=GUTF8String(buffer, length);
-            while(isspace(name[0]))
+            while(isspace((unsigned char)name[0]))
             {
               name=name.substr(1,(unsigned int)-1);
             }
-            while(isspace(name[(int)name.length()-1]))
+            while(isspace((unsigned char)name[(int)name.length()-1]))
             {
               name.setat(name.length()-1, 0);
             }
@@ -1357,7 +1357,7 @@ DjVuDocEditor::simplify_anno(void (* progress_cb)(float progress, void *),
    {
       GP<DjVuFile> djvu_file=get_djvu_file(page_num);
       if (!djvu_file)
-         G_THROW( ERR_MSG("DjVuDocEditor.page_fail") "\t"+page_num);
+        G_THROW( ERR_MSG("DjVuDocEditor.page_fail") "\t" + GUTF8String(page_num));
       int max_level=0;
       GP<ByteStream> anno;
       anno=djvu_file->get_merged_anno(ignore_list, &max_level);
@@ -1960,7 +1960,15 @@ DjVuDocEditor::save_as(const GURL &where, bool bundled)
      doc_url=GURL();
    }else
    {
-     if (djvm_dir->get_files_num()==1 && !djvm_nav)
+     bool singlepage = (djvm_dir->get_files_num()==1 && !djvm_nav);
+     if (singlepage)
+     {
+       // maybe save as single page
+       DjVmDir::File *file = djvm_dir->page_to_file(0);
+       if (file->get_title() != file->get_load_name())
+         singlepage = false;
+     }
+     if (singlepage)
      {
        // Here 'bundled' has no effect: we will save it as one page.
        DEBUG_MSG("saving one file...\n");

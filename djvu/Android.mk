@@ -3,23 +3,32 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 SAVED_NDK_APP_DST_DIR := $(NDK_APP_DST_DIR)
-NDK_APP_DST_DIR := assets/plugins
+NDK_APP_DST_DIR := assets/thornyreader/$(TARGET_ARCH_ABI)
+LOCAL_MODULE := djvu
+LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_MODULE    := djvu
+LOCAL_CPP_FEATURES  := exceptions
 
-LOCAL_CFLAGS    := -fexceptions
+LOCAL_STATIC_LIBRARIES := standalone jpeg-turbo abitmap-utils
+LOCAL_LDLIBS := -llog
+
+LOCAL_LDFLAGS 		+= -rdynamic -pie # runpie
+LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie
+
+LOCAL_CFLAGS 		+= -DHAVE_CONFIG_H
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/include \
-	$(LOCAL_PATH)/../jpeg-turbo/include \
-	$(LOCAL_PATH)/../standalone/include
+	$(LOCAL_PATH)/../standalone/include \
+	$(LOCAL_PATH)/../jpeg-turbo/jpeg-turbo/include \
+	$(LOCAL_PATH)/../abitmap-utils/include \
+	$(LOCAL_PATH)/include
 
 LOCAL_SRC_FILES :=  \
-	standalone/DjvuMain.cpp \
-	standalone/DjvuBridge.cpp \
-	standalone/DjvuOutline.cpp \
-	standalone/DjvuLinks.cpp \
-	standalone/DjvuText.cpp \
+	DjvuMain.cpp \
+	DjvuBridge.cpp \
+	DjvuOutline.cpp \
+	DjvuLinks.cpp \
+	DjvuText.cpp \
 	src/Arrays.cpp \
 	src/BSByteStream.cpp \
 	src/BSEncodeByteStream.cpp \
@@ -74,11 +83,6 @@ LOCAL_SRC_FILES :=  \
 	src/debug.cpp \
 	src/ddjvuapi.cpp \
 	src/miniexp.cpp
-
-LOCAL_STATIC_LIBRARIES := standalone jpeg-turbo
-LOCAL_LDLIBS := -llog
-
-LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
 include $(BUILD_EXECUTABLE)
 

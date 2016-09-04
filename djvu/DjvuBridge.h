@@ -47,6 +47,7 @@ protected:
     void processPageInfo(CmdRequest& request, CmdResponse& response);
     void processPage(CmdRequest& request, CmdResponse& response);
     void processPageRender(CmdRequest& request, CmdResponse& response);
+    void processSmartCrop(CmdRequest& request, CmdResponse& response);
     void processPageFree(CmdRequest& request, CmdResponse& response);
     void processOutline(CmdRequest& request, CmdResponse& response);
     void processPageText(CmdRequest& request, CmdResponse& response);
