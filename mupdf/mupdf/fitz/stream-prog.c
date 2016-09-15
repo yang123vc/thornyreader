@@ -1,7 +1,7 @@
 #include "mupdf/fitz/stream.h"
 #include "mupdf/fitz/string.h"
 
-#if defined(_WIN32) && !defined(NDEBUG)
+#if (defined(_WIN32) || defined(_WIN64)) && !defined(NDEBUG)
 #include "windows.h"
 
 static void
@@ -24,12 +24,17 @@ typedef struct prog_state
 	int available;
 	int bps;
 	clock_t start_time;
+	unsigned char buffer[4096];
 } prog_state;
 
-static int read_prog(fz_stream *stm, unsigned char *buf, int len)
+static int next_prog(fz_context *ctx, fz_stream *stm, int len)
 {
 	prog_state *ps = (prog_state *)stm->state;
 	int n;
+	unsigned char *buf = ps->buffer;
+
+	if (len > sizeof(ps->buffer))
+		len = sizeof(ps->buffer);
 
 	/* Simulate more data having arrived */
 	if (ps->available < ps->length)
@@ -45,18 +50,23 @@ static int read_prog(fz_stream *stm, unsigned char *buf, int len)
 			if (len <= 0)
 			{
 				show_progress(av, stm->pos);
-				fz_throw(stm->ctx, FZ_ERROR_TRYLATER, "Not enough data yet");
+				fz_throw(ctx, FZ_ERROR_TRYLATER, "Not enough data yet");
 			}
 		}
 	}
 
 	n = (len > 0 ? read(ps->fd, buf, len) : 0);
 	if (n < 0)
-		fz_throw(stm->ctx, FZ_ERROR_GENERIC, "read error: %s", strerror(errno));
-	return n;
+		fz_throw(ctx, FZ_ERROR_GENERIC, "read error: %s", strerror(errno));
+	stm->rp = ps->buffer + stm->pos;
+	stm->wp = ps->buffer + stm->pos + n;
+	stm->pos += n;
+	if (n == 0)
+		return EOF;
+	return *stm->rp++;
 }
 
-static void seek_prog(fz_stream *stm, int offset, int whence)
+static void seek_prog(fz_context *ctx, fz_stream *stm, int offset, int whence)
 {
 	prog_state *ps = (prog_state *)stm->state;
 	int n;
@@ -74,7 +84,7 @@ static void seek_prog(fz_stream *stm, int offset, int whence)
 		if (whence == SEEK_END)
 		{
 			show_progress(ps->available, ps->length);
-			fz_throw(stm->ctx, FZ_ERROR_TRYLATER, "Not enough data to seek to end yet");
+			fz_throw(ctx, FZ_ERROR_TRYLATER, "Not enough data to seek to end yet");
 		}
 	}
 	if (whence == SEEK_CUR)
@@ -84,7 +94,7 @@ static void seek_prog(fz_stream *stm, int offset, int whence)
 		if (offset > ps->available)
 		{
 			show_progress(ps->available, offset);
-			fz_throw(stm->ctx, FZ_ERROR_TRYLATER, "Not enough data to seek (relatively) to offset yet");
+			fz_throw(ctx, FZ_ERROR_TRYLATER, "Not enough data to seek (relatively) to offset yet");
 		}
 	}
 	if (whence == SEEK_SET)
@@ -92,16 +102,15 @@ static void seek_prog(fz_stream *stm, int offset, int whence)
 		if (offset > ps->available)
 		{
 			show_progress(ps->available, offset);
-			fz_throw(stm->ctx, FZ_ERROR_TRYLATER, "Not enough data to seek to offset yet");
+			fz_throw(ctx, FZ_ERROR_TRYLATER, "Not enough data to seek to offset yet");
 		}
 	}
 
 	n = lseek(ps->fd, offset, whence);
 	if (n < 0)
-		fz_throw(stm->ctx, FZ_ERROR_GENERIC, "cannot lseek: %s", strerror(errno));
+		fz_throw(ctx, FZ_ERROR_GENERIC, "cannot lseek: %s", strerror(errno));
 	stm->pos = n;
-	stm->rp = stm->bp;
-	stm->wp = stm->bp;
+	stm->wp = stm->rp;
 }
 
 static void close_prog(fz_context *ctx, void *state)
@@ -113,7 +122,7 @@ static void close_prog(fz_context *ctx, void *state)
 	fz_free(ctx, state);
 }
 
-static int meta_prog(fz_stream *stm, int key, int size, void *ptr)
+static int meta_prog(fz_context *ctx, fz_stream *stm, int key, int size, void *ptr)
 {
 	prog_state *ps = (prog_state *)stm->state;
 	switch(key)
@@ -144,7 +153,7 @@ fz_open_fd_progressive(fz_context *ctx, int fd, int bps)
 
 	fz_try(ctx)
 	{
-		stm = fz_new_stream(ctx, state, read_prog, close_prog);
+		stm = fz_new_stream(ctx, state, next_prog, close_prog);
 	}
 	fz_catch(ctx)
 	{
@@ -160,7 +169,7 @@ fz_open_fd_progressive(fz_context *ctx, int fd, int bps)
 fz_stream *
 fz_open_file_progressive(fz_context *ctx, const char *name, int bps)
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 	char *s = (char*)name;
 	wchar_t *wname, *d;
 	int c, fd;

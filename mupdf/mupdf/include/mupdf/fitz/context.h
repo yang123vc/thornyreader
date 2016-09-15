@@ -1,6 +1,7 @@
 #ifndef MUPDF_FITZ_CONTEXT_H
 #define MUPDF_FITZ_CONTEXT_H
 
+#include "mupdf/fitz/version.h"
 #include "mupdf/fitz/system.h"
 
 /*
@@ -17,6 +18,7 @@ typedef struct fz_aa_context_s fz_aa_context;
 typedef struct fz_locks_context_s fz_locks_context;
 typedef struct fz_store_s fz_store;
 typedef struct fz_glyph_cache_s fz_glyph_cache;
+typedef struct fz_document_handler_context_s fz_document_handler_context;
 typedef struct fz_context_s fz_context;
 
 struct fz_alloc_context_s
@@ -77,7 +79,9 @@ enum
 {
 	FZ_ERROR_NONE = 0,
 	FZ_ERROR_GENERIC = 1,
-	FZ_ERROR_TRYLATER = 2,
+	FZ_ERROR_SYNTAX = 2,
+	FZ_ERROR_TRYLATER = 3,
+	FZ_ERROR_ABORT = 4,
 	FZ_ERROR_COUNT
 };
 
@@ -106,9 +110,16 @@ struct fz_context_s
 	fz_aa_context *aa;
 	fz_store *store;
 	fz_glyph_cache *glyph_cache;
+	fz_document_handler_context *handler;
 	// EBD: context flags >>>
 	int ebookdroid_nightmode;
 	int ebookdroid_slowcmyk;
+	int ebookdroid_ignore_most_errors;
+	int ebookdroid_linearized_load;
+	int ebookdroid_setcolor_per_page;
+	int ebookdroid_file_stream_offset;
+	int ebookdroid_hasPassword;
+	int ebookdroid_reparing;
 	// EBD: context flags <<<
 };
 
@@ -131,7 +142,7 @@ enum {
 
 	The global state contains an exception stack, resource store,
 	etc. Most functions in MuPDF take a context argument to be
-	able to reference the global state. See fz_free_context for
+	able to reference the global state. See fz_drop_context for
 	freeing an allocated context.
 
 	alloc: Supply a custom memory allocator through a set of
@@ -154,7 +165,9 @@ enum {
 
 	Does not throw exceptions, but may return NULL.
 */
-fz_context *fz_new_context(fz_alloc_context *alloc, fz_locks_context *locks, unsigned int max_store);
+fz_context *fz_new_context_imp(fz_alloc_context *alloc, fz_locks_context *locks, unsigned int max_store, const char *version);
+
+#define fz_new_context(alloc, locks, max_store) fz_new_context_imp(alloc, locks, max_store, FZ_VERSION)
 
 /*
 	fz_clone_context: Make a clone of an existing context.
@@ -174,7 +187,7 @@ fz_context *fz_new_context(fz_alloc_context *alloc, fz_locks_context *locks, uns
 fz_context *fz_clone_context(fz_context *ctx);
 
 /*
-	fz_free_context: Free a context and its global state.
+	fz_drop_context: Free a context and its global state.
 
 	The context and all of its global state is freed, and any
 	buffered warnings are flushed (see fz_flush_warnings). If NULL
@@ -182,7 +195,7 @@ fz_context *fz_clone_context(fz_context *ctx);
 
 	Does not throw exceptions.
 */
-void fz_free_context(fz_context *ctx);
+void fz_drop_context(fz_context *ctx);
 
 /*
 	fz_aa_level: Get the number of bits of antialiasing we are
@@ -228,7 +241,7 @@ struct fz_locks_context_s
 
 enum {
 	FZ_LOCK_ALLOC = 0,
-	FZ_LOCK_FILE,
+	FZ_LOCK_FILE, /* Unused now */
 	FZ_LOCK_FREETYPE,
 	FZ_LOCK_GLYPHCACHE,
 	FZ_LOCK_MAX
@@ -399,12 +412,6 @@ char *fz_strdup_no_throw(fz_context *ctx, const char *s);
 */
 int fz_gen_id(fz_context *ctx);
 
-/*
-	fz_javascript_supported: test whether a version of mupdf with
-	a javascript engine is in use.
-*/
-int fz_javascript_supported(void);
-
 struct fz_warn_context_s
 {
 	char message[256];
@@ -414,8 +421,12 @@ struct fz_warn_context_s
 fz_context *fz_clone_context_internal(fz_context *ctx);
 
 void fz_new_aa_context(fz_context *ctx);
-void fz_free_aa_context(fz_context *ctx);
+void fz_drop_aa_context(fz_context *ctx);
 void fz_copy_aa_context(fz_context *dst, fz_context *src);
+
+void fz_new_document_handler_context(fz_context *ctx);
+void fz_drop_document_handler_context(fz_context *ctx);
+fz_document_handler_context *fz_keep_document_handler_context(fz_context *ctx);
 
 /* Default allocator */
 extern fz_alloc_context fz_alloc_default;
@@ -455,6 +466,66 @@ fz_unlock(fz_context *ctx, int lock)
 {
 	fz_lock_debug_unlock(ctx, lock);
 	ctx->locks->unlock(ctx->locks->user, lock);
+}
+
+static inline void *
+fz_keep_imp(fz_context *ctx, void *p, int *refs)
+{
+	if (p)
+	{
+		fz_lock(ctx, FZ_LOCK_ALLOC);
+		if (*refs > 0)
+			++*refs;
+		fz_unlock(ctx, FZ_LOCK_ALLOC);
+	}
+	return p;
+}
+
+static inline void *
+fz_keep_imp8(fz_context *ctx, void *p, int8_t *refs)
+{
+	if (p)
+	{
+		fz_lock(ctx, FZ_LOCK_ALLOC);
+		if (*refs > 0)
+			++*refs;
+		fz_unlock(ctx, FZ_LOCK_ALLOC);
+	}
+	return p;
+}
+
+static inline int
+fz_drop_imp(fz_context *ctx, void *p, int *refs)
+{
+	if (p)
+	{
+		int drop;
+		fz_lock(ctx, FZ_LOCK_ALLOC);
+		if (*refs > 0)
+			drop = --*refs == 0;
+		else
+			drop = 0;
+		fz_unlock(ctx, FZ_LOCK_ALLOC);
+		return drop;
+	}
+	return 0;
+}
+
+static inline int
+fz_drop_imp8(fz_context *ctx, void *p, int8_t *refs)
+{
+	if (p)
+	{
+		int drop;
+		fz_lock(ctx, FZ_LOCK_ALLOC);
+		if (*refs > 0)
+			drop = --*refs == 0;
+		else
+			drop = 0;
+		fz_unlock(ctx, FZ_LOCK_ALLOC);
+		return drop;
+	}
+	return 0;
 }
 
 #endif

@@ -13,9 +13,12 @@ char font_DroidSerifRegular[] = "/system/fonts/DroidSerif-Regular.ttf";
 char font_DroidSerifBold[] = "/system/fonts/DroidSerif-Bold.ttf";
 char font_DroidSerifItalic[] = "/system/fonts/DroidSerif-Italic.ttf";
 char font_DroidSerifBoldItalic[] = "/system/fonts/DroidSerif-BoldItalic.ttf";
-char font_StandardSym[] = "/sdcard/.org.ebookdroid/StandardSymL.cff";
-char font_Dingbats[] = "/sdcard/.org.ebookdroid/Dingbats.cff";
+//char font_StandardSym[] = "/sdcard/.org.ebookdroid/StandardSymL.cff";
+//char font_Dingbats[] = "/sdcard/.org.ebookdroid/Dingbats.cff";
+char font_StandardSym[] = "/data/data/org.readera/files/thornyreader/ssl.cff";
+char font_Dingbats[] = "/data/data/org.readera/files/thornyreader/dingbats.cff";
 char font_DroidSansFallback[] = "/system/fonts/DroidSansFallback.ttf";
+char font_DroidSansFallbackFull[] = "/system/fonts/DroidSansFallbackFull.ttf";
 
 char ext_font_Courier[1024]; //= "/sdcard/.org.ebookdroid/fonts/FreeMono.ttf";
 char ext_font_CourierBold[1024]; // = "/sdcard/.org.ebookdroid/fonts/FreeMonoBold.ttf";
@@ -33,7 +36,8 @@ char ext_font_Symbol[1024]; // = "/sdcard/.org.ebookdroid/fonts/StandardSymL.cff
 char ext_font_ZapfDingbats[1024]; // = "/sdcard/.org.ebookdroid/fonts/Dingbats.cff";
 
 
-char ext_system_fonts[100][2][512];
+char ext_system_fonts[1024][2][512];
+unsigned int ext_system_fonts_idx[1024];
 int  ext_system_fonts_count;
 
 
@@ -171,10 +175,12 @@ unsigned char* get_ext_font(fontsubst* fs)
 }
 
 unsigned char *
-pdf_lookup_builtin_font(char *name, unsigned int *len)
+pdf_lookup_builtin_font(fz_context *ctx, const char *name, unsigned int *len)
 {
 	*len = 0;
 	int index;
+
+	LOGI("Try to load builtin: %s", name);
 	for(index = 0; index < fonts_count; index++)
 	{
 		if (!strcmp(fonts[index]->name, name))
@@ -210,7 +216,7 @@ pdf_lookup_substitute_fontfamily(fontfamily* font, int bold, int italic)
 }
 
 unsigned char *
-pdf_lookup_substitute_font(int mono, int serif, int bold, int italic, unsigned int *len)
+pdf_lookup_substitute_font(fz_context *ctx, int mono, int serif, int bold, int italic, unsigned int *len)
 {
 	*len = 0;
 
@@ -228,28 +234,59 @@ pdf_lookup_substitute_font(int mono, int serif, int bold, int italic, unsigned i
 }
 
 unsigned char *
-pdf_lookup_substitute_cjk_font(int ros, int serif, unsigned int *len)
+pdf_lookup_substitute_cjk_font(fz_context *ctx, int ros, int serif, int wmode, unsigned int *len, int *index)
 {
 	*len = 0;
-	return (unsigned char*) font_DroidSansFallback;
+	if (file_exists(font_DroidSansFallbackFull))
+	{
+		return (unsigned char*) font_DroidSansFallbackFull;
+	}
+	else if (file_exists(font_DroidSansFallback))
+	{
+		return (unsigned char*) font_DroidSansFallback;
+	}
+	else
+	{
+		LOGI("No system DroidSansFallbackFull or DroidSansFallback found");
+		return pdf_lookup_substitute_fontfamily(&font_Helvetica, 0, 0);
+	}
 }
 
 unsigned char *
-pdf_lookup_system_font(char *name, unsigned int *len)
+pdf_lookup_system_font(fz_context *ctx, const char *name, unsigned int *len)
 {
+	LOGI("Try to load system: %s", name);
+
 	*len = 0;
+
+	int l = strlen(name);
+
+	char fontname[l + 1];
+	int i, j = 0;
+	for (i = 0; i < l; i++)
+	{
+		if (name[i] == ' ' || name[i] == '-' || name[i] == ',')
+		{
+			continue;
+		}
+		fontname[j++] = name[i];
+	}
+
+	fontname[j] = 0;
+
 	int index;
 	for(index = 0; index < ext_system_fonts_count; index++)
 	{
-		if (!strcmp(ext_system_fonts[index][0], name))
+		if (!strcmp(ext_system_fonts[index][0], fontname))
 		{
 			LOGI("System font found: %s", name);
 			if (file_exists(ext_system_fonts[index][1])) {
+				*len = ext_system_fonts_idx[index];
 				return (unsigned char *)ext_system_fonts[index][1];
 			}
 		}
 	}
 
-	LOGI("No System font found");
+	LOGI("No System font found: %s", name);
 	return NULL;
 }

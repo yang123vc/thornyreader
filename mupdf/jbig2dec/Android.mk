@@ -6,7 +6,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := jbig2dec
 
-LOCAL_CFLAGS :=
+LOCAL_CFLAGS 		+= -DHAVE_CONFIG_H
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
 

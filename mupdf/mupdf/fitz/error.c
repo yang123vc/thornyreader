@@ -1,9 +1,5 @@
 #include "mupdf/fitz.h"
 
-#if defined(_WIN32) && !defined(NDEBUG)
-#define USE_OUTPUT_DEBUG_STRING
-#endif
-
 #ifdef USE_OUTPUT_DEBUG_STRING
 #include <windows.h>
 #endif
@@ -17,17 +13,23 @@ void fz_var_imp(void *var)
 
 void fz_flush_warnings(fz_context *ctx)
 {
+// EBD: Logging >>>
+#ifdef MUPDF_LOG_WARN_ENABLED
 	if (ctx->warn->count > 1)
 	{
-		fprintf(stderr, "warning: ... repeated %d times ...\n", ctx->warn->count);
-		LOGE("warning: ... repeated %d times ...\n", ctx->warn->count);
+		//fprintf(stderr, "warning: ... repeated %d times ...\n", ctx->warn->count);
+		LOGW("warning: ... repeated %d times ...\n", ctx->warn->count);
 	}
+#endif
+// EBD: Logging <<<
 	ctx->warn->message[0] = 0;
 	ctx->warn->count = 0;
 }
 
 void fz_warn(fz_context *ctx, const char *fmt, ...)
 {
+// EBD: Logging >>>
+#ifdef MUPDF_LOG_WARN_ENABLED
 	va_list ap;
 	char buf[sizeof ctx->warn->message];
 
@@ -46,11 +48,13 @@ void fz_warn(fz_context *ctx, const char *fmt, ...)
 	else
 	{
 		fz_flush_warnings(ctx);
-		fprintf(stderr, "warning: %s\n", buf);
-		LOGE("warning: %s\n", buf);
+		//fprintf(stderr, "warning: %s\n", buf);
+		LOGW("warning: %s\n", buf);
 		fz_strlcpy(ctx->warn->message, buf, sizeof ctx->warn->message);
 		ctx->warn->count = 1;
 	}
+#endif
+// EBD: Logging <<<
 }
 
 /* Error context */
@@ -88,10 +92,15 @@ FZ_NORETURN static void throw(fz_error_context *ex);
 
 static void throw(fz_error_context *ex)
 {
-	if (ex->top >= 0) {
+	if (ex->top >= 0)
+	{
 		fz_longjmp(ex->stack[ex->top].buffer, ex->stack[ex->top].code + 2);
-	} else {
-		fprintf(stderr, "uncaught exception: %s\n", ex->message);
+	}
+	else
+	{
+// EBD: Logging >>>
+//		fprintf(stderr, "uncaught exception: %s\n", ex->message);
+// EBD: Logging <<<
 		LOGE("uncaught exception: %s\n", ex->message);
 #ifdef USE_OUTPUT_DEBUG_STRING
 		OutputDebugStringA("uncaught exception: ");
@@ -116,7 +125,9 @@ int fz_push_try(fz_error_context *ex)
 	assert(ex->top == nelem(ex->stack)-1);
 	strcpy(ex->message, "exception stack overflow!");
 	ex->stack[ex->top].code = 2;
-	fprintf(stderr, "error: %s\n", ex->message);
+// EBD: Logging >>>
+//	fprintf(stderr, "error: %s\n", ex->message);
+// EBD: Logging <<<
 	LOGE("error: %s\n", ex->message);
 	return 0;
 }
@@ -141,14 +152,19 @@ void fz_throw(fz_context *ctx, int code, const char *fmt, ...)
 	vsnprintf(ctx->error->message, sizeof ctx->error->message, fmt, args);
 	va_end(args);
 
-	fz_flush_warnings(ctx);
-	fprintf(stderr, "error: %s\n", ctx->error->message);
-	LOGE("error: %s\n", ctx->error->message);
+	if (code != FZ_ERROR_ABORT)
+	{
+		fz_flush_warnings(ctx);
+// EBD: Logging >>>
+//		fprintf(stderr, "error: %s\n", ctx->error->message);
+// EBD: Logging <<<
+		LOGE("error: %s\n", ctx->error->message);
 #ifdef USE_OUTPUT_DEBUG_STRING
-	OutputDebugStringA("error: ");
-	OutputDebugStringA(ctx->error->message);
-	OutputDebugStringA("\n");
+		OutputDebugStringA("error: ");
+		OutputDebugStringA(ctx->error->message);
+		OutputDebugStringA("\n");
 #endif
+	}
 
 	throw(ctx->error);
 }
@@ -169,14 +185,19 @@ void fz_rethrow_message(fz_context *ctx, const char *fmt, ...)
 	vsnprintf(ctx->error->message, sizeof ctx->error->message, fmt, args);
 	va_end(args);
 
-	fz_flush_warnings(ctx);
-	fprintf(stderr, "error: %s\n", ctx->error->message);
-	LOGE("error: %s\n", ctx->error->message);
+	if (ctx->error->errcode != FZ_ERROR_ABORT)
+	{
+		fz_flush_warnings(ctx);
+// EBD: Logging >>>
+//		fprintf(stderr, "error: %s\n", ctx->error->message);
+// EBD: Logging <<<
+		LOGE("error: %s\n", ctx->error->message);
 #ifdef USE_OUTPUT_DEBUG_STRING
-	OutputDebugStringA("error: ");
-	OutputDebugStringA(ctx->error->message);
-	OutputDebugStringA("\n");
+		OutputDebugStringA("error: ");
+		OutputDebugStringA(ctx->error->message);
+		OutputDebugStringA("\n");
 #endif
+	}
 
 	throw(ctx->error);
 }

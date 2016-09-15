@@ -3,105 +3,41 @@
 #define MIN_BOMB (100 << 20)
 
 int
-fz_read(fz_stream *stm, unsigned char *buf, int len)
+fz_read(fz_context *ctx, fz_stream *stm, unsigned char *buf, int len)
 {
 	int count, n;
 
-	count = fz_mini(len, stm->wp - stm->rp);
-	if (count)
+	count = 0;
+	do
 	{
-		memcpy(buf, stm->rp, count);
-		stm->rp += count;
-	}
-
-	if (count == len || stm->error || stm->eof)
-		return count;
-
-	assert(stm->rp == stm->wp);
-
-	if (len - count < stm->ep - stm->bp)
-	{
-		n = stm->read(stm, stm->bp, stm->ep - stm->bp);
+		n = fz_available(ctx, stm, len);
+		if (n > len)
+			n = len;
 		if (n == 0)
-		{
-			stm->eof = 1;
-		}
-		else if (n > 0)
-		{
-			stm->rp = stm->bp;
-			stm->wp = stm->bp + n;
-			stm->pos += n;
-		}
+			break;
 
-		n = fz_mini(len - count, stm->wp - stm->rp);
-		if (n)
-		{
-			memcpy(buf + count, stm->rp, n);
-			stm->rp += n;
-			count += n;
-		}
+		memcpy(buf, stm->rp, n);
+		stm->rp += n;
+		buf += n;
+		count += n;
+		len -= n;
 	}
-	else
-	{
-		n = stm->read(stm, buf + count, len - count);
-		if (n == 0)
-		{
-			stm->eof = 1;
-		}
-		else if (n > 0)
-		{
-			stm->pos += n;
-			count += n;
-		}
-	}
+	while (len > 0);
 
 	return count;
 }
 
-void
-fz_fill_buffer(fz_stream *stm)
+fz_buffer *
+fz_read_all(fz_context *ctx, fz_stream *stm, int initial)
 {
-	int n;
-
-	assert(stm->rp == stm->wp);
-
-	if (stm->error || stm->eof)
-		return;
-
-	fz_try(stm->ctx)
-	{
-		n = stm->read(stm, stm->bp, stm->ep - stm->bp);
-		if (n == 0)
-		{
-			stm->eof = 1;
-		}
-		else if (n > 0)
-		{
-			stm->rp = stm->bp;
-			stm->wp = stm->bp + n;
-			stm->pos += n;
-		}
-	}
-	fz_catch(stm->ctx)
-	{
-		fz_rethrow_if(stm->ctx, FZ_ERROR_TRYLATER);
-		fz_warn(stm->ctx, "read error; treating as end of file");
-		stm->error = 1;
-	}
+	return fz_read_best(ctx, stm, initial, NULL);
 }
 
 fz_buffer *
-fz_read_all(fz_stream *stm, int initial)
-{
-	return fz_read_best(stm, initial, NULL);
-}
-
-fz_buffer *
-fz_read_best(fz_stream *stm, int initial, int *truncated)
+fz_read_best(fz_context *ctx, fz_stream *stm, int initial, int *truncated)
 {
 	fz_buffer *buf = NULL;
 	int n;
-	fz_context *ctx = stm->ctx;
 
 	fz_var(buf);
 
@@ -125,7 +61,7 @@ fz_read_best(fz_stream *stm, int initial, int *truncated)
 				fz_throw(ctx, FZ_ERROR_GENERIC, "compression bomb detected");
 			}
 
-			n = fz_read(stm, buf->data + buf->len, buf->cap - buf->len);
+			n = fz_read(ctx, stm, buf->data + buf->len, buf->cap - buf->len);
 			if (n == 0)
 				break;
 
@@ -149,25 +85,24 @@ fz_read_best(fz_stream *stm, int initial, int *truncated)
 			fz_rethrow(ctx);
 		}
 	}
-	fz_trim_buffer(ctx, buf);
 
 	return buf;
 }
 
 void
-fz_read_line(fz_stream *stm, char *mem, int n)
+fz_read_line(fz_context *ctx, fz_stream *stm, char *mem, int n)
 {
 	char *s = mem;
 	int c = EOF;
 	while (n > 1)
 	{
-		c = fz_read_byte(stm);
+		c = fz_read_byte(ctx, stm);
 		if (c == EOF)
 			break;
 		if (c == '\r') {
-			c = fz_peek_byte(stm);
+			c = fz_peek_byte(ctx, stm);
 			if (c == '\n')
-				fz_read_byte(stm);
+				fz_read_byte(ctx, stm);
 			break;
 		}
 		if (c == '\n')
@@ -180,52 +115,73 @@ fz_read_line(fz_stream *stm, char *mem, int n)
 }
 
 int
-fz_tell(fz_stream *stm)
+fz_tell(fz_context *ctx, fz_stream *stm)
 {
 	return stm->pos - (stm->wp - stm->rp);
 }
 
 void
-fz_seek(fz_stream *stm, int offset, int whence)
+fz_seek(fz_context *ctx, fz_stream *stm, int offset, int whence)
 {
 	stm->avail = 0; /* Reset bit reading */
 	if (stm->seek)
 	{
 		if (whence == 1)
 		{
-			offset = fz_tell(stm) + offset;
+			offset = fz_tell(ctx, stm) + offset;
 			whence = 0;
 		}
-		if (whence == 0)
-		{
-			int dist = stm->pos - offset;
-			if (dist >= 0 && dist <= stm->wp - stm->bp)
-			{
-				stm->rp = stm->wp - dist;
-				stm->eof = 0;
-				return;
-			}
-		}
-		stm->seek(stm, offset, whence);
+		stm->seek(ctx, stm, offset, whence);
 		stm->eof = 0;
 	}
 	else if (whence != 2)
 	{
 		if (whence == 0)
-			offset -= fz_tell(stm);
+			offset -= fz_tell(ctx, stm);
 		if (offset < 0)
-			fz_warn(stm->ctx, "cannot seek backwards");
+			fz_warn(ctx, "cannot seek backwards");
 		/* dog slow, but rare enough */
 		while (offset-- > 0)
-			fz_read_byte(stm);
+		{
+			if (fz_read_byte(ctx, stm) == EOF)
+			{
+				fz_warn(ctx, "seek failed");
+				break;
+			}
+		}
 	}
 	else
-		fz_warn(stm->ctx, "cannot seek");
+		fz_warn(ctx, "cannot seek");
 }
 
-int fz_stream_meta(fz_stream *stm, int key, int size, void *ptr)
+int fz_stream_meta(fz_context *ctx, fz_stream *stm, int key, int size, void *ptr)
 {
 	if (!stm || !stm->meta)
 		return -1;
-	return stm->meta(stm, key, size, ptr);
+	return stm->meta(ctx, stm, key, size, ptr);
+}
+
+fz_buffer *
+fz_read_file(fz_context *ctx, const char *filename)
+{
+	fz_stream *stm;
+	fz_buffer *buf = NULL;
+
+	fz_var(buf);
+
+	stm = fz_open_file(ctx, filename);
+	fz_try(ctx)
+	{
+		buf = fz_read_all(ctx, stm, 0);
+	}
+	fz_always(ctx)
+	{
+		fz_drop_stream(ctx, stm);
+	}
+	fz_catch(ctx)
+	{
+		fz_rethrow(ctx);
+	}
+
+	return buf;
 }

@@ -91,7 +91,9 @@ fz_malloc_array_no_throw(fz_context *ctx, unsigned int count, unsigned int size)
 
 	if (count > UINT_MAX / size)
 	{
-		fprintf(stderr, "error: malloc of array (%d x %d bytes) failed (integer overflow)", count, size);
+// EBD: Logging >>>
+		LOGE("error: malloc of array (%d x %d bytes) failed (integer overflow)", count, size);
+// EBD: Logging <<<
 		return NULL;
 	}
 
@@ -130,7 +132,9 @@ fz_calloc_no_throw(fz_context *ctx, unsigned int count, unsigned int size)
 
 	if (count > UINT_MAX / size)
 	{
-		fprintf(stderr, "error: calloc (%d x %d bytes) failed (integer overflow)\n", count, size);
+// EBD: Logging >>>
+		LOGE("error: calloc (%d x %d bytes) failed (integer overflow)\n", count, size);
+// EBD: Logging <<<
 		return NULL;
 	}
 
@@ -173,7 +177,9 @@ fz_resize_array_no_throw(fz_context *ctx, void *p, unsigned int count, unsigned 
 
 	if (count > UINT_MAX / size)
 	{
-		fprintf(stderr, "error: resize array (%d x %d bytes) failed (integer overflow)\n", count, size);
+// EBD: Logging >>>
+		LOGE("error: resize array (%d x %d bytes) failed (integer overflow)\n", count, size);
+// EBD: Logging <<<
 		return NULL;
 	}
 
@@ -269,7 +275,7 @@ int fz_lock_taken[FZ_LOCK_DEBUG_CONTEXT_MAX][FZ_LOCK_MAX] = { { 0 } };
  * when threads are involved. */
 static int ms_clock(void)
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 	return (int)GetTickCount();
 #else
 	struct timeval tp;
