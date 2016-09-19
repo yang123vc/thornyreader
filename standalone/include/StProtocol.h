@@ -43,6 +43,17 @@
 #define CMD_REQ_OUTLINE     16
 #define CMD_RES_OUTLINE     17
 
+#define CMD_REQ_SET_CONFIG   			20
+#define CMD_RES_SET_CONFIG   			21
+#define CMD_REQ_SMART_CROP              22
+#define CMD_RES_SMART_CROP              23
+#define CMD_REQ_CRE_PAGE_BY_XPATH		24
+#define CMD_RES_CRE_PAGE_BY_XPATH		25
+#define CMD_REQ_CRE_PAGE_XPATH			26
+#define CMD_RES_CRE_PAGE_XPATH			27
+#define CMD_REQ_CRE_METADATA   			28
+#define CMD_RES_CRE_METADATA			29
+
 #define CMD_REQ_PDF_STORAGE 124
 #define CMD_RES_PDF_STORAGE 125
 #define CMD_REQ_PDF_FONTS   126
@@ -51,6 +62,9 @@
 #define CMD_REQ_PDF_SYSTEM_FONT   122
 #define CMD_RES_PDF_SYSTEM_FONT   123
 
+#define CMD_REQ_PDF_GET_MISSED_FONTS   120
+#define CMD_RES_PDF_GET_MISSED_FONTS   121
+
 #define RES_OK              0
 #define RES_UNKNOWN_CMD     1
 #define RES_NO_FILE         2
@@ -58,16 +72,25 @@
 #define RES_DUP_OPEN        4
 #define RES_NOT_OPENED      5
 #define RES_BAD_REQ_DATA    6
+#define RES_MUPDF_PWD_WRONG 251
+#define RES_MUPDF_PWD_NEED  252
+#define RES_MUPDF_OOM       253
+#define RES_MUPDF_FAIL      254
 
 #define TYPE_NONE           0
-#define TYPE_FIX_BYTES      1
 #define TYPE_FIX_WORDS      2
 #define TYPE_FIX_INT        3
 #define TYPE_FIX_FLOAT      4
-#define TYPE_VAR            5
+#define TYPE_ARRAY_POINTER  5
 
 #define TYPE_MASK_TYPE      0x7F
 #define TYPE_MASK_HAS_NEXT  0x80
+
+#define OUTLINE_TARGET_PAGE 			1
+#define OUTLINE_TARGET_URI				2
+#define OUTLINE_TARGET_XPATH			10
+
+#include <stdint.h>
 
 class CmdData
 {
@@ -80,25 +103,26 @@ public:
         uint32_t value32;
         float valuef;
     } value;
-    uint8_t* external;
+
     bool owned_external;
-    CmdData* next;
+    uint8_t* external_array = 0;
+    CmdData* nextData = 0;
 
 public:
     CmdData();
-    CmdData(uint32_t val);
-    CmdData(uint16_t val0, uint16_t val1);
-    CmdData(float val);
-    CmdData(int n);
-    CmdData(int n, uint8_t* ptr, bool owned);
-    CmdData(int n, uint16_t* ptr, bool owned);
-    CmdData(int n, int* ptr, bool owned);
-    CmdData(int n, float* ptr, bool owned);
-    CmdData(const char* data, bool owned);
     ~CmdData();
 
-    void setExternal(int size, uint8_t* ptr, bool owned);
-    void freeExternal();
+public:
+    CmdData* setInt(uint32_t val);
+    CmdData* setWords(uint16_t val0, uint16_t val1);
+    CmdData* setFloat(float val);
+    CmdData* setByteArray(int n, uint8_t *ptr, bool owned);
+    CmdData* setIntArray(int n, int* ptr, bool owned);
+    CmdData* setFloatArray(int n, float* ptr, bool owned);
+    CmdData* setIpcString(const char* data, bool owned);
+
+    uint8_t* newByteArray(int n);
+    void freeArray();
 
     void print(const char* lctx);
 };
@@ -118,17 +142,14 @@ public:
     bool isValid();
     bool isValid(int index);
     int getCount();
-    uint32_t getErrors();
 
-    CmdDataIterator& bytes(uint8_t* v0, uint8_t* v1, uint8_t* v2, uint8_t* v3);
-    CmdDataIterator& words(uint16_t* v0, uint16_t* v1);
-    CmdDataIterator& integer(uint32_t* v0);
-    CmdDataIterator& floater(float* v0);
-    CmdDataIterator& optional(uint8_t** buffer, uint32_t* len);
-    CmdDataIterator& optional(uint16_t** buffer, uint32_t* len);
-    CmdDataIterator& required(uint8_t** buffer);
-    CmdDataIterator& required(uint32_t** buffer, int elements);
-    CmdDataIterator& required(float** buffer, int elements);
+    CmdDataIterator& getWords(uint16_t* v0, uint16_t* v1);
+    CmdDataIterator& getInt(uint32_t* v0);
+    CmdDataIterator& getFloat(float* v0);
+    CmdDataIterator& optionalByteArray(uint8_t** buffer, uint32_t* len);
+    CmdDataIterator& getByteArray(uint8_t** buffer);
+    CmdDataIterator& getIntArray(uint32_t** buffer, int elements);
+    CmdDataIterator& getFloatArray(float** buffer, int elements);
 
     void print(const char* lctx);
 };
@@ -136,23 +157,21 @@ public:
 class CmdDataList
 {
 public:
-    int dataCount;
-    CmdData* first;
-    CmdData* last;
+    int dataCount = 0;
+    CmdData* first = 0;
+    CmdData* last = 0;
 
 public:
     CmdDataList();
 
-    CmdDataList& add(CmdData* data);
-    CmdDataList& add(uint32_t val);
-    CmdDataList& add(uint16_t val0, uint16_t val1);
-    CmdDataList& add(float val);
-    CmdDataList& add(double val);
-    CmdDataList& add(int n, uint8_t* ptr, bool owned);
-    CmdDataList& add(int n, uint16_t* ptr, bool owned);
-    CmdDataList& add(int n, int* ptr, bool owned);
-    CmdDataList& add(int n, float* ptr, bool owned);
-    CmdDataList& add(const char* data, bool owned);
+    CmdDataList& addData(CmdData* data);
+    CmdDataList& addInt(uint32_t val);
+    CmdDataList& addWords(uint16_t val0, uint16_t val1);
+    CmdDataList& addFloat(float val);
+    CmdDataList& addByteArray(int n, uint8_t* ptr, bool owned);
+    CmdDataList& addIntArray(int n, int* ptr, bool owned);
+    CmdDataList& addFloatArray(int n, float* ptr, bool owned);
+    CmdDataList& addIpcString(const char* data, bool owned);
 };
 
 class CmdRequest: public CmdDataList

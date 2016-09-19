@@ -45,7 +45,7 @@ void RequestQueue::writeRequest(CmdRequest& request)
     while (data != NULL)
     {
         writeData(data);
-        data = data->next;
+        data = data->nextData;
     }
 
     DEBUG_L(L_DEBUG_REQ, lctx, "Flush request");
@@ -79,7 +79,7 @@ int RequestQueue::readRequest(CmdRequest& request)
         if (data == NULL)
         {
             data = new CmdData();
-            request.add(data);
+            request.addData(data);
         }
 
         if (readData(data, hasData) == 0)
@@ -88,7 +88,7 @@ int RequestQueue::readRequest(CmdRequest& request)
             return 0;
         }
 
-        data = data->next;
+        data = data->nextData;
     }
 
     pthread_mutex_unlock(&readlock);

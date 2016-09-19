@@ -54,7 +54,7 @@ void ResponseQueue::writeResponse(CmdResponse& response)
     while (data != NULL)
     {
         writeData(data);
-        data = data->next;
+        data = data->nextData;
     }
 
     DEBUG_L(L_DEBUG_RES, lctx, "Flush response");
@@ -95,7 +95,7 @@ int ResponseQueue::readResponse(CmdResponse& response)
         if (data == NULL)
         {
             data = new CmdData();
-            response.add(data);
+            response.addData(data);
         }
 
         if (readData(data, hasData) == 0)
@@ -104,7 +104,7 @@ int ResponseQueue::readResponse(CmdResponse& response)
             return 0;
         }
 
-        data = data->next;
+        data = data->nextData;
     }
 
     pthread_mutex_unlock(&readlock);

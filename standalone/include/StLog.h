@@ -25,6 +25,9 @@
 #define ERROR_L(LCTX, args...) \
     __android_log_print(ANDROID_LOG_ERROR, LCTX, args)
 
+#define WARN_L(LCTX, args...) \
+    __android_log_print(ANDROID_LOG_WARNING, LCTX, args)
+
 #define INFO_L(LCTX, args...) \
     __android_log_print(ANDROID_LOG_INFO, LCTX, args)
 

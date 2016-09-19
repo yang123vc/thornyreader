@@ -123,10 +123,10 @@ int Queue::readData(CmdData* data, uint8_t& hasNext)
 
     DEBUG_L(L_DEBUG_IO, lctx, "Data type: %d, has next data: %d", dtype, hasNext);
 
-    if ((data->type == TYPE_VAR) && data->type != dtype)
+    if ((data->type == TYPE_ARRAY_POINTER) && data->type != dtype)
     {
         ERROR_L(lctx, "Received type %d not equal to expected %d", dtype, data->type);
-        data->freeExternal();
+        data->freeArray();
     }
     data->type = dtype;
 
@@ -140,24 +140,24 @@ int Queue::readData(CmdData* data, uint8_t& hasNext)
     }
     DEBUG_L(L_DEBUG_IO, lctx, "Data: %08x", data->value.value32);
 
-    if ((data->type == TYPE_VAR) && data->value.value32 > 0)
+    if ((data->type == TYPE_ARRAY_POINTER) && data->value.value32 > 0)
     {
-        if (old < data->value.value32 && data->external != NULL)
+        if (old < data->value.value32 && data->external_array != NULL)
         {
             ERROR_L(lctx, "Received length %d not equal to expected %d", data->value.value32, old);
-            data->freeExternal();
+            data->freeArray();
         }
 
         DEBUG_L(L_DEBUG_IO, lctx, "Reading external data...");
-        if (data->external == NULL)
+        if (data->external_array == NULL)
         {
-            data->external = (uint8_t*) malloc(data->value.value32);
+            data->external_array = (uint8_t*) malloc(data->value.value32);
         }
-        res = readBuffer(data->value.value32, data->external);
+        res = readBuffer(data->value.value32, data->external_array);
         if (res == 0)
         {
             DEBUG_L(L_DEBUG_IO, lctx, "No external data received");
-            data->freeExternal();
+            data->freeArray();
             return 0;
         }
         else
@@ -170,7 +170,7 @@ int Queue::readData(CmdData* data, uint8_t& hasNext)
 
 void Queue::writeData(CmdData* data)
 {
-    uint8_t type = data->type | (data->next != NULL ? TYPE_MASK_HAS_NEXT : 0);
+    uint8_t type = data->type | (data->nextData != NULL ? TYPE_MASK_HAS_NEXT : 0);
     uint32_t val = data->value.value32;
 
     DEBUG_L(L_DEBUG_IO, lctx, "Writing data type: %02x", type);
@@ -178,9 +178,9 @@ void Queue::writeData(CmdData* data)
 
     DEBUG_L(L_DEBUG_IO, lctx, "Writing data: %08x", val);
     write(fp, &(val), sizeof(val));
-    if (data->type == TYPE_VAR)
+    if (data->type == TYPE_ARRAY_POINTER)
     {
-        if (val > 0 && data->external != NULL)
+        if (val > 0 && data->external_array != NULL)
         {
             DEBUG_L(L_DEBUG_IO, lctx, "Writing external data: %d", val);
 
@@ -188,7 +188,7 @@ void Queue::writeData(CmdData* data)
             uint32_t count = 0;
 
             while(count < val) {
-                ssize_t r = write(fp, data->external + count, MIN(bufSize, val - count));
+                ssize_t r = write(fp, data->external_array + count, MIN(bufSize, val - count));
                 if (r == -1)
                 {
                     DEBUG_L(L_DEBUG_IO, lctx, "IO error: %s", strerror(errno));

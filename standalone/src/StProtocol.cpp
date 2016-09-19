@@ -25,185 +25,147 @@ CmdData::CmdData()
 {
     type = TYPE_NONE;
     value.value32 = 0;
-    external = NULL;
-    next = NULL;
-}
-
-CmdData::CmdData(uint32_t val)
-{
-    type = TYPE_FIX_INT;
-    value.value32 = val;
-    owned_external = false;
-    external = NULL;
-    next = NULL;
-}
-
-CmdData::CmdData(uint16_t val0, uint16_t val1)
-{
-    type = TYPE_FIX_WORDS;
-    value.value16[0] = val0;
-    value.value16[1] = val1;
-    owned_external = false;
-    external = NULL;
-    next = NULL;
-}
-
-CmdData::CmdData(float val)
-{
-    type = TYPE_FIX_FLOAT;
-    value.valuef = val;
-    owned_external = false;
-    external = NULL;
-    next = NULL;
-}
-
-CmdData::CmdData(int n)
-{
-    type = TYPE_VAR;
-    value.value32 = n;
     owned_external = true;
-    external = (uint8_t*) malloc(value.value32);
-    next = NULL;
-}
-
-CmdData::CmdData(int n, uint8_t* ptr, bool owned)
-{
-    type = TYPE_VAR;
-    value.value32 = n;
-    owned_external = owned;
-    if (owned)
-    {
-        external = (uint8_t*) malloc(value.value32);
-        memcpy(external, ptr, value.value32);
-    }
-    else
-    {
-        external = ptr;
-    }
-    next = NULL;
-}
-
-CmdData::CmdData(int n, uint16_t* ptr, bool owned)
-{
-    type = TYPE_VAR;
-    value.value32 = n * sizeof(uint16_t);
-    owned_external = owned;
-    if (owned)
-    {
-        external = (uint8_t*) malloc(value.value32);
-        memcpy(external, ptr, value.value32);
-    }
-    else
-    {
-        external = (uint8_t*) ptr;
-    }
-    next = NULL;
-}
-
-CmdData::CmdData(int n, int* ptr, bool owned)
-{
-    type = TYPE_VAR;
-    value.value32 = n * sizeof(int);
-    owned_external = owned;
-    if (owned)
-    {
-        external = (uint8_t*) malloc(value.value32);
-        memcpy(external, ptr, value.value32);
-    }
-    else
-    {
-        external = (uint8_t*) ptr;
-    }
-    next = NULL;
-}
-
-CmdData::CmdData(int n, float* ptr, bool owned)
-{
-    type = TYPE_VAR;
-    value.value32 = n * sizeof(float);
-    owned_external = owned;
-    if (owned)
-    {
-        external = (uint8_t*) malloc(value.value32);
-        memcpy(external, ptr, value.value32);
-    }
-    else
-    {
-        external = (uint8_t*) ptr;
-    }
-    next = NULL;
-}
-
-CmdData::CmdData(const char* data, bool owned)
-{
-    type = TYPE_VAR;
-    owned_external = owned;
-    if (data != NULL)
-    {
-        value.value32 = strlen(data) + 1;
-        external = owned ? (uint8_t*) strdup(data) : (uint8_t*) data;
-    }
-    else
-    {
-        value.value32 = 0;
-        external = NULL;
-    }
-    next = NULL;
+    external_array = NULL;
+    nextData = NULL;
 }
 
 CmdData::~CmdData()
 {
-    freeExternal();
+    freeArray();
     type = TYPE_NONE;
     value.value32 = 0;
-    external = NULL;
-    if (next != NULL)
+    external_array = NULL;
+    if (nextData != NULL)
     {
-        delete next;
-        next = NULL;
+        delete nextData;
+        nextData = NULL;
     }
 }
 
-void CmdData::setExternal(int size, uint8_t* ptr, bool owned)
+uint8_t* CmdData::newByteArray(int n)
 {
-    type = TYPE_VAR;
-    if (owned_external && external != NULL)
+    freeArray();
+    type = TYPE_ARRAY_POINTER;
+    value.value32 = n;
+    owned_external = true;
+    external_array = (uint8_t*) malloc(value.value32);
+    return external_array;
+}
+
+void CmdData::freeArray()
+{
+    if (owned_external && external_array != NULL)
     {
-        free(external);
+        free(external_array);
     }
-    value.value32 = size;
+    type = TYPE_NONE;
+    value.value32 = 0;
+    external_array = NULL;
+    owned_external = true;
+}
+
+CmdData* CmdData::setInt(uint32_t val)
+{
+    freeArray();
+    type = TYPE_FIX_INT;
+    value.value32 = val;
+    return this;
+}
+
+CmdData* CmdData::setWords(uint16_t val0, uint16_t val1)
+{
+    freeArray();
+    type = TYPE_FIX_WORDS;
+    value.value16[0] = val0;
+    value.value16[1] = val1;
+    return this;
+}
+
+CmdData* CmdData::setFloat(float val)
+{
+    freeArray();
+    type = TYPE_FIX_FLOAT;
+    value.valuef = val;
+    return this;
+}
+
+CmdData* CmdData::setByteArray(int n, uint8_t* ptr, bool owned)
+{
+    freeArray();
+    type = TYPE_ARRAY_POINTER;
+    value.value32 = n;
     owned_external = owned;
     if (owned)
     {
-        external = (uint8_t*) malloc(value.value32);
-        memcpy(external, ptr, value.value32);
+        external_array = (uint8_t*) calloc(1, value.value32);
+        memcpy(external_array, ptr, value.value32);
     }
     else
     {
-        external = ptr;
+        external_array = ptr;
     }
+    return this;
 }
 
-void CmdData::freeExternal()
+CmdData* CmdData::setIntArray(int n, int* ptr, bool owned)
 {
-    if (owned_external)
+    freeArray();
+    type = TYPE_ARRAY_POINTER;
+    value.value32 = n * sizeof(int);
+    owned_external = owned;
+    if (owned)
     {
-        if (external != NULL)
-        {
-            free(external);
-        }
-        external = NULL;
+        external_array = (uint8_t*) calloc(1, value.value32);
+        memcpy(external_array, ptr, value.value32);
     }
     else
     {
-        external = NULL;
+        external_array = (uint8_t*) ptr;
     }
-    owned_external = true;
+    return this;
+}
+
+CmdData* CmdData::setFloatArray(int n, float* ptr, bool owned)
+{
+    freeArray();
+    type = TYPE_ARRAY_POINTER;
+    value.value32 = n * sizeof(float);
+    owned_external = owned;
+    if (owned)
+    {
+        external_array = (uint8_t*) calloc(1, value.value32);
+        memcpy(external_array, ptr, value.value32);
+    }
+    else
+    {
+        external_array = (uint8_t*) ptr;
+    }
+    return this;
+}
+
+CmdData* CmdData::setIpcString(const char* data, bool owned)
+{
+    freeArray();
+    type = TYPE_ARRAY_POINTER;
+    owned_external = owned;
+    if (data != NULL)
+    {
+        value.value32 = strlen(data) + 1;
+        external_array = owned ? (uint8_t*) strdup(data) : (uint8_t*) data;
+    }
+    else
+    {
+        value.value32 = 0;
+        external_array = NULL;
+    }
+    return this;
 }
 
 void CmdData::print(const char* lctx)
 {
-    DEBUG_L(L_PRINT_CMD, lctx, "Data: %p %u %08x %p", this, this->type, this->value.value32, this->external);
+    DEBUG_L(L_PRINT_CMD, lctx, "Data: %p %u %08x %p",
+            this, this->type, this->value.value32, this->external_array);
 }
 
 CmdDataList::CmdDataList()
@@ -212,7 +174,7 @@ CmdDataList::CmdDataList()
     first = last = NULL;
 }
 
-CmdDataList& CmdDataList::add(CmdData* data)
+CmdDataList& CmdDataList::addData(CmdData* data)
 {
     if (data != NULL)
     {
@@ -222,7 +184,7 @@ CmdDataList& CmdDataList::add(CmdData* data)
         }
         else
         {
-            last->next = data;
+            last->nextData = data;
             last = data;
         }
         dataCount++;
@@ -230,48 +192,38 @@ CmdDataList& CmdDataList::add(CmdData* data)
     return *this;
 }
 
-CmdDataList& CmdDataList::add(uint32_t val)
+CmdDataList& CmdDataList::addInt(uint32_t val)
 {
-    return add(new CmdData(val));
+    return addData((new CmdData())->setInt(val));
 }
 
-CmdDataList& CmdDataList::add(uint16_t val0, uint16_t val1)
+CmdDataList& CmdDataList::addWords(uint16_t val0, uint16_t val1)
 {
-    return add(new CmdData(val0, val1));
+    return addData((new CmdData())->setWords(val0, val1));
 }
 
-CmdDataList& CmdDataList::add(float val)
+CmdDataList& CmdDataList::addFloat(float val)
 {
-    return add(new CmdData(val));
+    return addData((new CmdData())->setFloat(val));
 }
 
-CmdDataList& CmdDataList::add(double val)
+CmdDataList& CmdDataList::addByteArray(int n, uint8_t* ptr, bool owned)
 {
-    return add(new CmdData((float)val));
+    return addData((new CmdData())->setByteArray(n, ptr, owned));
 }
 
-CmdDataList& CmdDataList::add(int n, uint8_t* ptr, bool owned)
+CmdDataList& CmdDataList::addIntArray(int n, int* ptr, bool owned)
 {
-    return add(new CmdData(n, ptr, owned));
+    return addData((new CmdData())->setIntArray(n, ptr, owned));
+}
+CmdDataList& CmdDataList::addFloatArray(int n, float* ptr, bool owned)
+{
+    return addData((new CmdData())->setFloatArray(n, ptr, owned));
 }
 
-CmdDataList& CmdDataList::add(int n, uint16_t* ptr, bool owned)
+CmdDataList& CmdDataList::addIpcString(const char* data, bool owned)
 {
-    return add(new CmdData(n, ptr, owned));
-}
-
-CmdDataList& CmdDataList::add(int n, int* ptr, bool owned)
-{
-    return add(new CmdData(n, ptr, owned));
-}
-CmdDataList& CmdDataList::add(int n, float* ptr, bool owned)
-{
-    return add(new CmdData(n, ptr, owned));
-}
-
-CmdDataList& CmdDataList::add(const char* data, bool owned)
-{
-    return add(new CmdData(data, owned));
+    return addData((new CmdData())->setIpcString(data, owned));
 }
 
 CmdRequest::CmdRequest()
@@ -302,7 +254,7 @@ void CmdRequest::print(const char* lctx)
 {
     DEBUG_L(L_PRINT_CMD, lctx, "Request: %u", this->cmd);
     CmdData* data;
-    for (data = this->first; data != NULL; data = data->next)
+    for (data = this->first; data != NULL; data = data->nextData)
     {
         data->print(lctx);
     }
@@ -341,7 +293,7 @@ void CmdResponse::print(const char* lctx)
 {
     DEBUG_L(L_PRINT_CMD, lctx, "Response: %u %u", this->cmd, this->result);
     CmdData* data;
-    for (data = this->first; data != NULL; data = data->next)
+    for (data = this->first; data != NULL; data = data->nextData)
     {
         data->print(lctx);
     }
@@ -380,36 +332,7 @@ int CmdDataIterator::getCount()
     return count;
 }
 
-uint32_t CmdDataIterator::getErrors()
-{
-    return errors;
-}
-
-CmdDataIterator& CmdDataIterator::bytes(uint8_t* v0, uint8_t* v1, uint8_t* v2, uint8_t* v3)
-{
-    *v0 = *v1 = *v2 = *v3 = 0;
-    if (this->data == NULL)
-    {
-        this->errors |= 1 << count;
-    }
-    else if (this->data->type != TYPE_FIX_BYTES)
-    {
-        this->errors |= 1 << count;
-    }
-    else
-    {
-        *v0 = this->data->value.value8[0];
-        *v1 = this->data->value.value8[1];
-        *v2 = this->data->value.value8[2];
-        *v3 = this->data->value.value8[3];
-    }
-
-    count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
-    return *this;
-}
-
-CmdDataIterator& CmdDataIterator::words(uint16_t* v0, uint16_t* v1)
+CmdDataIterator& CmdDataIterator::getWords(uint16_t* v0, uint16_t* v1)
 {
     *v0 = *v1 = 0;
     if (this->data == NULL)
@@ -427,12 +350,12 @@ CmdDataIterator& CmdDataIterator::words(uint16_t* v0, uint16_t* v1)
     }
 
     count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
+    this->data = this->data != NULL ? this->data->nextData : NULL;
     return *this;
 
 }
 
-CmdDataIterator& CmdDataIterator::integer(uint32_t* v0)
+CmdDataIterator& CmdDataIterator::getInt(uint32_t* v0)
 {
     *v0 = 0;
     if (this->data == NULL)
@@ -449,11 +372,11 @@ CmdDataIterator& CmdDataIterator::integer(uint32_t* v0)
     }
 
     count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
+    this->data = this->data != NULL ? this->data->nextData : NULL;
     return *this;
 }
 
-CmdDataIterator& CmdDataIterator::floater(float* v0)
+CmdDataIterator& CmdDataIterator::getFloat(float* v0)
 {
     *v0 = 0;
     if (this->data == NULL)
@@ -470,90 +393,70 @@ CmdDataIterator& CmdDataIterator::floater(float* v0)
     }
 
     count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
+    this->data = this->data != NULL ? this->data->nextData : NULL;
     return *this;
 }
 
-CmdDataIterator& CmdDataIterator::optional(uint8_t** buffer, uint32_t* len)
+CmdDataIterator& CmdDataIterator::optionalByteArray(uint8_t** buffer, uint32_t* len)
 {
     *buffer = NULL;
-    *len = 0;
+    if (len) {
+    	*len = 0;
+    }
     if (this->data == NULL)
     {
         this->errors |= 1 << count;
     }
-    else if (this->data->type != TYPE_VAR)
+    else if (this->data->type != TYPE_ARRAY_POINTER)
     {
         this->errors |= 1 << count;
     }
     else
     {
-        *len = this->data->value.value32;
-        *buffer = this->data->external;
+    	if (len) {
+    		*len = this->data->value.value32;
+		}
+        *buffer = this->data->external_array;
     }
 
     count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
+    this->data = this->data != NULL ? this->data->nextData : NULL;
     return *this;
 }
 
-CmdDataIterator& CmdDataIterator::optional(uint16_t** buffer, uint32_t* len)
+CmdDataIterator& CmdDataIterator::getByteArray(uint8_t** buffer)
 {
     *buffer = NULL;
-    *len = 0;
     if (this->data == NULL)
     {
         this->errors |= 1 << count;
     }
-    else if (this->data->type != TYPE_VAR)
+    else if (this->data->type != TYPE_ARRAY_POINTER)
+    {
+        this->errors |= 1 << count;
+    }
+    else if (this->data->value.value32 == 0 || this->data->external_array == NULL)
     {
         this->errors |= 1 << count;
     }
     else
     {
-        *len = this->data->value.value32/sizeof(uint16_t);
-        *buffer = (uint16_t*)this->data->external;
+        *buffer = this->data->external_array;
     }
 
     count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
+    this->data = this->data != NULL ? this->data->nextData : NULL;
     return *this;
 }
 
-
-CmdDataIterator& CmdDataIterator::required(uint8_t** buffer)
+CmdDataIterator& CmdDataIterator::getIntArray(uint32_t** buffer, int elements)
 {
     *buffer = NULL;
     if (this->data == NULL)
     {
         this->errors |= 1 << count;
     }
-    else if (this->data->type != TYPE_VAR)
-    {
-        this->errors |= 1 << count;
-    }
-    else if (this->data->value.value32 == 0 || this->data->external == NULL)
-    {
-        this->errors |= 1 << count;
-    }
-    else
-    {
-        *buffer = this->data->external;
-    }
-
-    count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
-    return *this;
-}
-
-CmdDataIterator& CmdDataIterator::required(uint32_t** buffer, int elements)
-{
-    *buffer = NULL;
-    if (this->data == NULL)
-    {
-        this->errors |= 1 << count;
-    }
-    else if (this->data->type != TYPE_VAR)
+    else if (this->data->type != TYPE_ARRAY_POINTER)
     {
         this->errors |= 1 << count;
     }
@@ -563,22 +466,22 @@ CmdDataIterator& CmdDataIterator::required(uint32_t** buffer, int elements)
     }
     else
     {
-        *buffer = (uint32_t*) this->data->external;
+        *buffer = (uint32_t*) this->data->external_array;
     }
 
     count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
+    this->data = this->data != NULL ? this->data->nextData : NULL;
     return *this;
 }
 
-CmdDataIterator& CmdDataIterator::required(float** buffer, int elements)
+CmdDataIterator& CmdDataIterator::getFloatArray(float** buffer, int elements)
 {
     *buffer = NULL;
     if (this->data == NULL)
     {
         this->errors |= 1 << count;
     }
-    else if (this->data->type != TYPE_VAR)
+    else if (this->data->type != TYPE_ARRAY_POINTER)
     {
         this->errors |= 1 << count;
     }
@@ -588,11 +491,11 @@ CmdDataIterator& CmdDataIterator::required(float** buffer, int elements)
     }
     else
     {
-        *buffer = (float*) this->data->external;
+        *buffer = (float*) this->data->external_array;
     }
 
     count++;
-    this->data = this->data != NULL ? this->data->next : NULL;
+    this->data = this->data != NULL ? this->data->nextData : NULL;
     return *this;
 }
 

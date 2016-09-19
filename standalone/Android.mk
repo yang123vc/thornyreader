@@ -13,7 +13,8 @@ LOCAL_SRC_FILES := \
 	src/StQueue.cpp \
 	src/StRequestQueue.cpp \
 	src/StResponseQueue.cpp \
-	src/StStringNaturalCompare.cpp
+	src/StStringNaturalCompare.cpp \
+	src/StSocket.cpp
 
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
