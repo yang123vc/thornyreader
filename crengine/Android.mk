@@ -7,9 +7,10 @@ LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
 LOCAL_STATIC_LIBRARIES := standalone
 
-LOCAL_CPP_FEATURES  := exceptions
+LOCAL_CPP_FEATURES  += exceptions
 
-LOCAL_LDLIBS        := -llog -lz -ldl #-Wl,-Map=crengine.map
+ #-Wl,-Map=crengine.map
+LOCAL_LDLIBS        += -llog -latomic -lz -ldl
 
 LOCAL_LDFLAGS 		+= -rdynamic -pie # runpie
 LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie

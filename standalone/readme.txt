@@ -1,2 +1,3 @@
-При передаче данных между процессами флаг owned_external игнорируется,
-устанавливаясь в значение по умолчанию: true.
+Significant changes compared to original CLI interface sources:
+
+    Value of owned_external flag is default to true

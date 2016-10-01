@@ -7,8 +7,8 @@ NDK_APP_DST_DIR := assets/thornyreader/$(TARGET_ARCH_ABI)
 LOCAL_MODULE := mupdf
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES 	:= standalone freetype jpeg-turbo jbig2dec openjpeg abitmap-utils
-LOCAL_LDLIBS 		:= -llog -lz
+LOCAL_STATIC_LIBRARIES 	+= standalone freetype jpeg-turbo jbig2dec openjpeg abitmap-utils
+LOCAL_LDLIBS 		+= -llog -latomic -lz
 
 LOCAL_LDFLAGS 		+= -rdynamic -pie # runpie
 LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie

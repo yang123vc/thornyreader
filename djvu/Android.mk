@@ -7,10 +7,10 @@ NDK_APP_DST_DIR := assets/thornyreader/$(TARGET_ARCH_ABI)
 LOCAL_MODULE := djvu
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_CPP_FEATURES  := exceptions
+LOCAL_CPP_FEATURES  += exceptions
 
-LOCAL_STATIC_LIBRARIES := standalone jpeg-turbo abitmap-utils
-LOCAL_LDLIBS := -llog
+LOCAL_STATIC_LIBRARIES += standalone jpeg-turbo abitmap-utils
+LOCAL_LDLIBS += -llog -latomic
 
 LOCAL_LDFLAGS 		+= -rdynamic -pie # runpie
 LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie
