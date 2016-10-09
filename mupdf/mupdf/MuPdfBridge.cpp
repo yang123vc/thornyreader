@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include <stdlib.h>
 #include <signal.h>
 
@@ -26,6 +25,7 @@
 
 #define LCTX "MuPdfBridge"
 #define L_DEBUG false
+//#define DEBUG_CRASH
 
 static int config_format = 0;
 static int config_invert_images = 0;
@@ -62,10 +62,10 @@ MuPdfBridge::MuPdfBridge() : StBridge("MuPdfBridge")
     format = 0;
     resetFonts();
 
-    // if ((defaultHandler = signal(SIGSEGV, sig_handler)) == SIG_ERR)
-    // {
-    //     ERROR_L(LCTX, "!!! can't catch SIGSEGV");
-    // }
+     //if ((defaultHandler = signal(SIGSEGV, sig_handler)) == SIG_ERR)
+     //{
+     //    ERROR_L(LCTX, "SIGSEGV signal fail");
+     //}
 }
 
 MuPdfBridge::~MuPdfBridge()
@@ -329,8 +329,14 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
 	*/
 }
 
+static void SegfaultDeath()
+{
+    *(int*) 0 = 0;
+}
+
 void MuPdfBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
 {
+    //DEBUG_L(L_DEBUG, LCTX, "processPageInfo");
     response.cmd = CMD_RES_PAGE_INFO;
     if (request.dataCount == 0)
     {
@@ -352,6 +358,15 @@ void MuPdfBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
         response.result = RES_DUP_OPEN;
         return;
     }
+
+#ifdef DEBUG_CRASH
+    if (pageNo == 1) {
+        SegfaultDeath();
+    }
+    if (pageNo % 2) {
+        SegfaultDeath();
+    }
+#endif
 
     fz_page *page = getPage(pageNo, false);
     if (!page)
@@ -383,6 +398,7 @@ void MuPdfBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
 
 void MuPdfBridge::processPage(CmdRequest& request, CmdResponse& response)
 {
+    DEBUG_L(L_DEBUG, LCTX, "processPage");
     response.cmd = CMD_RES_PAGE;
     if (request.dataCount == 0)
     {
@@ -413,6 +429,12 @@ void MuPdfBridge::processPage(CmdRequest& request, CmdResponse& response)
         return;
     }
 
+#ifdef DEBUG_CRASH
+    if (pageNumber == 3) {
+        SegfaultDeath();
+    }
+#endif
+
     fz_page* p = getPage(pageNumber, true);
 
     if (p == NULL)
@@ -426,6 +448,7 @@ void MuPdfBridge::processPage(CmdRequest& request, CmdResponse& response)
 
 void MuPdfBridge::processPageFree(CmdRequest& request, CmdResponse& response)
 {
+    DEBUG_L(L_DEBUG, LCTX, "processPageFree");
     response.cmd = CMD_RES_PAGE_FREE;
     if (request.dataCount == 0)
     {
@@ -456,6 +479,11 @@ void MuPdfBridge::processPageFree(CmdRequest& request, CmdResponse& response)
         return;
     }
 
+#ifdef DEBUG_CRASH
+    if (pageNumber == 5) {
+        SegfaultDeath();
+    }
+#endif
 
     if (pageLists[pageNumber]) {
         fz_try(ctx)
@@ -510,6 +538,7 @@ void MuPdfBridge::processPageFree(CmdRequest& request, CmdResponse& response)
 */
 void MuPdfBridge::processPageRender(CmdRequest& request, CmdResponse& response)
 {
+    DEBUG_L(L_DEBUG, LCTX, "processPageRender");
     response.cmd = CMD_RES_PAGE_RENDER;
     if (request.dataCount == 0)
     {
@@ -538,6 +567,12 @@ void MuPdfBridge::processPageRender(CmdRequest& request, CmdResponse& response)
         response.result = RES_BAD_REQ_DATA;
         return;
     }
+
+#ifdef DEBUG_CRASH
+    if (page_index == 7) {
+        SegfaultDeath();
+    }
+#endif
 
     fz_page* page = getPage(page_index, true);
 
@@ -603,6 +638,7 @@ void MuPdfBridge::processPageRender(CmdRequest& request, CmdResponse& response)
 
 void MuPdfBridge::processOutline(CmdRequest& request, CmdResponse& response)
 {
+    DEBUG_L(L_DEBUG, LCTX, "processOutline");
     response.cmd = CMD_RES_OUTLINE;
 
     if (document == NULL)
@@ -716,6 +752,7 @@ fz_page* MuPdfBridge::getPage(uint32_t pageNo, bool decode)
 
 bool MuPdfBridge::restart()
 {
+    DEBUG_L(L_DEBUG, LCTX, "restart");
     release();
 
     DEBUG_L(L_DEBUG, LCTX, "Creating context: storememory = %d", storememory);
@@ -774,6 +811,7 @@ bool MuPdfBridge::restart()
 
 void MuPdfBridge::release()
 {
+    DEBUG_L(L_DEBUG, LCTX, "release");
     if (pageLists != NULL)
     {
         int i;
@@ -815,6 +853,7 @@ void MuPdfBridge::release()
 
 void MuPdfBridge::processConfig(CmdRequest& request, CmdResponse& response)
 {
+    DEBUG_L(L_DEBUG, LCTX, "processConfig");
     response.cmd = CMD_RES_SET_CONFIG;
     CmdDataIterator iter(request.first);
 
@@ -843,6 +882,7 @@ void MuPdfBridge::processConfig(CmdRequest& request, CmdResponse& response)
 
 void MuPdfBridge::processSmartCrop(CmdRequest& request, CmdResponse& response)
 {
+    DEBUG_L(L_DEBUG, LCTX, "processSmartCrop");
     response.cmd = CMD_RES_SMART_CROP;
     if (request.dataCount == 0) {
         ERROR_L(LCTX, "No request data found");
@@ -873,6 +913,12 @@ void MuPdfBridge::processSmartCrop(CmdRequest& request, CmdResponse& response)
 
     float slice_w = slice_r - slice_l;
     float slice_h = slice_b - slice_t;
+
+#ifdef DEBUG_CRASH
+    if (page_index == 9) {
+        SegfaultDeath();
+    }
+#endif
 
     fz_page* page = getPage(page_index, true);
     if (!page) {

@@ -18,7 +18,7 @@
 
 int main(int argc, char *argv[])
 {
-    __android_log_print(ANDROID_LOG_INFO, "axy.mypdf", "mupdf v9499");
+    __android_log_print(ANDROID_LOG_INFO, "axy.mypdf", "mupdf v1.0.0");
     MuPdfBridge mupdf;
 
     return mupdf.main(argc, argv);

@@ -25,7 +25,7 @@
 #include "abitmap-utils.h"
 
 #define LCTX "DjvuBridge"
-#define L_DEBUG true
+#define L_DEBUG false
 
 #define RES_DJVU_FAIL       255
 
