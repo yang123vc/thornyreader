@@ -2418,7 +2418,9 @@ public:
         if ( readBytes<0 )
             return LVERR_FAIL;
         if ( readBytes!=(int)count ) {
+#ifdef AXY_DEBUG
             CRLog::trace("ZIP stream: %d bytes read instead of %d", (int)readBytes, (int)count);
+#endif
         }
         if (bytesRead)
             *bytesRead = (lvsize_t)readBytes;
