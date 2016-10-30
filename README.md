@@ -2,24 +2,40 @@
 
 ## About
 
-ThornyReader is a tool for rendering EPUB, PDF, DOC, RTF, TXT, DJVU,
-FB2 and MOBI documents formats.
+ThornyReader is a program for rendering EPUB without DRM,
+PDF without DRM, DOC, RTF, TXT, DJVU, FB2 and MOBI docs.
 
 ## Usage
 
-Application.mk sample:
+ThornyReader operates via CLI. Basic principle:
+- create two FIFO files
+- choose desired binary:
+  - crengine for EPUB, DOC, RTF, TXT, MOBI and CHM
+  - mupdf for PDF, XPS and OXPS
+  - djvu for DJVU
+- start chosen binary and pass two created FIFO files as arguments
+- write requests to first FIFO and read responses from second FIFO
+
+## Build
+
+Build is performed by Android Studio. Build should create four binaries:
+crengine, mupdf, djvu and runpie. Application.mk sample:
 ```
 APP_MODULES             := runpie crengine mupdf djvu
 APP_PLATFORM            := android-14
-APP_OPTIM               := release
-NDK_TOOLCHAIN_VERSION   := 4.9
 APP_STL                 := c++_static
 APP_ABI                 := armeabi armeabi-v7a arm64-v8a x86 x86_64
 ```
 
+## Third-party
+
+ThornyReader uses number of other projects, mainly CoolReader, MuPDF
+and DjVuLibre. You can find all original copyright notices for used projects
+in the corresponding source directories.
+
 ## Contacts
 
-If you have any questions, feel free to contact me: thornyreader@gmail.com
+If you have any questions, feel free to contact: thornyreader@gmail.com
 
 ## License
 
