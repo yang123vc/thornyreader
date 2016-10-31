@@ -22,6 +22,7 @@ LOCAL_CFLAGS        += -DFT2_BUILD_LIBRARY=1
 LOCAL_CFLAGS        += -DCR3_ANTIWORD_PATCH=1
 
 LOCAL_C_INCLUDES := \
+    $(LOCAL_PATH)/../ \
     $(LOCAL_PATH)/crengine/include \
     $(LOCAL_PATH)/libpng \
     $(LOCAL_PATH)/freetype/include \

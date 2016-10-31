@@ -18,6 +18,7 @@ LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie
 LOCAL_CFLAGS 		+= -DHAVE_CONFIG_H
 
 LOCAL_C_INCLUDES := \
+    $(LOCAL_PATH)/../ \
 	$(LOCAL_PATH)/../standalone/include \
 	$(LOCAL_PATH)/../jpeg-turbo/jpeg-turbo/include \
 	$(LOCAL_PATH)/../abitmap-utils/include \

@@ -20,6 +20,7 @@ LOCAL_CFLAGS     += -DARCH_ARM -DARCH_THUMB -DARCH_ARM_CAN_LOAD_UNALIGNED
 endif # TARGET_ARCH == armeabi
 
 LOCAL_C_INCLUDES := \
+    $(LOCAL_PATH)/../../ \
 	$(LOCAL_PATH)/../../standalone/include \
 	$(LOCAL_PATH)/../../jpeg-turbo/jpeg-turbo/include \
 	$(LOCAL_PATH)/../../abitmap-utils/include \
