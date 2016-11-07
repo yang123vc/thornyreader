@@ -2417,13 +2417,13 @@ public:
         int readBytes = read( (lUInt8 *)buf, (int)count );
         if ( readBytes<0 )
             return LVERR_FAIL;
-        if ( readBytes!=(int)count ) {
+        if (readBytes != (int) count) {
 #ifdef AXY_DEBUG
-            CRLog::trace("ZIP stream: %d bytes read instead of %d", (int)readBytes, (int)count);
+            CRLog::trace("ZIP stream: %d bytes read instead of %d", (int) readBytes, (int) count);
 #endif
         }
         if (bytesRead)
-            *bytesRead = (lvsize_t)readBytes;
+            *bytesRead = (lvsize_t) readBytes;
         //CRLog::trace("%d bytes requested, %d bytes read, %d bytes left", count, readBytes, m_outbytesleft);
         return LVERR_OK;
     }
