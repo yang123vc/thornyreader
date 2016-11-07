@@ -18,11 +18,11 @@ ThornyReader operates via CLI. Basic principle:
 
 ## Build
 
-Build is performed by Android Studio. Build should create four binaries:
-crengine, mupdf, djvu and runpie. Application.mk sample:
+Build is performed by Android Studio. Build should create three binaries:
+crengine, mupdf and djvu. Application.mk sample:
 ```
-APP_MODULES             := runpie crengine mupdf djvu
-APP_PLATFORM            := android-14
+APP_MODULES             := crengine mupdf djvu
+APP_PLATFORM            := android-16
 APP_STL                 := c++_static
 APP_ABI                 := armeabi armeabi-v7a arm64-v8a x86 x86_64
 ```

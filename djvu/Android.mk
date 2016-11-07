@@ -12,9 +12,6 @@ LOCAL_CPP_FEATURES  += exceptions
 LOCAL_STATIC_LIBRARIES += standalone jpeg-turbo abitmap-utils
 LOCAL_LDLIBS += -llog -latomic
 
-LOCAL_LDFLAGS 		+= -rdynamic -pie # runpie
-LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie
-
 LOCAL_CFLAGS 		+= -DHAVE_CONFIG_H
 
 LOCAL_C_INCLUDES := \

@@ -10,9 +10,6 @@ LOCAL_ARM_MODE := $(APP_ARM_MODE)
 LOCAL_STATIC_LIBRARIES 	+= standalone freetype jpeg-turbo jbig2dec openjpeg abitmap-utils
 LOCAL_LDLIBS 		+= -llog -latomic -lz
 
-LOCAL_LDFLAGS 		+= -rdynamic -pie # runpie
-LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie
-
 LOCAL_CFLAGS 		+= -DAA_BITS=8 -DNDEBUG -DHAVE_CONFIG_H
 
 ifeq ($(TARGET_ARCH),arm)

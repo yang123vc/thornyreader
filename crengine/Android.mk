@@ -12,9 +12,6 @@ LOCAL_CPP_FEATURES  += exceptions
  #-Wl,-Map=crengine.map
 LOCAL_LDLIBS        += -llog -latomic -lz -ldl
 
-LOCAL_LDFLAGS 		+= -rdynamic -pie # runpie
-LOCAL_CFLAGS        += -fvisibility=default -fPIE # runpie
-
 LOCAL_CFLAGS        += -DHAVE_CONFIG_H
 LOCAL_CFLAGS        += -DLINUX=1
 LOCAL_CFLAGS        += -D_LINUX=1
