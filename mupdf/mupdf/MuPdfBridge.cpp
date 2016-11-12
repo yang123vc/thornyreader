@@ -136,6 +136,9 @@ void MuPdfBridge::process(CmdRequest& request, CmdResponse& response)
     case CMD_REQ_SMART_CROP:
         processSmartCrop(request, response);
         break;
+    case CMD_REQ_ALIVE:
+        response.cmd = CMD_RES_ALIVE;
+        break;
     default:
         ERROR_L(LCTX, "Unknown request: %d", request.cmd);
         response.result = RES_UNKNOWN_CMD;
