@@ -25,10 +25,7 @@
 class AndroidLogger : public CRLog
 {
 public:
-	AndroidLogger()
-	{
-		set_log_level(CRLog::TRACE);
-	}
+	AndroidLogger()	{ }
 
 protected:
 	virtual void log(const char* lvl, const char* msg, va_list args)
@@ -675,8 +672,6 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
     AddString(response, doc_lang);
 
     /*
-    TODO Metadata parsing improvement
-
     Empire V EPUB - не извлекается обложка, хотя она есть
 
     LvStreamRef GetEpubCoverpage(LVContainerRef doc_stream_zip)
@@ -746,6 +741,11 @@ CreBridge::CreBridge() : StBridge("CreBridge")
 {
     doc_view_ = NULL;
     CRLog::setLogger(new AndroidLogger());
+#ifdef AXY_DEBUG
+    CRLog::set_log_level(CRLog::INFO);
+#else
+    CRLog::set_log_level(CRLog::ERROR);
+#endif
     InitFontManager(lString8::empty_str);
     // 0 - disabled, 1 - bytecode, 2 - auto
     fontMan->SetHintingMode(HINTING_MODE_BYTECODE_INTERPRETOR);

@@ -2415,12 +2415,10 @@ public:
     virtual lverror_t Read(void* buf, lvsize_t count, lvsize_t* bytesRead)
     {
         int readBytes = read( (lUInt8 *)buf, (int)count );
-        if ( readBytes<0 )
+        if (readBytes < 0)
             return LVERR_FAIL;
         if (readBytes != (int) count) {
-#ifdef AXY_DEBUG
             CRLog::trace("ZIP stream: %d bytes read instead of %d", (int) readBytes, (int) count);
-#endif
         }
         if (bytesRead)
             *bytesRead = (lvsize_t) readBytes;

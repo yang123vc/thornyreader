@@ -3538,9 +3538,7 @@ lString16 htmlCharset(lString16 htmlHeader)
     if ( p<0 )
         return lString16::empty_str;
     htmlHeader = htmlHeader.substr( 0, p );
-#ifdef AXY_DEBUG
     CRLog::trace("http-equiv content-type: %s", UnicodeToUtf8(htmlHeader).c_str());
-#endif
     p = htmlHeader.pos("charset=");
     if ( p<0 )
         return lString16::empty_str;
