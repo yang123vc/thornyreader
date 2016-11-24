@@ -119,6 +119,9 @@ void DjvuBridge::process(CmdRequest& request, CmdResponse& response)
     case CMD_REQ_OUTLINE:
         processOutline(request, response);
         break;
+    case CMD_REQ_ALIVE:
+        response.cmd = CMD_RES_ALIVE;
+        break;
     case CMD_REQ_QUIT:
         processQuit(request, response);
         break;
