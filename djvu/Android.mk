@@ -1,18 +1,13 @@
 LOCAL_PATH := $(call my-dir)
-
 include $(CLEAR_VARS)
-
-SAVED_NDK_APP_DST_DIR := $(NDK_APP_DST_DIR)
-NDK_APP_DST_DIR := assets/thornyreader/$(TARGET_ARCH_ABI)
 LOCAL_MODULE := djvu
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_CPP_FEATURES  += exceptions
+LOCAL_STATIC_LIBRARIES  := standalone jpeg-turbo abitmap-utils
+LOCAL_LDLIBS            += -llog -latomic
+LOCAL_CPP_FEATURES      += exceptions
 
-LOCAL_STATIC_LIBRARIES += standalone jpeg-turbo abitmap-utils
-LOCAL_LDLIBS += -llog -latomic
-
-LOCAL_CFLAGS 		+= -DHAVE_CONFIG_H
+LOCAL_CFLAGS 		    += -DHAVE_CONFIG_H
 
 LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/../ \
@@ -83,5 +78,3 @@ LOCAL_SRC_FILES :=  \
 	src/miniexp.cpp
 
 include $(BUILD_EXECUTABLE)
-
-NDK_APP_DST_DIR := $(SAVED_NDK_APP_DST_DIR)

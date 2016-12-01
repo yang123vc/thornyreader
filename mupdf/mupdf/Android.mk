@@ -1,16 +1,14 @@
 LOCAL_PATH:= $(call my-dir)
-
 include $(CLEAR_VARS)
-
-SAVED_NDK_APP_DST_DIR := $(NDK_APP_DST_DIR)
-NDK_APP_DST_DIR := assets/thornyreader/$(TARGET_ARCH_ABI)
 LOCAL_MODULE := mupdf
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES 	+= standalone freetype jpeg-turbo jbig2dec openjpeg abitmap-utils
-LOCAL_LDLIBS 		+= -llog -latomic -lz
+LOCAL_STATIC_LIBRARIES 	:= standalone freetype jpeg-turbo jbig2dec openjpeg abitmap-utils
+LOCAL_LDLIBS 		    += -llog -latomic -lz
 
-LOCAL_CFLAGS 		+= -DAA_BITS=8 -DNDEBUG -DHAVE_CONFIG_H
+LOCAL_CFLAGS 		    += -DHAVE_CONFIG_H
+LOCAL_CFLAGS 		    += -DNDEBUG
+LOCAL_CFLAGS 		    += -DAA_BITS=8
 
 ifeq ($(TARGET_ARCH),arm)
 LOCAL_CFLAGS     += -DARCH_ARM -DARCH_THUMB -DARCH_ARM_CAN_LOAD_UNALIGNED
@@ -176,5 +174,3 @@ LOCAL_SRC_FILES += \
 	fitz/xml.c
 
 include $(BUILD_EXECUTABLE)
-
-NDK_APP_DST_DIR := $(SAVED_NDK_APP_DST_DIR)

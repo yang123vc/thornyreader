@@ -1,22 +1,17 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
-SAVED_NDK_APP_DST_DIR := $(NDK_APP_DST_DIR)
-NDK_APP_DST_DIR := assets/thornyreader/$(TARGET_ARCH_ABI)
 LOCAL_MODULE := crengine
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES := standalone
+LOCAL_STATIC_LIBRARIES  := standalone
+LOCAL_LDLIBS            += -llog -latomic -lz -ldl
+LOCAL_CPP_FEATURES      += exceptions
 
-LOCAL_CPP_FEATURES  += exceptions
-
- #-Wl,-Map=crengine.map
-LOCAL_LDLIBS        += -llog -latomic -lz -ldl
-
-LOCAL_CFLAGS        += -DHAVE_CONFIG_H
-LOCAL_CFLAGS        += -DLINUX=1
-LOCAL_CFLAGS        += -D_LINUX=1
-LOCAL_CFLAGS        += -DFT2_BUILD_LIBRARY=1
-LOCAL_CFLAGS        += -DCR3_ANTIWORD_PATCH=1
+LOCAL_CFLAGS            += -DHAVE_CONFIG_H
+LOCAL_CFLAGS            += -DLINUX=1
+LOCAL_CFLAGS            += -D_LINUX=1
+LOCAL_CFLAGS            += -DFT2_BUILD_LIBRARY=1
+LOCAL_CFLAGS            += -DCR3_ANTIWORD_PATCH=1
 
 LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/../ \
@@ -28,7 +23,11 @@ LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/chmlib/src \
 	$(LOCAL_PATH)/../standalone/include
 
-CRENGINE_SRC_FILES := \
+LOCAL_SRC_FILES := \
+	CreBridge.cpp \
+	CreMain.cpp
+
+LOCAL_SRC_FILES += \
 	crengine/src/css/crcss_chm.cpp \
 	crengine/src/css/crcss_def.cpp \
 	crengine/src/css/crcss_doc.cpp \
@@ -66,7 +65,7 @@ CRENGINE_SRC_FILES := \
     crengine/src/txtselector.cpp \
     crengine/src/wordfmt.cpp
 
-PNG_SRC_FILES := \
+LOCAL_SRC_FILES += \
     libpng/pngerror.c  \
     libpng/pngget.c  \
     libpng/pngpread.c \
@@ -85,7 +84,7 @@ PNG_SRC_FILES := \
     libpng/pngwio.c \
     libpng/pngwtran.c
 
-JPEG_SRC_FILES := \
+LOCAL_SRC_FILES += \
     libjpeg/jcapimin.c \
     libjpeg/jchuff.c \
     libjpeg/jcomapi.c \
@@ -133,7 +132,7 @@ JPEG_SRC_FILES := \
     libjpeg/jidctint.c \
     libjpeg/jquant2.c
 
-FREETYPE_SRC_FILES := \
+LOCAL_SRC_FILES += \
     freetype/src/autofit/autofit.c \
     freetype/src/bdf/bdf.c \
     freetype/src/cff/cff.c \
@@ -172,11 +171,11 @@ FREETYPE_SRC_FILES := \
     freetype/src/cid/type1cid.c \
     freetype/src/type42/type42.c
 	
-CHM_SRC_FILES := \
+LOCAL_SRC_FILES += \
     chmlib/src/chm_lib.c \
     chmlib/src/lzx.c 
 
-ANTIWORD_SRC_FILES := \
+LOCAL_SRC_FILES += \
     antiword/asc85enc.c \
     antiword/blocklist.c \
     antiword/chartrans.c \
@@ -220,15 +219,4 @@ ANTIWORD_SRC_FILES := \
     antiword/wordwin.c \
     antiword/xmalloc.c
 
-LOCAL_SRC_FILES := \
-    $(FREETYPE_SRC_FILES) \
-    $(PNG_SRC_FILES) \
-    $(JPEG_SRC_FILES) \
-    $(CHM_SRC_FILES) \
-    $(ANTIWORD_SRC_FILES) \
-    $(CRENGINE_SRC_FILES) \
-	CreBridge.cpp \
-	CreMain.cpp
-
 include $(BUILD_EXECUTABLE)
-NDK_APP_DST_DIR := $(SAVED_NDK_APP_DST_DIR)
