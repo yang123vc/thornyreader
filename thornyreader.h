@@ -1,6 +1,0 @@
-#ifndef _THORNYREADER_H_
-#define _THORNYREADER_H_
-
-#define THORNYREADER_VERSION "1.0.4"
-
-#endif /* _THORNYREADER_H_ */

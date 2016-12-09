@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := crengine
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES  := standalone
+LOCAL_STATIC_LIBRARIES  := thornyreader
 LOCAL_LDLIBS            += -llog -latomic -lz -ldl
 LOCAL_CPP_FEATURES      += exceptions
 
@@ -14,14 +14,13 @@ LOCAL_CFLAGS            += -DFT2_BUILD_LIBRARY=1
 LOCAL_CFLAGS            += -DCR3_ANTIWORD_PATCH=1
 
 LOCAL_C_INCLUDES := \
-    $(LOCAL_PATH)/../ \
+    $(LOCAL_PATH)/../thornyreader/include \
     $(LOCAL_PATH)/crengine/include \
     $(LOCAL_PATH)/libpng \
     $(LOCAL_PATH)/freetype/include \
     $(LOCAL_PATH)/libjpeg \
     $(LOCAL_PATH)/antiword \
-    $(LOCAL_PATH)/chmlib/src \
-	$(LOCAL_PATH)/../standalone/include
+    $(LOCAL_PATH)/chmlib/src
 
 LOCAL_SRC_FILES := \
 	CreBridge.cpp \

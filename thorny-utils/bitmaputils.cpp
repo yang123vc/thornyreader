@@ -1,4 +1,4 @@
-#include "abitmap-utils.h"
+#include "bitmaputils.h"
 
 #define V_LINE_SIZE 5
 #define H_LINE_SIZE 5

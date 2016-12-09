@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := mupdf
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES 	:= standalone freetype jpeg-turbo jbig2dec openjpeg abitmap-utils
+LOCAL_STATIC_LIBRARIES 	:= thornyreader freetype jpeg-turbo jbig2dec openjpeg thorny-utils
 LOCAL_LDLIBS 		    += -llog -latomic -lz
 
 LOCAL_CFLAGS 		    += -DHAVE_CONFIG_H
@@ -15,17 +15,15 @@ LOCAL_CFLAGS     += -DARCH_ARM -DARCH_THUMB -DARCH_ARM_CAN_LOAD_UNALIGNED
 endif # TARGET_ARCH == armeabi
 
 LOCAL_C_INCLUDES := \
-    $(LOCAL_PATH)/../../ \
-	$(LOCAL_PATH)/../../standalone/include \
+	$(LOCAL_PATH)/../../thornyreader/include \
 	$(LOCAL_PATH)/../../jpeg-turbo/jpeg-turbo/include \
-	$(LOCAL_PATH)/../../abitmap-utils/include \
+	$(LOCAL_PATH)/../../thorny-utils/include \
 	$(LOCAL_PATH)/../freetype/overlay \
 	$(LOCAL_PATH)/../freetype/include \
 	$(LOCAL_PATH)/../jbig2dec/include \
 	$(LOCAL_PATH)/../openjpeg/openjpeg/include \
 	$(LOCAL_PATH)/include \
-	$(LOCAL_PATH)/generated \
-	$(LOCAL_PATH)/standalone
+	$(LOCAL_PATH)/generated
 
 LOCAL_SRC_FILES := \
 	MuPdfMain.cpp \

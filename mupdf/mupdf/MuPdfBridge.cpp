@@ -19,9 +19,9 @@
 #include "StLog.h"
 #include "StProtocol.h"
 #include "StSocket.h"
-#include "StConfig.h"
 #include "MuPdfBridge.h"
-#include "abitmap-utils.h"
+#include "thornyreader.h"
+#include "bitmaputils.h"
 
 #define LCTX "MuPdfBridge"
 #define L_DEBUG false

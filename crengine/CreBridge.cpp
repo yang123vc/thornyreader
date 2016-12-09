@@ -5,9 +5,9 @@
 
 #include <android/log.h>
 
+#include "thornyreader.h"
 #include "StProtocol.h"
 #include "StSocket.h"
-#include "StConfig.h"
 
 #include "crengine.h"
 #include "epubfmt.h"

@@ -19,10 +19,9 @@
 #include "StLog.h"
 #include "StProtocol.h"
 #include "StSocket.h"
-#include "StConfig.h"
 #include "DjvuBridge.h"
-
-#include "abitmap-utils.h"
+#include "thornyreader.h"
+#include "bitmaputils.h"
 
 #define LCTX "DjvuBridge"
 #define L_DEBUG false

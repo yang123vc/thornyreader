@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <android/log.h>
+
 #include "thornyreader.h"
 #include "DjvuBridge.h"
 
 int main(int argc, char *argv[])
 {
-    __android_log_print(ANDROID_LOG_INFO, "axy.mypdf", "djvu v%s", THORNYREADER_VERSION);
+    StartThornyReader("djvu");
     DjvuBridge djvu;
     return djvu.main(argc, argv);
 }

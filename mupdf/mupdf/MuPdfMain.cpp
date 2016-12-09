@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <android/log.h>
+
 #include "thornyreader.h"
 #include "MuPdfBridge.h"
 
 int main(int argc, char *argv[])
 {
-    __android_log_print(ANDROID_LOG_INFO, "axy.mypdf", "mupdf v%s", THORNYREADER_VERSION);
+    StartThornyReader("mupdf");
     MuPdfBridge mupdf;
-
     return mupdf.main(argc, argv);
 }
