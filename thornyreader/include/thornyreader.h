@@ -17,10 +17,10 @@
 #ifndef _THORNYREADER_H_
 #define _THORNYREADER_H_
 
-#define THORNYREADER_VERSION "1.0.6"
+#define THORNYREADER_VERSION "1.0.11"
 
 const char* ThornyReader_NDEBUG();
-const char* ThornyReader_AXY_DEBUG();
+const char* ThornyReader_AXYDEBUG();
 void StartThornyReader(const char* name);
 
 #define CONFIG_CRENGINE_FOOTNOTES               	100

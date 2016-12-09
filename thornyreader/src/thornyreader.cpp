@@ -28,13 +28,13 @@ const char* ThornyReader_NDEBUG()
     return ndebug;
 }
 
-const char* ThornyReader_AXY_DEBUG()
+const char* ThornyReader_AXYDEBUG()
 {
     const char* axy_debug;
-#ifdef AXY_DEBUG
-    axy_debug = "AXY_DEBUG=def";
+#ifdef AXYDEBUG
+    axy_debug = "AXYDEBUG=def";
 #else
-    axy_debug = "AXY_DEBUG=ndef";
+    axy_debug = "AXYDEBUG=ndef";
 #endif
     return axy_debug;
 }
@@ -45,5 +45,5 @@ void StartThornyReader(const char* name)
                         name,
                         THORNYREADER_VERSION,
                         ThornyReader_NDEBUG(),
-                        ThornyReader_AXY_DEBUG());
+                        ThornyReader_AXYDEBUG());
 }

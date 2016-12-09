@@ -741,7 +741,7 @@ CreBridge::CreBridge() : StBridge("CreBridge")
 {
     doc_view_ = NULL;
     CRLog::setLogger(new AndroidLogger());
-#ifdef AXY_DEBUG
+#ifdef AXYDEBUG
     CRLog::set_log_level(CRLog::INFO);
 #else
     CRLog::set_log_level(CRLog::ERROR);
