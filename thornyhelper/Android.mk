@@ -2,7 +2,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := thorny-utils
+LOCAL_MODULE := thornyhelper
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include

@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := mupdf
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES 	:= thornyreader freetype jpeg-turbo jbig2dec openjpeg thorny-utils
+LOCAL_STATIC_LIBRARIES 	:= thornyreader freetype jpeg-turbo jbig2dec openjpeg thornyhelper
 LOCAL_LDLIBS 		    += -llog -latomic -lz
 
 LOCAL_CFLAGS 		    += -DHAVE_CONFIG_H
@@ -17,7 +17,7 @@ endif # TARGET_ARCH == armeabi
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/../../thornyreader/include \
 	$(LOCAL_PATH)/../../jpeg-turbo/jpeg-turbo/include \
-	$(LOCAL_PATH)/../../thorny-utils/include \
+	$(LOCAL_PATH)/../../thornyhelper/include \
 	$(LOCAL_PATH)/../freetype/overlay \
 	$(LOCAL_PATH)/../freetype/include \
 	$(LOCAL_PATH)/../jbig2dec/include \

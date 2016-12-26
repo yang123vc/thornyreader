@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := djvu
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES  := thornyreader jpeg-turbo thorny-utils
+LOCAL_STATIC_LIBRARIES  := thornyreader jpeg-turbo thornyhelper
 LOCAL_LDLIBS            += -llog -latomic
 LOCAL_CPP_FEATURES      += exceptions
 
@@ -12,7 +12,7 @@ LOCAL_CFLAGS 		    += -DHAVE_CONFIG_H
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/../thornyreader/include \
 	$(LOCAL_PATH)/../jpeg-turbo/jpeg-turbo/include \
-	$(LOCAL_PATH)/../thorny-utils/include \
+	$(LOCAL_PATH)/../thornyhelper/include \
 	$(LOCAL_PATH)/include
 
 LOCAL_SRC_FILES :=  \
