@@ -1411,7 +1411,6 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 	stream_ = stream;
 	// To allow apply styles and rend method while loading
 	CheckRenderProps(0, 0);
-#if (USE_ZLIB==1)
 	doc_format_t pdb_format = doc_format_none;
 	// DetectPDBFormat установит pdb_format в корректное значение
 	if (DetectPDBFormat(stream_, pdb_format)) {
@@ -1475,7 +1474,6 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 		}
 	}
 #endif //ENABLE_ANTIWORD == 1
-#endif //USE_ZLIB
 	LvDomWriter writer(cr_dom_);
 	if (stream_->GetSize() < 5) {
 		return false;

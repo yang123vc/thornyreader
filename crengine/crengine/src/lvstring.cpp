@@ -26,9 +26,7 @@
 #endif
 #endif
 
-#if (USE_ZLIB==1)
 #include <zlib.h>
-#endif
 
 #if defined(_WIN32)
 extern "C" {
@@ -1326,14 +1324,9 @@ void lString16HashedCollection::serialize( SerialBuf & buf )
 }
 
 /// calculates CRC32 for buffer contents
-lUInt32 lStr_crc32( lUInt32 prevValue, const void * buf, int size )
+lUInt32 lStr_crc32(lUInt32 prevValue, const void * buf, int size )
 {
-#if (USE_ZLIB==1)
     return crc32( prevValue, (const lUInt8 *)buf, size );
-#else
-    // TODO:
-    return 0;
-#endif
 }
 
 /// add CRC32 for last N bytes

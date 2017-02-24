@@ -11,11 +11,9 @@
 #define CRSETUP_H_INCLUDED
 
 #if defined(_LINUX) || defined (LINUX)
-
 #define USE_LIBJPEG                          1
 #define USE_LIBPNG                           1
 #define USE_GIF                              1
-#define USE_ZLIB                             1
 #define USE_ANSI_FILES                       1
 #define GRAY_INVERSE                         0
 #define USE_FREETYPE                         1
@@ -36,16 +34,13 @@
 #define GLYPH_CACHE_SIZE                     0x40000
 #define ZIP_STREAM_BUFFER_SIZE               0x40000
 #define FILE_STREAM_BUFFER_SIZE              0x20000
-
 #endif //defined(_LINUX) || defined (LINUX)
 
 #if (LBOOK==1)
-
 #define USE_DOM_UTF8_STORAGE                 1
 #ifndef MAX_IMAGE_SCALE_MUL
 #define MAX_IMAGE_SCALE_MUL                  2
 #endif
-#define USE_ZLIB                             1
 #define USE_ANSI_FILES                       1
 #define GRAY_INVERSE                         0
 #define ALLOW_KERNING                        1
@@ -56,7 +51,6 @@
 #define GLYPH_CACHE_SIZE                     0x20000
 #define ZIP_STREAM_BUFFER_SIZE               0x80000
 #define FILE_STREAM_BUFFER_SIZE              0x40000
-
 #endif // LBOOK==1
 
 #if defined(_WIN32)
@@ -95,10 +89,6 @@
 #ifndef USE_LIBPNG
 ///allow PNG support via libpng
 #define USE_LIBPNG 1
-#endif
-
-#ifndef USE_ZLIB
-#define USE_ZLIB 1
 #endif
 
 #ifndef GRAY_INVERSE

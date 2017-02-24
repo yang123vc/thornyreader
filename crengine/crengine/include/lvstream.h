@@ -788,9 +788,7 @@ LVStreamRef LVMapFileStream( const lChar8 * pathname, lvopen_mode_t mode, lvsize
     \param stream is archieve file stream
     \return reference to opened archieve if success, NULL reference if error
 */
-#if (USE_ZLIB==1)
-LVContainerRef LVOpenArchieve( LVStreamRef stream );
-#endif
+LVContainerRef LVOpenArchieve(LVStreamRef stream);
 
 /// Creates memory stream
 /**

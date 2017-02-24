@@ -32,10 +32,7 @@
 #include <string.h>
 
 //#define USE_UNRAR 1
-
-#if (USE_ZLIB==1)
 #include <zlib.h>
-#endif
 #if (USE_UNRAR==1)
 #include <rar.hpp>
 #endif
@@ -2115,8 +2112,6 @@ struct ZipHd2
 #define ARC_INBUF_SIZE  5000
 #define ARC_OUTBUF_SIZE 10000
 
-#if (USE_ZLIB==1)
-
 class LVZipDecodeStream : public LVNamedStream
 {
 private:
@@ -2720,8 +2715,6 @@ public:
     }
 
 };
-#endif
-
 #if (USE_UNRAR==1)
 class LVRarArc : public LVArcContainerBase
 {
@@ -2811,10 +2804,6 @@ public:
 
 };
 #endif // UNRAR
-
-
-
-
 
 class LVMemoryStream : public LVNamedStream
 {
@@ -3061,7 +3050,6 @@ public:
 	}
 };
 
-#if (USE_ZLIB==1)
 LVContainerRef LVOpenArchieve( LVStreamRef stream )
 {
     LVContainerRef ref;
@@ -3082,7 +3070,6 @@ LVContainerRef LVOpenArchieve( LVStreamRef stream )
     // not found: return null ref
     return ref;
 }
-#endif
 
 /// Creates memory stream as copy of string contents
 LVStreamRef LVCreateStringStream( lString8 data )
