@@ -1,5 +1,4 @@
 /*******************************************************
-
    CoolReader Engine
 
    lvtinydom.cpp: fast and compact XML DOM tree
@@ -8,7 +7,6 @@
    This source code is distributed under the terms of
    GNU General Public License
    See LICENSE file for details
-
 *******************************************************/
 
 /// Data compression level (0=no compression, 1=fast compressions, 3=normal compression)
@@ -39,19 +37,7 @@
 #define STYLE_CACHE_CHUNK_SIZE    0x00C000 // 48K
 //--------------------------------------------------------
 
-#define COMPRESS_NODE_DATA          true
-#define COMPRESS_NODE_STORAGE_DATA  true
-#define COMPRESS_MISC_DATA          true
-#define COMPRESS_PAGES_DATA         true
-#define COMPRESS_TOC_DATA           true
-#define COMPRESS_STYLE_DATA         true
-
-//#define CACHE_FILE_SECTOR_SIZE 4096
-#define CACHE_FILE_SECTOR_SIZE 1024
-#define CACHE_FILE_WRITE_BLOCK_PADDING 1
-
 //#define TRACE_AUTOBOX
-
 #define RECT_DATA_CHUNK_ITEMS_SHIFT 11
 #define STYLE_DATA_CHUNK_ITEMS_SHIFT 12
 
@@ -69,39 +55,12 @@
 #define STYLE_HASH_TABLE_SIZE     512
 #define FONT_HASH_TABLE_SIZE      256
 
-enum CacheFileBlockType {
-    CBT_FREE = 0,
-    CBT_INDEX = 1,
-    CBT_TEXT_DATA,
-    CBT_ELEM_DATA,
-    CBT_RECT_DATA, //4
-    CBT_ELEM_STYLE_DATA,
-    CBT_MAPS_DATA,
-    CBT_PAGE_DATA, //7
-    CBT_PROP_DATA,
-    CBT_NODE_INDEX,
-    CBT_ELEM_NODE,
-    CBT_TEXT_NODE,
-    CBT_REND_PARAMS, //12
-    CBT_TOC_DATA,
-    CBT_STYLE_DATA,
-    CBT_BLOB_INDEX, //15
-    CBT_BLOB_DATA,
-    CBT_FONT_DATA  //17
-};
-
-
 #include <stdlib.h>
-#include <string.h>
-#include <stddef.h>
-#include <math.h>
 #include <zlib.h>
-#include "crsetup.h"
 #include "lvstring.h"
 #include "lvtinydom.h"
 #include "fb2def.h"
 #include "lvrend.h"
-#include "chmfmt.h"
 
 // Define to store new text nodes as persistent text, instead of mutable
 #define USE_PERSISTENT_TEXT 1
@@ -177,36 +136,10 @@ public:
     }
 };
 
-//#define INDEX1 94
-//#define INDEX2 96
-
-//#define INDEX1 105
-//#define INDEX2 106
-
 /// pack data from _buf to _compbuf
 bool ldomPack( const lUInt8 * buf, int bufsize, lUInt8 * &dstbuf, lUInt32 & dstsize );
 /// unpack data from _compbuf to _buf
 bool ldomUnpack( const lUInt8 * compbuf, int compsize, lUInt8 * &dstbuf, lUInt32 & dstsize  );
-
-// FNV 64bit hash function from http://isthe.com/chongo/tech/comp/fnv/#gcc-O3
-#define NO_FNV_GCC_OPTIMIZATION
-#define FNV_64_PRIME ((lUInt64)0x100000001b3ULL)
-static lUInt64 calcHash64( const lUInt8 * s, int len )
-{
-    const lUInt8 * endp = s + len;
-    // 64 bit FNV hash function
-    lUInt64 hval = 14695981039346656037ULL;
-    for ( ; s<endp; s++ ) {
-#if defined(NO_FNV_GCC_OPTIMIZATION)
-        hval *= FNV_64_PRIME;
-#else /* NO_FNV_GCC_OPTIMIZATION */
-        hval += (hval << 1) + (hval << 4) + (hval << 5) +
-            (hval << 7) + (hval << 8) + (hval << 40);
-#endif /* NO_FNV_GCC_OPTIMIZATION */
-        hval ^= *s;
-    }
-    return hval;
-}
 
 lUInt32 calcGlobalSettingsHash(int documentId)
 {
@@ -232,367 +165,6 @@ static void dumpRendMethods( ldomNode * node, lString16 prefix )
     for ( int i=0; i<node->getChildCount(); i++ ) {
         dumpRendMethods( node->getChildNode(i), prefix + "   ");
     }
-}
-
-#define CACHE_FILE_ITEM_MAGIC 0xC007B00C
-
-struct CacheFileItem
-{
-    lUInt32 _magic;    // magic number
-    lUInt16 _dataType;     // data type
-    lUInt16 _dataIndex;    // additional data index, for internal usage for data type
-    int _blockIndex;   // sequential number of block
-    int _blockFilePos; // start of block
-    int _blockSize;    // size of block within file
-    int _dataSize;     // used data size inside block (<= block size)
-    lUInt64 _dataHash; // additional hash of data
-    lUInt64 _packedHash; // additional hash of packed data
-    lUInt32 _uncompressedSize;   // size of uncompressed block, if compression is applied, 0 if no compression
-
-    bool validate(int fsize)
-    {
-        if (_magic != CACHE_FILE_ITEM_MAGIC) {
-            CRLog::error("CacheFileItem validation failed. Block magic doesn't match");
-            return false;
-        }
-        if (_dataSize > _blockSize
-        		|| _blockSize < 0
-        		|| _dataSize < 0
-        		|| _blockFilePos + _dataSize > fsize
-        		|| _blockFilePos < CACHE_FILE_SECTOR_SIZE) {
-            CRLog::error("CacheFileItem validation failed. Invalid block size or position");
-            return false;
-        }
-        return true;
-    }
-
-    CacheFileItem() {}
-
-    CacheFileItem(lUInt16 data_type, lUInt16 data_index)
-    : _magic(CACHE_FILE_ITEM_MAGIC),
-    _dataType(data_type),   	// data type
-    _dataIndex(data_index), 	// additional data index, for internal usage for data type
-    _blockIndex(0),        	// sequential number of block
-    _blockFilePos(0),      	// start of block
-    _blockSize(0),         	// size of block within file
-    _dataSize(0),          	// used data size inside block (<= block size)
-    _dataHash(0),          	// hash of data
-    _packedHash(0), 		// additional hash of packed data
-    _uncompressedSize(0)  	// size of uncompressed block, if compression is applied, 0 if no compression
-    {}
-};
-
-/**
- * Cache file implementation.
- */
-class CacheFile
-{
-    int _sectorSize; // block position and size granularity
-    int _size;
-    bool _indexChanged;
-    LVStreamRef _stream; // file stream
-    LVPtrVector<CacheFileItem, true> _index; // full file block index
-    LVPtrVector<CacheFileItem, false> _freeIndex; // free file block index
-    LVHashTable<lUInt32, CacheFileItem*> _map; // hash map for fast search
-    // searches for existing block
-    CacheFileItem * findBlock( lUInt16 type, lUInt16 index );
-    // alocates block at index, reuses existing one, if possible
-    CacheFileItem * allocBlock( lUInt16 type, lUInt16 index, int size );
-    // mark block as free, for later reusing
-    void freeBlock( CacheFileItem * block );
-public:
-    // create uninitialized cache file, call open or create to initialize
-    CacheFile();
-    // free resources
-    ~CacheFile();
-    /// writes block to file
-    bool write( lUInt16 type, lUInt16 dataIndex, const lUInt8 * buf, int size, bool compress );
-    /// reads and allocates block in memory
-    bool read( lUInt16 type, lUInt16 dataIndex, lUInt8 * &buf, int &size );
-    /// writes content of serial buffer
-    bool write( lUInt16 type, lUInt16 index, SerialBuf & buf, bool compress );
-    /// reads content of serial buffer
-    bool read( lUInt16 type, lUInt16 index, SerialBuf & buf );
-    /// writes content of serial buffer
-    bool write( lUInt16 type, SerialBuf & buf, bool compress )
-    {
-        return write( type, 0, buf, compress);
-    }
-    /// reads content of serial buffer
-    bool read( lUInt16 type, SerialBuf & buf )
-    {
-        return read(type, 0, buf);
-    }
-    /// reads block as a stream
-    LVStreamRef readStream(lUInt16 type, lUInt16 index);
-
-    int roundSector( int n )
-    {
-        return (n + (_sectorSize-1)) & ~(_sectorSize-1);
-    }
-};
-
-// create uninitialized cache file, call open or create to initialize
-CacheFile::CacheFile()
-: _sectorSize( CACHE_FILE_SECTOR_SIZE ), _size(0), _indexChanged(false), _map(1024)
-{
-}
-
-// free resources
-CacheFile::~CacheFile() { }
-
-//
-void CacheFile::freeBlock( CacheFileItem * block )
-{
-    lUInt32 key = ((lUInt32)block->_dataType)<<16 | block->_dataIndex;
-    _map.remove(key);
-    block->_dataIndex = 0;
-    block->_dataType = 0;
-    block->_dataSize = 0;
-    _freeIndex.add( block );
-}
-
-/// reads block as a stream
-LVStreamRef CacheFile::readStream(lUInt16 type, lUInt16 index)
-{
-    CacheFileItem * block = findBlock(type, index);
-    if (block && block->_dataSize) {
-        return LVStreamRef(new LVStreamFragment(_stream, block->_blockFilePos, block->_dataSize));
-    }
-    return LVStreamRef();
-}
-
-// searches for existing block
-CacheFileItem * CacheFile::findBlock( lUInt16 type, lUInt16 index )
-{
-    lUInt32 key = ((lUInt32)type)<<16 | index;
-    CacheFileItem * existing = _map.get( key );
-    return existing;
-}
-
-// allocates index record for block, sets its new size
-CacheFileItem * CacheFile::allocBlock( lUInt16 type, lUInt16 index, int size )
-{
-    lUInt32 key = ((lUInt32)type)<<16 | index;
-    CacheFileItem * existing = _map.get( key );
-    if ( existing ) {
-        if ( existing->_blockSize >= size ) {
-            if ( existing->_dataSize != size ) {
-                existing->_dataSize = size;
-                _indexChanged = true;
-            }
-            return existing;
-        }
-        // old block has not enough space: free it
-        freeBlock( existing );
-        existing = NULL;
-    }
-    // search for existing free block of proper size
-    int bestSize = -1;
-    //int bestIndex = -1;
-    for ( int i=0; i<_freeIndex.length(); i++ ) {
-        if ( _freeIndex[i] && (_freeIndex[i]->_blockSize>=size) && (bestSize==-1 || _freeIndex[i]->_blockSize<bestSize) ) {
-            bestSize = _freeIndex[i]->_blockSize;
-            //bestIndex = -1;
-            existing = _freeIndex[i];
-        }
-    }
-    if ( existing ) {
-        _freeIndex.remove( existing );
-        existing->_dataType = type;
-        existing->_dataIndex = index;
-        existing->_dataSize = size;
-        _map.set( key, existing );
-        _indexChanged = true;
-        return existing;
-    }
-    // allocate new block
-    CacheFileItem * block = new CacheFileItem( type, index );
-    _map.set( key, block );
-    block->_blockSize = roundSector(size);
-    block->_dataSize = size;
-    block->_blockIndex = _index.length();
-    _index.add(block);
-    block->_blockFilePos = _size;
-    _size += block->_blockSize;
-    _indexChanged = true;
-    // really, file size is not extended
-    return block;
-}
-
-// reads and allocates block in memory
-bool CacheFile::read( lUInt16 type, lUInt16 dataIndex, lUInt8 * &buf, int &size )
-{
-    buf = NULL;
-    size = 0;
-    CacheFileItem * block = findBlock( type, dataIndex );
-    if ( !block ) {
-        CRLog::trace("CacheFile::read: Block %d:%d not found in file", type, dataIndex);
-        return false;
-    }
-    if ( (int)_stream->SetPos( block->_blockFilePos )!=block->_blockFilePos )
-        return false;
-
-    // read block from file
-    size = block->_dataSize;
-    buf = (lUInt8 *)malloc(size);
-    lvsize_t bytesRead = 0;
-    _stream->Read(buf, size, &bytesRead );
-    if ( (int)bytesRead!=size ) {
-        CRLog::error("CacheFile::read: Cannot read block %d:%d of size %d", type, dataIndex, (int)size);
-        free(buf);
-        buf = NULL;
-        size = 0;
-        return false;
-    }
-
-    bool compress = block->_uncompressedSize!=0;
-
-    if ( compress ) {
-        // block is compressed
-
-        // check crc separately only for compressed data
-        lUInt64 packedhash = calcHash64( buf, size );
-        if ( packedhash!=block->_packedHash ) {
-            CRLog::error("CacheFile::read: packed data CRC doesn't match for block %d:%d of size %d", type, dataIndex, (int)size);
-            free(buf);
-            buf = NULL;
-            size = 0;
-            return false;
-        }
-
-        // uncompress block data
-        lUInt8 * uncomp_buf = NULL;
-        lUInt32 uncomp_size = 0;
-        if ( ldomUnpack(buf, size, uncomp_buf, uncomp_size) && uncomp_size==block->_uncompressedSize ) {
-            free( buf );
-            buf = uncomp_buf;
-            size = uncomp_size;
-        } else {
-            CRLog::error("CacheFile::read: error while uncompressing data for block %d:%d of size %d", type, dataIndex, (int)size);
-            free(buf);
-            buf = NULL;
-            size = 0;
-            return false;
-        }
-    }
-
-    // check CRC
-    lUInt64 hash = calcHash64( buf, size );
-    if (hash != block->_dataHash) {
-        CRLog::error("CacheFile::read: CRC doesn't match for block %d:%d of size %d", type, dataIndex, (int)size);
-        free(buf);
-        buf = NULL;
-        size = 0;
-        return false;
-    }
-    // Success. Don't forget to free allocated block externally
-    return true;
-}
-
-// writes block to file
-bool CacheFile::write( lUInt16 type, lUInt16 dataIndex, const lUInt8 * buf, int size, bool compress )
-{
-    // check whether data is changed
-    lUInt64 newhash = calcHash64( buf, size );
-    CacheFileItem * existingblock = findBlock( type, dataIndex );
-
-    if (existingblock) {
-        bool sameSize = ((int)existingblock->_uncompressedSize==size) || (existingblock->_uncompressedSize==0 && (int)existingblock->_dataSize==size);
-        if (sameSize && existingblock->_dataHash == newhash ) {
-            return true;
-        }
-    }
-
-    //setDirtyFlag(true);
-
-    lUInt32 uncompressedSize = 0;
-    lUInt64 newpackedhash = newhash;
-#if DOC_DATA_COMPRESSION_LEVEL==0
-    compress = false;
-#else
-    if ( compress ) {
-        lUInt8 * dstbuf = NULL;
-        lUInt32 dstsize = 0;
-        if ( !ldomPack( buf, size, dstbuf, dstsize ) ) {
-            compress = false;
-        } else {
-            uncompressedSize = size;
-            size = dstsize;
-            buf = dstbuf;
-            newpackedhash = calcHash64( buf, size );
-        }
-    }
-#endif
-
-    CacheFileItem * block = NULL;
-    if ( existingblock && existingblock->_dataSize>=size ) {
-        // reuse existing block
-        block = existingblock;
-    } else {
-        // allocate new block
-        if ( existingblock )
-            freeBlock( existingblock );
-        block = allocBlock( type, dataIndex, size );
-    }
-    if ( !block )
-        return false;
-    if ( (int)_stream->SetPos( block->_blockFilePos )!=block->_blockFilePos )
-        return false;
-    // assert: size == block->_dataSize
-    // actual writing of data
-    block->_dataSize = size;
-    lvsize_t bytesWritten = 0;
-    _stream->Write(buf, size, &bytesWritten );
-    if ( (int)bytesWritten!=size )
-        return false;
-#if CACHE_FILE_WRITE_BLOCK_PADDING==1
-    int paddingSize = block->_blockSize - size; //roundSector( size ) - size
-    if ( paddingSize ) {
-        if ((int)block->_blockFilePos + (int)block->_dataSize >= (int)_stream->GetSize() - _sectorSize) {
-            lUInt8 tmp[16384];
-            memset(tmp, 0xFF, paddingSize < 16384 ? paddingSize : 16384);
-            do {
-                int blkSize = paddingSize < 16384 ? paddingSize : 16384;
-                _stream->Write(tmp, blkSize, &bytesWritten );
-                paddingSize -= blkSize;
-            } while (paddingSize > 0);
-        }
-    }
-#endif
-    //_stream->Flush(true);
-    // update CRC
-    block->_dataHash = newhash;
-    block->_packedHash = newpackedhash;
-    block->_uncompressedSize = uncompressedSize;
-
-#if DOC_DATA_COMPRESSION_LEVEL!=0
-    if ( compress ) {
-        free( (void*)buf );
-    }
-#endif
-    _indexChanged = true;
-    // success
-    return true;
-}
-
-/// writes content of serial buffer
-bool CacheFile::write( lUInt16 type, lUInt16 index, SerialBuf & buf, bool compress )
-{
-    return write( type, index, buf.buf(), buf.pos(), compress );
-}
-
-/// reads content of serial buffer
-bool CacheFile::read( lUInt16 type, lUInt16 index, SerialBuf & buf )
-{
-    lUInt8 * tmp = NULL;
-    int size = 0;
-    bool res = read( type, index, tmp, size );
-    if ( res ) {
-        buf.set( tmp, size );
-    }
-    buf.setPos(0);
-    return res;
 }
 
 // BLOB storage
@@ -635,67 +207,15 @@ public:
     }
 };
 
-ldomBlobCache::ldomBlobCache() : _cacheFile(NULL), _changed(false)
+ldomBlobCache::ldomBlobCache() : _changed(false)
 {
 
 }
 
-#define BLOB_INDEX_MAGIC "BLOBINDX"
-
-bool ldomBlobCache::loadIndex()
+bool ldomBlobCache::addBlob(const lUInt8 * data, int size, lString16 name)
 {
-    bool res;
-    SerialBuf buf(0,true);
-    res = _cacheFile->read(CBT_BLOB_INDEX, buf);
-    if (!res) {
-        _list.clear();
-        return true; // missing blob index: treat as empty list of blobs
-    }
-    if (!buf.checkMagic(BLOB_INDEX_MAGIC))
-        return false;
-    lUInt32 len;
-    buf >> len;
-    for ( lUInt32 i = 0; i<len; i++ ) {
-        lString16 name;
-        buf >> name;
-        lUInt32 size;
-        buf >> size;
-        if (buf.error())
-            break;
-        ldomBlobItem * item = new ldomBlobItem(name);
-        item->setIndex(i, size);
-        _list.add(item);
-    }
-    res = !buf.error();
-    return res;
-}
-
-bool ldomBlobCache::saveIndex()
-{
-    bool res;
-    SerialBuf buf(0,true);
-    buf.putMagic(BLOB_INDEX_MAGIC);
-    lUInt32 len = _list.length();
-    buf << len;
-    for ( lUInt32 i = 0; i<len; i++ ) {
-        ldomBlobItem * item = _list[i];
-        buf << item->getName();
-        buf << (lUInt32)item->getSize();
-    }
-    res = _cacheFile->write( CBT_BLOB_INDEX, buf, false );
-    return res;
-}
-
-bool ldomBlobCache::addBlob( const lUInt8 * data, int size, lString16 name )
-{
-    int index = _list.length();
-    ldomBlobItem * item = new ldomBlobItem(name);
-    if (_cacheFile != NULL) {
-        _cacheFile->write(CBT_BLOB_DATA, index, data, size, false);
-        item->setIndex(index, size);
-    } else {
-        item->setData(data, size);
-    }
+    ldomBlobItem* item = new ldomBlobItem(name);
+    item->setData(data, size);
     _list.add(item);
     _changed = true;
     return true;
@@ -703,23 +223,16 @@ bool ldomBlobCache::addBlob( const lUInt8 * data, int size, lString16 name )
 
 LVStreamRef ldomBlobCache::getBlob( lString16 name )
 {
-    ldomBlobItem * item = NULL;
-    lUInt16 index = 0;
-    for ( int i=0; i<_list.length(); i++ ) {
+    ldomBlobItem* item = NULL;
+    for (int i=0; i<_list.length(); i++) {
         if (_list[i]->getName() == name) {
             item = _list[i];
-            index = i;
             break;
         }
     }
-    if (item) {
-        if (item->getData()) {
-            // RAM
-            return LVCreateMemoryStream(item->getData(), item->getSize(), true);
-        } else {
-            // CACHE FILE
-            return _cacheFile->readStream(CBT_BLOB_DATA, index);
-        }
+    if (item && item->getData()) {
+        // RAM
+        return LVCreateMemoryStream(item->getData(), item->getSize(), true);
     }
     return LVStreamRef();
 }
@@ -974,7 +487,6 @@ tinyNodeCollection::tinyNodeCollection()
 		, _tinyElementCount(0)
 		, _itemCount(0)
 		, _renderedBlockCache( 32 )
-		, _cacheFile(NULL)
 		, _mapped(false)
 		, _maperror(false)
 		, _mapSavingStage(0)
@@ -1071,117 +583,6 @@ lUInt16 tinyNodeCollection::getNodeFontIndex( lUInt32 dataIndex )
     return info._fontIndex;
 }
 
-bool tinyNodeCollection::loadNodeData(lUInt16 type, ldomNode ** list, int nodecount)
-{
-    int count = ((nodecount + TNC_PART_LEN - 1) >> TNC_PART_SHIFT);
-    for (lUInt16 i=0; i<count; i++) {
-        int offs = i*TNC_PART_LEN;
-        int sz = TNC_PART_LEN;
-        if (offs + sz > nodecount) {
-            sz = nodecount - offs;
-        }
-
-        lUInt8 * p;
-        int buflen;
-        if (!_cacheFile->read( type, i, p, buflen ))
-            return false;
-        ldomNode * buf = (ldomNode *)p;
-        if (!buf || (unsigned)buflen != sizeof(ldomNode) * sz)
-            return false;
-        list[i] = buf;
-        for (int j=0; j<sz; j++) {
-            buf[j].setDocumentIndex( _docIndex );
-            if ( buf[j].isElement() ) {
-                // will be set by loadStyles/updateStyles
-                //buf[j]._data._pelem._styleIndex = 0;
-                setNodeFontIndex( buf[j]._handle._dataIndex, 0 );
-                //buf[j]._data._pelem._fontIndex = 0;
-            }
-        }
-    }
-    return true;
-}
-
-bool tinyNodeCollection::saveNodeData( lUInt16 type, ldomNode ** list, int nodecount )
-{
-    int count = ((nodecount+TNC_PART_LEN-1) >> TNC_PART_SHIFT);
-    for (lUInt16 i=0; i<count; i++) {
-        if (!list[i])
-            continue;
-        int offs = i*TNC_PART_LEN;
-        int sz = TNC_PART_LEN;
-        if (offs + sz > nodecount) {
-            sz = nodecount - offs;
-        }
-        ldomNode buf[TNC_PART_LEN];
-        memcpy(buf, list[i], sizeof(ldomNode) * sz);
-        for (int j = 0; j < sz; j++)
-            buf[j].setDocumentIndex(_docIndex);
-        if (!_cacheFile->write(type, i, (lUInt8*)buf, sizeof(ldomNode) * sz, COMPRESS_NODE_DATA))
-            crFatalError(-1, "Cannot write node data");
-    }
-    return true;
-}
-
-#define NODE_INDEX_MAGIC 0x19283746
-bool tinyNodeCollection::saveNodeData()
-{
-    SerialBuf buf(12, true);
-    buf << (lUInt32)NODE_INDEX_MAGIC << (lUInt32)_elemCount << (lUInt32)_textCount;
-    if ( !saveNodeData( CBT_ELEM_NODE, _elemList, _elemCount+1 ) )
-        return false;
-    if ( !saveNodeData( CBT_TEXT_NODE, _textList, _textCount+1 ) )
-        return false;
-    if ( !_cacheFile->write(CBT_NODE_INDEX, buf, COMPRESS_NODE_DATA) )
-        return false;
-    return true;
-}
-
-bool tinyNodeCollection::loadNodeData()
-{
-    SerialBuf buf(0, true);
-    if ( !_cacheFile->read((lUInt16)CBT_NODE_INDEX, buf) )
-        return false;
-    lUInt32 magic;
-    lInt32 elemcount;
-    lInt32 textcount;
-    buf >> magic >> elemcount >> textcount;
-    if ( magic != NODE_INDEX_MAGIC ) {
-        return false;
-    }
-    if ( elemcount<=0 || elemcount>200000 )
-        return false;
-    if ( textcount<=0 || textcount>200000 )
-        return false;
-    ldomNode * elemList[TNC_PART_COUNT];
-    memset( elemList, 0, sizeof(elemList) );
-    ldomNode * textList[TNC_PART_COUNT];
-    memset( textList, 0, sizeof(textList) );
-    if ( !loadNodeData( CBT_ELEM_NODE, elemList, elemcount+1 ) ) {
-        for ( int i=0; i<TNC_PART_COUNT; i++ )
-            if ( elemList[i] )
-                free( elemList[i] );
-        return false;
-    }
-    if ( !loadNodeData( CBT_TEXT_NODE, textList, textcount+1 ) ) {
-        for ( int i=0; i<TNC_PART_COUNT; i++ )
-            if ( textList[i] )
-                free( textList[i] );
-        return false;
-    }
-    for ( int i=0; i<TNC_PART_COUNT; i++ ) {
-        if ( _elemList[i] )
-            free( _elemList[i] );
-        if ( _textList[i] )
-            free( _textList[i] );
-    }
-    memcpy( _elemList, elemList, sizeof(elemList) );
-    memcpy( _textList, textList, sizeof(textList) );
-    _elemCount = elemcount;
-    _textCount = textcount;
-    return true;
-}
-
 /// get ldomNode instance pointer
 ldomNode * tinyNodeCollection::getTinyNode( lUInt32 index )
 {
@@ -1270,8 +671,6 @@ void tinyNodeCollection::recycleTinyNode( lUInt32 index )
 
 tinyNodeCollection::~tinyNodeCollection()
 {
-    if ( _cacheFile )
-        delete _cacheFile;
     // clear all elem parts
     for ( int partindex = 0; partindex<=(_elemCount>>TNC_PART_SHIFT); partindex++ ) {
         ldomNode * part = _elemList[partindex];
@@ -1849,7 +1248,7 @@ public:
     }
 };
 
-CrXmlDom::CrXmlDom(int dataBufSize)
+CrXmlDom::CrXmlDom()
 		: _elementNameTable(MAX_ELEMENT_TYPE_ID),
 		  _attrNameTable(MAX_ATTRIBUTE_TYPE_ID),
 		  _nsNameTable(MAX_NAMESPACE_TYPE_ID),
@@ -6734,14 +6133,6 @@ void tinyNodeCollection::setDocFlags(lUInt32 value)
     _docFlags = value;
 }
 
-int tinyNodeCollection::getPersistenceFlags()
-{
-    int format = 2; //getProps()->getIntDef(DOC_PROP_FILE_FORMAT, 0);
-    int flag = ( format==2 && getDocFlag(DOC_FLAG_TXT_NO_SMART_FORMAT) ) ? 1 : 0;
-    //CRLog::trace("getPersistenceFlags() returned %d", flag);
-    return flag;
-}
-
 void CrDom::clear()
 {
     clearRendBlockCache();
@@ -6753,77 +6144,6 @@ void CrDom::clear()
     //_elemStorage.
 }
 
-static const char * styles_magic = "CRSTYLES";
-
-bool tinyNodeCollection::saveStylesData()
-{
-    SerialBuf stylebuf(0, true);
-    lUInt32 stHash = stylesheet_.getHash();
-    LVArray<css_style_ref_t> * list = _styles.getIndex();
-    stylebuf.putMagic(styles_magic);
-    stylebuf << stHash;
-    stylebuf << (lUInt32)list->length(); // index
-    for ( int i=0; i<list->length(); i++ ) {
-        css_style_ref_t rec = list->get(i);
-        if ( !rec.isNull() ) {
-            stylebuf << (lUInt32)i; // index
-            rec->serialize( stylebuf ); // style
-        }
-    }
-    stylebuf << (lUInt32)0; // index=0 is end list mark
-    stylebuf.putMagic(styles_magic);
-    delete list;
-    if ( stylebuf.error() )
-        return false;
-    CRLog::trace("Writing style data: %d bytes", stylebuf.pos());
-    if ( !_cacheFile->write( CBT_STYLE_DATA, stylebuf, COMPRESS_STYLE_DATA) ) {
-        return false;
-    }
-    return !stylebuf.error();
-}
-
-bool tinyNodeCollection::loadStylesData()
-{
-    SerialBuf stylebuf(0, true);
-    if ( !_cacheFile->read( CBT_STYLE_DATA, stylebuf ) ) {
-        CRLog::error("Error while reading style data");
-        return false;
-    }
-    lUInt32 stHash = 0;
-    lInt32 len = 0;
-    lUInt32 myHash = stylesheet_.getHash();
-
-    //LVArray<css_style_ref_t> * list = _styles.getIndex();
-    stylebuf.checkMagic(styles_magic);
-    stylebuf >> stHash;
-    if ( stHash != myHash ) {
-        CRLog::trace("tinyNodeCollection::loadStylesData(), stylesheet hash changed, skip loading styles");
-        return false;
-    }
-    stylebuf >> len; // index
-    if ( stylebuf.error() )
-        return false;
-    LVArray<css_style_ref_t> list(len, css_style_ref_t());
-    for ( int i=0; i<list.length(); i++ ) {
-        lUInt32 index = 0;
-        stylebuf >> index; // index
-        if ( index<=0 || (int)index>=len || stylebuf.error() )
-            break;
-        css_style_ref_t rec( new css_style_rec_t() );
-        if ( !rec->deserialize(stylebuf) )
-            break;
-        list.set( index, rec );
-    }
-    stylebuf.checkMagic(styles_magic);
-    if ( stylebuf.error() )
-        return false;
-
-    CRLog::trace("Setting style data: %d bytes", stylebuf.size());
-    _styles.setIndex( list );
-
-    return !stylebuf.error();
-}
-
 lUInt32 tinyNodeCollection::calcStyleHash()
 {
     int count = ((_elemCount+TNC_PART_LEN-1) >> TNC_PART_SHIFT);
@@ -6831,8 +6151,7 @@ lUInt32 tinyNodeCollection::calcStyleHash()
     lUInt32 globalHash = calcGlobalSettingsHash(getFontContextDocIndex());
     lUInt32 docFlags = getDocFlags();
     /*
-    CRLog::trace(
-            "calcStyleHash: elemCount=%d, globalHash=%08x, docFlags=%08x",
+    CRLog::trace("calcStyleHash: elemCount=%d, globalHash=%08x, docFlags=%08x",
             _elemCount,
             globalHash,
             docFlags);
@@ -8967,7 +8286,6 @@ void tinyNodeCollection::dumpStatistics() {
                 ((CrDom*)this)->_renderedBlockCache.length(),
                 _tinyElementCount,
                 _tinyElementCount * (sizeof(tinyElement) + 8 * 4) / 1024);
-
     CRLog::trace("Document memory usage:"
                 " elements: %d,"
                 " textNodes: %d,"

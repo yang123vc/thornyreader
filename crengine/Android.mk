@@ -28,7 +28,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_SRC_FILES += \
 	crengine/src/css/crcss_chm.cpp \
-	crengine/src/css/crcss_def.cpp \
 	crengine/src/css/crcss_doc.cpp \
 	crengine/src/css/crcss_epub.cpp \
 	crengine/src/css/crcss_fb2.cpp \

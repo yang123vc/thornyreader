@@ -1,9 +1,6 @@
 #include "../include/pdbfmt.h"
 #include <ctype.h>
 
-// uncomment following line to save PDB content streams to /tmp
-//#define DUMP_PDB_CONTENTS
-
 struct PDBHdr
 {
     lUInt8    name[32];
@@ -269,20 +266,6 @@ struct EReaderHeader
             return false;
         return true;
     }
-};
-
-struct PluckerPreamble {
-    lUInt32 signature; // 	4 	Numeric 	Must contain the value 0x6C6E6368.
-    lUInt16 hdrVersion; // 	2 	Numeric 	Must have the value 3.
-    lUInt16 hdrEncoding; // 	2 	Numeric 	Must have the value 0.
-    lUInt16 verStrWords; // 	2 	Numeric 	The number of two-byte words following, containing the version string.
-//    char  	2 * verStrWords 	String 	NUL-terminated ISO Latin-1 string, padded at end if necessary with a zero byte to an even-byte boundary, containing a version string to display to the user containing version information for the document.
-//    pqaTitleWords 	2 	Numeric 	The number of two-byte words in the following pqaTitleStr.
-//    pqaTitleStr 	2 * pqaTitleWords 	String 	NUL-terminated ISO Latin-1 string, padded at end if necessary with a zero byte to an even-byte boundary, containing a title string for iconic display of the document.
-//    iconWords 	2 	Numeric 	Number of two-byte words in the following icon image.
-//    icon 	2 * iconWords 	Image 	Image (32x32) in Palm image format to be used as an icon to represent the document on a desktop-style display. The image may not use a custom color map.
-//    smIconWords 	2 	Numeric 	Number of two-byte words in the following icon image.
-//    smIcon 	2 * smIconWords 	Image 	Small image (15x9) in Palm image format to be used as an icon to represent the document on a desktop-style display. The image may not use a custom color map.
 };
 
 /// unpack data from _compbuf to _buf
@@ -687,8 +670,6 @@ public:
             _format = MOBI;
         if ( hdr.checkType("Data") && hdr.checkCreator("Plkr") )
             _format = PLUCKER;
-//        if ( hdr.checkType("ToGo") && hdr.checkCreator("ToGo") )
-//            _format = ISILO;
         if ( _format==UNKNOWN )
             return false; // UNKNOWN FORMAT
 
@@ -707,8 +688,6 @@ public:
             lastEntryStart = pos;
         }
         _records[_records.length()-1].size = fsize - _records[_records.length()-1].offset;
-
-
         _stream = stream;
 
         if ( _format==EREADER ) {
@@ -746,20 +725,21 @@ public:
                 }
             }
         } else if (_format==MOBI ) {
-            if ( _records[0].size<sizeof(MobiPreamble) )
+            if (_records[0].size<sizeof(MobiPreamble))
                 return false;
-            if (!validateContent)
+            if (!validateContent) {
                 contentFormat = doc_format_mobi;
-
+            }
             MobiPreamble preamble;
             stream->SetPos(_records[0].offset);
-            if ( !preamble.read(stream, _mobiExtraDataFlags) )
+            if (!preamble.read(stream, _mobiExtraDataFlags))
                 return false; // invalid preamble
-            if ( preamble.recordCount>=_records.length() )
+            if (preamble.recordCount>=_records.length())
                 return false;
             _compression = preamble.compression;
-            if ( _compression==1 )
+            if (_compression==1){
                 _compression = 0;
+            }
             _textSize = preamble.textLength;
             _recordCount = preamble.firstNonBookIndex - 1;
             lUInt32 coverOffset = (lUInt32)-1;
@@ -867,34 +847,6 @@ public:
 //                _records[k+1].size -= 6;
 //        }
 
-//#ifdef DUMP_PDB_CONTENTS
-//        int unpoffset2 = 0;
-//        FILE * out = fopen("/tmp/pdbout.txt", "wb");
-//        int k;
-//        for (k=1; k <= _recordCount && unpoffset2 < this->_textSize; k++) {
-//            LVArray<lUInt8> dst;
-//            readRecordNoUnpack(k, &_buf);
-//            if (_mobiExtraDataFlags) {
-//                removeExtraData(k, _buf);
-////                    int b = _buf[_buf.length()-1];
-////                    CRLog::trace("Extra data: %d bytes", b);
-////                    _records[k].size -= b;
-////                    _buf.erase(_buf.length()-1-b, b);
-//            }
-//            if (_compression == 2) {
-//                unpack(dst, _buf);
-//                _records[k].unpoffset = unpoffset2;
-//                _records[k].unpsize = dst.length();
-//                unpoffset2 += dst.length();
-//                fwrite(dst.get(), dst.length(), 1, out);
-//                fprintf(out, "\n[block %d end]\n", k);
-//            }
-//            CRLog::trace("record[%d] : %06x %06x -  %06x %06x", k, _records[k].offset, _records[k].size, _records[k].unpoffset, _records[k].unpsize);
-//        }
-//        fclose(out);
-//        CRLog::trace("totalUncompSizeHdr=%06x realUncompSize=%06x %d blocks of %d", this->_textSize, unpoffset2, k, _records.length());
-//#endif
-
         if ( !validateContent )
             return true; // for simple format check
 
@@ -911,40 +863,7 @@ public:
         }
         _mobiExtraDataFlags = 0;
 
-
-        detectFormat( contentFormat );
-
-
-
-        #ifdef DUMP_PDB_CONTENTS
-        {
-                int unpoffset2 = 0;
-                FILE * out = fopen("/tmp/pdbout.txt", "wb");
-                int k;
-                for (k=1; k <= _recordCount && unpoffset2 < this->_textSize; k++) {
-                    LVArray<lUInt8> dst;
-                    readRecordNoUnpack(k, &_buf);
-//                    if (_mobiExtraDataFlags) {
-//                        removeExtraData(k, _buf);
-        //                    int b = _buf[_buf.length()-1];
-        //                    CRLog::trace("Extra data: %d bytes", b);
-        //                    _records[k].size -= b;
-        //                    _buf.erase(_buf.length()-1-b, b);
-//                    }
-                    if (_compression == 2) {
-                        unpack(dst, _buf);
-                        _records[k].unpoffset = unpoffset2;
-                        _records[k].unpsize = dst.length();
-                        unpoffset2 += dst.length();
-                        fwrite(dst.get(), dst.length(), 1, out);
-                        fprintf(out, "\n[block %d end]\n", k);
-                    }
-                    CRLog::trace("record[%d] : %06x %06x -  %06x %06x", k, _records[k].offset, _records[k].size, _records[k].unpoffset, _records[k].unpsize);
-                }
-                fclose(out);
-                CRLog::trace("totalUncompSizeHdr=%06x realUncompSize=%06x %d blocks of %d", this->_textSize, unpoffset2, k, _records.length());
-        }
-        #endif
+        detectFormat(contentFormat);
 
         if (_textSize == (lUInt32)-1)
             _textSize = unpoffset;
@@ -953,16 +872,11 @@ public:
             _textSize = unpoffset;
             //return false; // text size does not match
         }
-
-
         _bufIndex = -1;
         _bufSize = 0;
         _bufOffset = 0;
-
         SetName(_stream->GetName());
         m_mode = LVOM_READ;
-
-
         return true;
     }
 
@@ -1101,7 +1015,7 @@ public:
 
 };
 
-// open PDB stream from stream
+// Creates PDB decoder stream for stream
 //LVStreamRef LVOpenPDBStream( LVStreamRef srcstream, int &format )
 //{
 //    PDBFile * stream = PDBFile::create( srcstream, format );
@@ -1113,7 +1027,7 @@ public:
 //    return LVStreamRef();
 //}
 
-bool DetectPDBFormat( LVStreamRef stream, doc_format_t & contentFormat )
+bool DetectPDBFormat( LVStreamRef stream, doc_format_t & contentFormat)
 {
     PDBFile pdb;
     if (!pdb.open(stream, NULL, false, contentFormat))
@@ -1170,12 +1084,12 @@ LVStreamRef GetPDBCoverpage(LVStreamRef stream)
     return LVStreamRef();
  }
 
-bool ImportPDBDocument( LVStreamRef & stream, CrDom * doc, doc_format_t & contentFormat )
+bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t & doc_format)
 {
-    contentFormat = doc_format_none;
-    PDBFile * pdb = new PDBFile();
-    LVPDBContainer * container = new LVPDBContainer();
-    if ( !pdb->open(stream, container, true, contentFormat) ) {
+    doc_format = doc_format_none;
+    PDBFile* pdb = new PDBFile();
+    LVPDBContainer* container = new LVPDBContainer();
+    if (!pdb->open(stream, container, true, doc_format)) {
         delete container;
         delete pdb;
         return false;
@@ -1184,16 +1098,11 @@ bool ImportPDBDocument( LVStreamRef & stream, CrDom * doc, doc_format_t & conten
     stream = LVStreamRef(pdb);
     container->setStream(stream);
     doc->setDocParentContainer(LVContainerRef(container));
-
     doc->getProps()->set(pdb->getDocProps());
-
-    switch ( contentFormat ) {
-    case doc_format_html:
-        // HTML
+    switch (doc_format) {
+    case doc_format_html: // HTML
         {
-
-            LvDomAutocloseWriter writerFilter(doc, false,
-                    HTML_AUTOCLOSE_TABLE);
+            LvDomAutocloseWriter writerFilter(doc, false, HTML_AUTOCLOSE_TABLE);
             LvHtmlParser parser(stream, &writerFilter);
             if ( !parser.CheckFormat() ) {
                 return false;
@@ -1206,13 +1115,11 @@ bool ImportPDBDocument( LVStreamRef & stream, CrDom * doc, doc_format_t & conten
             }
         }
         break;
-    default:
-    //case doc_format_txt:
-        // TXT
+    default: // TXT
         {
             LvDomWriter writer(doc);
             LVTextParser parser(stream, &writer, false);
-            if ( !parser.CheckFormat() ) {
+            if (!parser.CheckFormat()) {
                 return false;
             } else {
                 if (!parser.Parse()) {
@@ -1223,12 +1130,10 @@ bool ImportPDBDocument( LVStreamRef & stream, CrDom * doc, doc_format_t & conten
         break;
         // PML
         {
-//            LvDomAutocloseWriter writerFilter(*doc, false,
-//                    HTML_AUTOCLOSE_TABLE);
-
+//            LvDomAutocloseWriter writerFilter(*doc, false, HTML_AUTOCLOSE_TABLE);
 //            LvHtmlParser parser(m_stream, &writerFilter);
 //            parser->setProgressCallback(progressCallback);
-//            if ( !parser->CheckFormat() ) {
+//            if (!parser->CheckFormat() ) {
 //                return false;
 //            } else {
 //                if (!parser->Parse()) {
@@ -1238,34 +1143,5 @@ bool ImportPDBDocument( LVStreamRef & stream, CrDom * doc, doc_format_t & conten
         }
         break;
     }
-#ifdef DUMP_PDB_CONTENTS
-    for (int i=0; i<container->GetObjectCount(); i++) {
-        const LVContainerItemInfo * item = container->GetObjectInfo(i);
-        if (item->IsContainer())
-            continue;
-        lString16 fn = item->GetName();
-        if (fn.empty())
-            fn = cs16("pdb_item_") + lString16::itoa(i);
-        fn = cs16("/tmp/") + fn;
-        LVStreamRef in = container->OpenStream(item->GetName(), LVOM_READ);
-        if (in.isNull())
-            continue;
-        LVStreamRef out = LVOpenFileStream(fn.c_str(), LVOM_WRITE);
-        if (out.isNull())
-            continue;
-        CRLog::trace("Dumping stream %s (%d)", LCSTR(fn), (int)item->GetSize());
-        LVPumpStream(out.get(), in.get());
-    }
-    {
-        LVStreamRef out = LVOpenFileStream("/tmp/pdb_main.txt", LVOM_WRITE);
-        if (!out.isNull()) {
-            stream->SetPos(0);
-            CRLog::trace("Dumping stream /tmp/pdb_main.txt (%d)", (int)stream->GetSize());
-            LVPumpStream(out.get(), stream.get());
-            stream->SetPos(0);
-        }
-    }
-#endif
-
     return true;
 }

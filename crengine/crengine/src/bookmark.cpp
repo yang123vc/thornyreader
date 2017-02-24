@@ -45,7 +45,6 @@ CRBookmark::CRBookmark (ldomXPointer ptr)
 {
     if (ptr.isNull())
         return;
-    lString16 path;
     lvPoint pt = ptr.toPoint();
     CrDom* doc = ptr.getNode()->getDocument();
     int h = doc->getFullHeight();

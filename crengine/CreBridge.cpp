@@ -43,7 +43,7 @@ protected:
 			level = ANDROID_LOG_DEBUG;
 		else if (!strcmp(lvl, "TRACE"))
 			level = ANDROID_LOG_VERBOSE;
-		__android_log_vprint(level, "axy.cre", msg, args);
+		__android_log_vprint(level, "thornyreader", msg, args);
 	}
 };
 
@@ -234,19 +234,16 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 return;
             }
             if (doc_view_->config_txt_smart_format_ != int_val) {
-                doc_view_->config_txt_smart_format_ = int_val;
-                doc_view_->GetCrDom()->setDocFlag(
-                        DOC_FLAG_TXT_NO_SMART_FORMAT,
-                        !int_val);
+                doc_view_->config_txt_smart_format_ = (bool) int_val;
                 if (doc_view_->doc_format_ == doc_format_txt) {
                     doc_view_->RequestRender();
                 }
             }
         } else if (key == CONFIG_CRENGINE_FONT_COLOR) {
-            doc_view_->text_color_ = atoi(val) & 0xFFFFFF;
+            doc_view_->text_color_ = (lUInt32) (atoi(val) & 0xFFFFFF);
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRENGINE_BACKGROUND_COLOR) {
-            doc_view_->background_color_ = atoi(val) & 0xFFFFFF;
+            doc_view_->background_color_ = (lUInt32) (atoi(val) & 0xFFFFFF);
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRENGINE_MARGIN_TOP
                    || key == CONFIG_CRENGINE_MARGIN_LEFT
@@ -322,21 +319,6 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
         } else {
             CRLog::warn("processConfig unknown key: key=%d, val=%s", key, val);
         }
-        /*
-        TODO TXT format options
-        public void toggleTextFormat()
-        {
-        	DocFormat fmt = mDoc.getFormat();
-        	if ((fmt == DocFormat.TXT) || (fmt == DocFormat.HTML) || (fmt == DocFormat.PDB)) {
-        		boolean disableTextReflow = mDoc.getFlag(Doc.DONT_REFLOW_TXT_FILES_FLAG);
-        		disableTextReflow = !disableTextReflow;
-        		mDoc.setFlag(Doc.DONT_REFLOW_TXT_FILES_FLAG, disableTextReflow);
-        		// Save and reload
-        		saveDoc();
-        		openDoc(mDoc, currentDocSectionTemp);
-        	}
-        }
-        */
     }
     doc_view_->RenderIfDirty();
     response.addInt(ExportPagesCount(doc_view_->GetColumns(), doc_view_->GetPagesCount()));
@@ -369,9 +351,7 @@ void CreBridge::processOpen(CmdRequest& request, CmdResponse& response)
 
     if (doc_view_->LoadDoc(reinterpret_cast<const char*>(file_name))) {
         doc_view_->RenderIfDirty();
-        response.addInt(ExportPagesCount(
-                doc_view_->GetColumns(),
-                doc_view_->GetPagesCount()));
+        response.addInt(ExportPagesCount(doc_view_->GetColumns(), doc_view_->GetPagesCount()));
     }
 }
 
@@ -403,7 +383,7 @@ void CreBridge::processPageRender(CmdRequest& request, CmdResponse& response)
     doc_view_->GoToPage(page * doc_view_->GetColumns());
 
     CmdData* resp = new CmdData();
-    unsigned char* pixels = (unsigned char*) resp->newByteArray(width * height * 4);
+    unsigned char* pixels = resp->newByteArray(width * height * 4);
     AndroidDrawBuf* buf = new AndroidDrawBuf(width, height, pixels, 32);
     doc_view_->Draw(*buf);
     buf->ToAndroidBitmap();

@@ -41,23 +41,19 @@
 #define LXML_NO_DATA       0 ///< to mark data storage record as empty
 #define LXML_ELEMENT_NODE  1 ///< element node
 #define LXML_TEXT_NODE     2 ///< text node
-//#define LXML_DOCUMENT_NODE 3 ///< document node (not implemented)
-//#define LXML_COMMENT_NODE  4 ///< comment node (not implemented)
 
 /// docFlag mask, enable internal stylesheet of document and style attribute of elements
-#define DOC_FLAG_EMBEDDED_STYLES 1
+#define DOC_FLAG_EMBEDDED_STYLES        1
 /// docFlag mask, enable paperbook-like footnotes
 #define DOC_FLAG_ENABLE_FOOTNOTES       2
-#define DOC_FLAG_TXT_NO_SMART_FORMAT      4
 /// docFlag mask, enable document embedded fonts (EPUB)
-#define DOC_FLAG_EMBEDDED_FONTS       8
+#define DOC_FLAG_EMBEDDED_FONTS         8
 
 #define LXML_NS_NONE 0       ///< no namespace specified
 #define LXML_NS_ANY  0xFFFF  ///< any namespace can be specified
 #define LXML_ATTR_VALUE_NONE  0xFFFF  ///< attribute not found
 
 #define DOC_STRING_HASH_SIZE  256
-#define RESERVED_DOC_SPACE    4096
 #define MAX_TYPE_ID           1024 // max of element, ns, attr
 #define MAX_ELEMENT_TYPE_ID   1024
 #define MAX_NAMESPACE_TYPE_ID 64
@@ -140,7 +136,6 @@ class DataBuffer;
 class ldomTextStorageChunk;
 class ldomTextStorageChunkBuilder;
 struct ElementDataStorageItem;
-class CacheFile;
 class tinyNodeCollection;
 
 struct ldomNodeStyleInfo
@@ -154,11 +149,8 @@ class ldomBlobItem;
 #define MOBI_IMAGE_NAME_PREFIX L"mobi_image_"
 class ldomBlobCache
 {
-    CacheFile * _cacheFile;
     LVPtrVector<ldomBlobItem> _list;
     bool _changed;
-    bool loadIndex();
-    bool saveIndex();
 public:
     ldomBlobCache();
     bool addBlob( const lUInt8 * data, int size, lString16 name );
@@ -188,8 +180,6 @@ public:
     lUInt32 allocElem( lUInt32 dataIndex, lUInt32 parentIndex, int childCount, int attrCount );
     /// get text by address
     lString8 getText( lUInt32 address );
-    /// get pointer to text data
-    TextDataStorageItem * getTextItem( lUInt32 addr );
     /// get pointer to element data
     ElementDataStorageItem * getElem( lUInt32 addr );
     /// change node's parent, returns true if modified
@@ -293,7 +283,6 @@ private:
 protected:
     /// final block cache
     CVRendBlockCache _renderedBlockCache;
-    CacheFile * _cacheFile;
     bool _mapped;
     bool _maperror;
     int  _mapSavingStage;
@@ -314,23 +303,14 @@ protected:
 
     CRPropRef _docProps;
     lUInt32 _docFlags;
-    int _styleIndex;
     LVStyleSheet stylesheet_;
     // Style index to font index
     LVHashTable<lUInt16, lUInt16> _fontMap;
     /// Checks buffer sizes, compacts most unused chunks
     ldomBlobCache _blobCache;
 
-    /// Uniquie id of file format parsing option (usually 0, but 1 for preformatted text files)
-    int getPersistenceFlags();
-    bool saveStylesData();
-    bool loadStylesData();
     bool updateLoadedStyles(bool enabled);
     lUInt32 calcStyleHash();
-    bool saveNodeData();
-    bool saveNodeData( lUInt16 type, ldomNode ** list, int nodecount );
-    bool loadNodeData();
-    bool loadNodeData( lUInt16 type, ldomNode ** list, int nodecount );
     void setNodeStyleIndex( lUInt32 dataIndex, lUInt16 index );
     void setNodeFontIndex( lUInt32 dataIndex, lUInt16 index );
     lUInt16 getNodeStyleIndex( lUInt32 dataIndex );
@@ -472,12 +452,9 @@ private:
 
     /// sets document for node
     inline void setDocumentIndex( int index ) { _handle._docIndex = index; }
-    void setStyleIndexInternal( lUInt16 index );
-    void setFontIndexInternal( lUInt16 index );
 
 #define TNTYPE  (_handle._dataIndex&0x0F)
 #define TNINDEX (_handle._dataIndex&(~0x0E))
-#define TNCHUNK (_addr>>&(~0x0F))
     void onCollectionDestroy();
     inline ldomNode * getTinyNode( lUInt32 index ) const { return ((tinyNodeCollection*)getDocument())->getTinyNode(index); }
 
@@ -702,10 +679,6 @@ public:
     bool getNodeListMarker( int & counterValue, lString16 & marker, int & markerWidth );
 };
 
-
-// default: 512K
-#define DEF_DOC_DATA_BUFFER_SIZE 0x80000
-
 /**
     Base class for XML DOM documents
 
@@ -722,7 +695,7 @@ class CrXmlDom : public tinyNodeCollection {
 public:
 
     /// Default constructor
-    CrXmlDom(int dataBufSize = DEF_DOC_DATA_BUFFER_SIZE);
+    CrXmlDom();
     /// Destructor
     virtual ~CrXmlDom();
 
@@ -955,13 +928,6 @@ struct lxmlAttribute
 };
 
 class CrDom;
-
-
-#define LDOM_ALLOW_NODE_INDEX 0
-
-
-class CrDom;
-
 
 /**
  * @brief XPointer/XPath object with reference counting.

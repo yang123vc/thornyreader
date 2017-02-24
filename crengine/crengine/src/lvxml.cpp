@@ -1252,13 +1252,14 @@ public:
     {
         return line->align == la_centered;
     }
+
     /// checks text format options
-    void detectFormatFlags()
+    void smartFormat()
     {
-        //CRLog::debug("detectFormatFlags() enter");
         formatFlags = tftParaPerLine | tftEmptyLineDelimHeaders; // default format
-        if ( length()<10 )
+        if (length() < 10) {
             return;
+        }
         formatFlags = 0;
         avg_center = 0;
         int empty_lines = 0;
@@ -1352,8 +1353,6 @@ public:
             return;
         }
 
-
-
         int non_empty_lines = length() - empty_lines;
         if ( non_empty_lines < 10 )
             return;
@@ -1369,7 +1368,6 @@ public:
         int fw = max_right_stats_pos - max_left_stats_pos;
         for ( i=0; i<length(); i++ ) {
             LVTextFileLine * line = get(i);
-            //CRLog::debug("    line(%d, %d)", line->lpos, line->rpos);
             int lw = line->rpos - line->lpos;
             if ( line->lpos > min_left+1 ) {
                 int center_dist = (line->rpos + line->lpos) / 2 - avg_center;
@@ -1418,15 +1416,13 @@ public:
         if ( max_right_stats_pos == max_right && best_right_align_percent > 30 )
            formatFlags |= tftJustified; // right bound is justified
 
-        CRLog::debug("detectFormatFlags() min_left=%d, max_right=%d, ident=%d, empty=%d, flags=%d",
+        CRLog::debug("smartFormat() min_left=%d, max_right=%d, ident=%d, empty=%d, flags=%d",
             min_left, max_right, ident_lines_percent, empty_lines_percent, formatFlags );
 
-        if ( !formatFlags ) {
+        if (!formatFlags) {
             formatFlags = tftParaPerLine | tftEmptyLineDelimHeaders; // default format
             return;
         }
-
-
     }
 
     bool testProjectGutenbergHeader()
@@ -2377,10 +2373,10 @@ lString16 LVTextFileBase::ReadLine( int maxLineSize, lUInt32 & flags )
 // Text file parser
 
 /// constructor
-LVTextParser::LVTextParser( LVStreamRef stream, LvXMLParserCallback * callback, bool isPreFormatted )
+LVTextParser::LVTextParser(LVStreamRef stream, LvXMLParserCallback * callback, bool smart_format)
     : LVTextFileBase(stream)
     , m_callback(callback)
-    , m_isPreFormatted( isPreFormatted )
+    , smart_format_(smart_format)
 {
     m_firstPageTextCounter = 300;
 }
@@ -2444,10 +2440,11 @@ bool LVTextParser::CheckFormat()
 /// parses input stream
 bool LVTextParser::Parse()
 {
-    LVTextLineQueue queue( this, 2000 );
-    queue.ReadLines( 2000 );
-    if ( !m_isPreFormatted )
-        queue.detectFormatFlags();
+    LVTextLineQueue queue(this, 2000);
+    queue.ReadLines(2000);
+    if (smart_format_) {
+        queue.smartFormat();
+    }
     // make fb2 document structure
     m_callback->OnTagOpen( NULL, L"?xml" );
     m_callback->OnAttribute( NULL, L"version", L"1.0" );
@@ -2466,7 +2463,7 @@ bool LVTextParser::Parse()
       m_callback->OnTagOpenNoAttr( NULL, L"body" );
         //callback_->OnTagOpen( NULL, L"section" );
           // process text
-          queue.DoTextImport( m_callback );
+          queue.DoTextImport(m_callback);
         //callback_->OnTagClose( NULL, L"section" );
       m_callback->OnTagClose( NULL, L"body" );
     m_callback->OnTagClose( NULL, L"FictionBook" );

@@ -39,6 +39,32 @@ public:
     LVScrollInfo() : pos(0), maxpos(0), pagesize(0), scale(1) { }
 };
 
+class LVDocView;
+
+class LVPageWordSelector
+{
+    LVDocView* doc_view_;
+    ldomWordExList words_;
+    void UpdateSelection();
+public:
+    // selects middle word of current page
+    LVPageWordSelector(LVDocView* docview);
+    // clears selection
+    ~LVPageWordSelector();
+    // move current word selection in specified direction, (distance) times
+    void MoveBy(MoveDirection dir, int distance = 1);
+    // returns currently selected word
+    ldomWordEx* GetSelectedWord() { return words_.getSelWord(); }
+    // access to words
+    ldomWordExList & GetWords() { return words_; }
+    // append chars to search pattern
+    ldomWordEx* AppendPattern(lString16 chars);
+    // remove last item from pattern
+    ldomWordEx* ReducePattern();
+    // selects word of current page with specified coords;
+    void SelectWord(int x, int y);
+};
+
 class LVDocView
 {
 private:
@@ -57,7 +83,6 @@ private:
     ldomMarkedRangeList marked_ranges_;
     ldomMarkedRangeList bookmark_ranges_;
     font_ref_t base_font_;
-
     LVStreamRef stream_;
     CrDom* cr_dom_;
     LVDocViewMode viewport_mode_;
@@ -75,8 +100,6 @@ private:
     /// sets current document format
     void SetDocFormat(doc_format_t fmt);
     void UpdateScroll();
-    /// makes table of contents for current document
-    void MakeToc();
     /// load document from stream
     bool LoadDoc(LVStreamRef stream);
     /// create empty document with specified message (to show errors)
@@ -137,12 +160,8 @@ public:
     void SetBookmarks(LVPtrVector<CRBookmark> & bookmarks);
     /// find bookmark by window point, return NULL if point doesn't belong to any bookmark
     CRBookmark * FindBookmarkByPoint(lvPoint pt);
-    /// returns true if coverpage display is on
-    bool getShowCover() { return  show_cover_; }
     /// sets coverpage display flag
     void setShowCover(bool show) { show_cover_ = show; }
-    /// returns true if page image is available (0=current, -1=prev, 1=next)
-    bool isPageImageReady(int delta);
     /// get background image
     LVImageSourceRef getBackgroundImage() const { return background_image; }
     /// set background image
@@ -154,8 +173,6 @@ public:
     }
     /// clears page background
     void DrawBackgroundTo(LVDrawBuf & drawbuf, int offsetX, int offsetY, int alpha = 0);
-    /// get current document format
-    doc_format_t getDocFormat() { return doc_format_; }
     // Links and selections functions
     /// sets selection for whole element, clears previous selection
     virtual void selectElement( ldomNode * elem);
@@ -190,18 +207,8 @@ public:
     LVRef<ldomXRange> getPageDocumentRange( int pageIndex=-1);
     /// get page text, -1 for current page
     lString16 getPageText( bool wrapWords, int pageIndex=-1);
-    /// returns number of non-space characters on current page
-    int getCurrentPageCharCount();
-    /// returns number of images on current page
-    int getCurrentPageImageCount();
-    /// sets page margins
-    /// get window visible page count (1 or 2)
     int GetColumns();
     void UpdatePageMargins();
-    /// returns if Render has been called
-    bool IsRendered() { return is_rendered_; }
-    /// returns formatted page list
-    LVRendPageList* getPageList() { return &pages_list_; }
     /// returns pointer to TOC root node
     void GetOutline(LVPtrVector<LvTocItem, false>& outline);
     /// returns xpointer for specified window point
@@ -215,8 +222,6 @@ public:
     bool DocToWindowPoint( lvPoint & pt);
     /// returns document
     CrDom* GetCrDom() { return cr_dom_; }
-    /// return document properties
-    CRPropRef getDocProps() { return doc_props_; }
     /// draws scaled image into buffer, clear background according to current settings
     bool DrawImageTo(LVDrawBuf* buf, LVImageSourceRef img, int x, int y, int dx, int dy);
     /// draws page to image buffer
@@ -264,33 +269,7 @@ public:
     void Clear();
     /// load document from file
     bool LoadDoc(const char* crengine_uri);
-    void WriteDomToXml();
     LVDocView();
     virtual ~LVDocView();
 };
-
-class LVPageWordSelector
-{
-    LVDocView* doc_view_;
-    ldomWordExList words_;
-    void UpdateSelection();
-public:
-    // selects middle word of current page
-    LVPageWordSelector(LVDocView* docview);
-    // clears selection
-    ~LVPageWordSelector();
-    // move current word selection in specified direction, (distance) times
-    void MoveBy(MoveDirection dir, int distance = 1);
-    // returns currently selected word
-    ldomWordEx* GetSelectedWord() { return words_.getSelWord(); }
-    // access to words
-    ldomWordExList & GetWords() { return words_; }
-    // append chars to search pattern
-    ldomWordEx* AppendPattern(lString16 chars);
-    // remove last item from pattern
-    ldomWordEx* ReducePattern();
-    // selects word of current page with specified coords;
-    void SelectWord(int x, int y);
-};
-
 #endif

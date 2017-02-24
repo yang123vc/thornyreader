@@ -336,10 +336,10 @@ class LVTextParser : public LVTextFileBase
 {
 protected:
     LvXMLParserCallback * m_callback;
-    bool m_isPreFormatted;
+    bool smart_format_;
 public:
     /// constructor
-    LVTextParser( LVStreamRef stream, LvXMLParserCallback * callback, bool isPreFormatted );
+    LVTextParser( LVStreamRef stream, LvXMLParserCallback * callback, bool pre_formatted );
     /// descructor
     virtual ~LVTextParser();
     /// returns true if format is recognized by parser

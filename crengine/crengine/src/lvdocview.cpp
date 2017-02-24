@@ -17,7 +17,6 @@
 #include "fb2def.h"
 #include "lvdocview.h"
 #include "rtfimp.h"
-#include "lvstyles.h"
 #include "lvrend.h"
 #include "lvstsheet.h"
 #include "crtxtenc.h"
@@ -62,7 +61,7 @@ LVDocView::LVDocView()
           config_embeded_styles_(false),
           config_embeded_fonts_(false),
           config_enable_footnotes_(true),
-          config_txt_smart_format_(true)
+          config_txt_smart_format_(false)
 {
 	config_font_face_ = lString8("Arial, Roboto");
 	base_font_ = fontMan->GetFont(
@@ -113,7 +112,6 @@ void LVDocView::CreateEmptyDom()
 	SetDocFormat(doc_format_none);
 	cr_dom_->setProps(doc_props_);
 	cr_dom_->setDocFlags(0);
-	cr_dom_->setDocFlag(DOC_FLAG_TXT_NO_SMART_FORMAT, !config_txt_smart_format_);
 	cr_dom_->setDocFlag(DOC_FLAG_ENABLE_FOOTNOTES, config_enable_footnotes_);
 	cr_dom_->setDocFlag(DOC_FLAG_EMBEDDED_STYLES, config_embeded_styles_);
 	cr_dom_->setDocFlag(DOC_FLAG_EMBEDDED_FONTS, config_embeded_fonts_);
@@ -859,23 +857,20 @@ LVRef<ldomXRange> LVDocView::getPageDocumentRange(int pageIndex) {
 	return res;
 }
 
-/// returns number of non-space characters on current page
-int LVDocView::getCurrentPageCharCount()
-{
-    lString16 text = getPageText(true);
-    int count = 0;
-    for (int i=0; i<text.length(); i++) {
+/* 	Number of non-space characters on current page:
+
+   	lString16 text = getPageText(true);
+   	int count = 0;
+   	for (int i=0; i<text.length(); i++) {
         lChar16 ch = text[i];
         if (ch>='0')
             count++;
-    }
-    return count;
-}
+   	}
+   	return count;
 
-/// returns number of images on current page
-int LVDocView::getCurrentPageImageCount()
-{
-    CHECK_RENDER("getCurPageImgCount()")
+   	Number of images on current page:
+
+	CHECK_RENDER("getCurPageImgCount()")
     LVRef<ldomXRange> range = getPageDocumentRange(-1);
     class ImageCounter : public ldomNodeCallback {
         int count;
@@ -896,14 +891,14 @@ int LVDocView::getCurrentPageImageCount()
     ImageCounter cnt;
     range->forEach(&cnt);
     return cnt.get();
-}
+*/
 
 /// get page text, -1 for current page
 lString16 LVDocView::getPageText(bool, int pageIndex)
 {
     CHECK_RENDER("getPageText()")
 	lString16 txt;
-	LVRef < ldomXRange > range = getPageDocumentRange(pageIndex);
+	LVRef <ldomXRange> range = getPageDocumentRange(pageIndex);
 	txt = range->getRangeText();
 	return txt;
 }
@@ -1520,26 +1515,24 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 
 	// Plain text format
 	if (parser == NULL) {
-		parser = new LVTextParser(stream_, &writer, !config_txt_smart_format_);
+		parser = new LVTextParser(stream_, &writer, config_txt_smart_format_);
 		if (!parser->CheckFormat()) {
 			delete parser;
 			parser = NULL;
 		} else {
 			SetDocFormat(doc_format_txt);
+            CRLog::trace("TXT format detected");
 		}
 	}
-
 	if (!parser) {
 		return false;
 	}
-
 	CheckRenderProps(0, 0);
 	if (!parser->Parse()) {
 		delete parser;
 		return false;
 	}
 	delete parser;
-
 	offset_ = 0;
 	page_ = 0;
 	//lString16 docstyle = m_doc->createXPointer(L"/FictionBook/stylesheet").getText();
@@ -1755,7 +1748,8 @@ bool LVDocView::goToScrollPos(int pos) {
 }
 
 /// converts scrollbar pos to doc pos
-int LVDocView::scrollPosToDocPos(int scrollpos) {
+int LVDocView::scrollPosToDocPos(int scrollpos)
+{
 	if (viewport_mode_ == MODE_SCROLL) {
 		int n = scrollpos << scroll_info_.scale;
 		if (n < 0)
@@ -1778,7 +1772,8 @@ int LVDocView::scrollPosToDocPos(int scrollpos) {
 }
 
 /// get list of links
-void LVDocView::getCurrentPageLinks(ldomXRangeList& list) {
+void LVDocView::getCurrentPageLinks(ldomXRangeList& list)
+{
 	list.clear();
 	/// get page document range, -1 for current page
 	LVRef < ldomXRange > page = getPageDocumentRange();
