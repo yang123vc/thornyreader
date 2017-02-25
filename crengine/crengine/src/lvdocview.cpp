@@ -1345,9 +1345,8 @@ void LVDocView::SetDocFormat(doc_format_t format)
         css = CRCSS_TXT;
     } else if (doc_format_ == doc_format_chm) {
         css = CRCSS_CHM;
-    } else if (doc_format_ == doc_format_html
-            || doc_format_ == doc_format_mobi) {
-        css = CRCSS_HTM;
+    } else if (doc_format_ == doc_format_html || doc_format_ == doc_format_mobi) {
+        css = CRCSS_MOBI_OR_HTML;
     } else {
         css = "";
     }
@@ -1446,7 +1445,6 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 	if (DetectCHMFormat(stream_)) {
 		CRLog::trace("CHM format detected");
 		cr_dom_->setProps(doc_props_);
-		// to allow apply styles and rend method while loading
 		SetDocFormat(doc_format_chm);
 		CheckRenderProps(0, 0);
 		if (ImportCHMDocument(stream_, cr_dom_)) {
@@ -1460,7 +1458,7 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 	}
 #if ENABLE_ANTIWORD == 1
 	if (DetectWordFormat(stream_)) {
-		CRLog::trace("Word format detected");
+		CRLog::trace("DOC format detected");
 		cr_dom_->setProps(doc_props_);
 		SetDocFormat(doc_format_doc);
 		CheckRenderProps(0, 0);
@@ -1478,17 +1476,15 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 	if (stream_->GetSize() < 5) {
 		return false;
 	}
-
 	// FB2 format
 	LVFileFormatParser* parser = new LvXmlParser(stream_, &writer, false, true);
 	if (!parser->CheckFormat()) {
 		delete parser;
 		parser = NULL;
 	} else {
+        CRLog::trace("FB2 format detected");
 		SetDocFormat(doc_format_fb2);
 	}
-
-	// RTF format
 	if (parser == NULL) {
 		parser = new LVRtfParser(stream_, &writer);
 		if (!parser->CheckFormat()) {
@@ -1496,10 +1492,9 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 			parser = NULL;
 		} else {
 			SetDocFormat(doc_format_rtf);
+            CRLog::trace("RTF format detected");
 		}
 	}
-
-	// HTML format
 	LvDomAutocloseWriter autoclose_writer(cr_dom_, false, HTML_AUTOCLOSE_TABLE);
 	if (parser == NULL) {
 		parser = new LvHtmlParser(stream_, &autoclose_writer);
@@ -1508,10 +1503,9 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 			parser = NULL;
 		} else {
 			SetDocFormat(doc_format_html);
+            CRLog::trace("HTML format detected");
 		}
 	}
-
-	// Plain text format
 	if (parser == NULL) {
 		parser = new LVTextParser(stream_, &writer, config_txt_smart_format_);
 		if (!parser->CheckFormat()) {

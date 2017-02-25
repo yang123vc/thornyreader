@@ -1,25 +1,17 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <dlfcn.h>
-
 #include <android/log.h>
-
 #include "thornyreader.h"
 #include "StProtocol.h"
 #include "StSocket.h"
-
 #include "crengine.h"
 #include "epubfmt.h"
 #include "pdbfmt.h"
-#include "lvstream.h"
-
 // Yep, twice include single header with different define
 #include "fb2def.h"
 #define XS_IMPLEMENT_SCHEME 1
 #include "fb2def.h"
 #undef XS_IMPLEMENT_SCHEME
-
 #include "CreBridge.h"
 
 class AndroidLogger : public CRLog
@@ -43,7 +35,7 @@ protected:
 			level = ANDROID_LOG_DEBUG;
 		else if (!strcmp(lvl, "TRACE"))
 			level = ANDROID_LOG_VERBOSE;
-		__android_log_vprint(level, "thornyreader", msg, args);
+		__android_log_vprint(level, THORNYREADER_LOG_TAG, msg, args);
 	}
 };
 
@@ -76,7 +68,7 @@ static void AddString(CmdResponse& response, lString16 str16)
 	//We will place null-terminator at the string end
 	size++;
 	CmdData* cmd_data = new CmdData();
-	unsigned char* str_buffer = (unsigned char*) cmd_data->newByteArray(size);
+	unsigned char* str_buffer = cmd_data->newByteArray(size);
 	memcpy(str_buffer, str8.c_str(), (size - 1));
 	str_buffer[size - 1] = 0;
 	response.addData(cmd_data);
@@ -653,7 +645,6 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
 
     /*
     Empire V EPUB - не извлекается обложка, хотя она есть
-
     LvStreamRef GetEpubCoverpage(LVContainerRef doc_stream_zip)
     {
     	// check root media type
@@ -717,7 +708,7 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
     */
 }
 
-CreBridge::CreBridge() : StBridge("CreBridge")
+CreBridge::CreBridge() : StBridge(THORNYREADER_LOG_TAG)
 {
     doc_view_ = NULL;
     CRLog::setLogger(new AndroidLogger());

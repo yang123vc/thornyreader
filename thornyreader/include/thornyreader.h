@@ -18,6 +18,7 @@
 #define _THORNYREADER_H_
 
 #define THORNYREADER_VERSION "1.0.17"
+#define THORNYREADER_LOG_TAG "thornyreader"
 
 const char* ThornyReader_NDEBUG();
 const char* ThornyReader_AXYDEBUG();

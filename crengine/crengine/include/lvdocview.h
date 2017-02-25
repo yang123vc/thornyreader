@@ -9,6 +9,7 @@
     GNU General Public License.
     See LICENSE file for details.
 */
+
 #ifndef __LV_TEXT_VIEW_H_INCLUDED__
 #define __LV_TEXT_VIEW_H_INCLUDED__
 
@@ -122,7 +123,6 @@ public:
     bool position_is_set_;
     doc_format_t doc_format_;
     lString8 config_font_face_;
-    // Config
     int width_;
     int height_;
     int page_columns_;

@@ -11,15 +11,13 @@ typedef enum {
     doc_format_chm,
     doc_format_doc,
     doc_format_mobi,
-    doc_format_max = doc_format_mobi
 } doc_format_t;
 
-extern const char* CRCSS_DEF;
 extern const char* CRCSS_CHM;
 extern const char* CRCSS_DOC;
 extern const char* CRCSS_EPUB;
 extern const char* CRCSS_FB2;
-extern const char* CRCSS_HTM;
+extern const char* CRCSS_MOBI_OR_HTML;
 extern const char* CRCSS_RTF;
 extern const char* CRCSS_TXT;
 

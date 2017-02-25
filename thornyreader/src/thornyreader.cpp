@@ -41,7 +41,7 @@ const char* ThornyReader_AXYDEBUG()
 
 void StartThornyReader(const char* name)
 {
-    __android_log_print(ANDROID_LOG_INFO, name, "Start %s v%s, %s, %s",
+    __android_log_print(ANDROID_LOG_INFO, THORNYREADER_LOG_TAG, "Start %s v%s, %s, %s",
                         name,
                         THORNYREADER_VERSION,
                         ThornyReader_NDEBUG(),

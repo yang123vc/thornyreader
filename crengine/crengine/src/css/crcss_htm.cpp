@@ -1,6 +1,6 @@
 #include "docformats.h"
 
-const char* CRCSS_HTM = R"delimiter(
+const char* CRCSS_MOBI_OR_HTML = R"delimiter(
 head, style, form, script {
   display: none;
 }
