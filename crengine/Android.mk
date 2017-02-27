@@ -31,7 +31,7 @@ LOCAL_SRC_FILES += \
 	crengine/src/css/crcss_doc.cpp \
 	crengine/src/css/crcss_epub.cpp \
 	crengine/src/css/crcss_fb2.cpp \
-	crengine/src/css/crcss_htm.cpp \
+	crengine/src/css/crcss_mobi.cpp \
 	crengine/src/css/crcss_rtf.cpp \
 	crengine/src/css/crcss_txt.cpp \
 	crengine/src/bookmark.cpp \

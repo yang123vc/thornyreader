@@ -1346,7 +1346,7 @@ void LVDocView::SetDocFormat(doc_format_t format)
     } else if (doc_format_ == doc_format_chm) {
         css = CRCSS_CHM;
     } else if (doc_format_ == doc_format_html || doc_format_ == doc_format_mobi) {
-        css = CRCSS_MOBI_OR_HTML;
+        css = CRCSS_MOBI;
     } else {
         css = "";
     }

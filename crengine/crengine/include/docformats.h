@@ -7,17 +7,17 @@ typedef enum {
     doc_format_txt,
     doc_format_rtf,
     doc_format_epub,
-    doc_format_html,
     doc_format_chm,
     doc_format_doc,
     doc_format_mobi,
+    doc_format_html,
 } doc_format_t;
 
 extern const char* CRCSS_CHM;
 extern const char* CRCSS_DOC;
 extern const char* CRCSS_EPUB;
 extern const char* CRCSS_FB2;
-extern const char* CRCSS_MOBI_OR_HTML;
+extern const char* CRCSS_MOBI;
 extern const char* CRCSS_RTF;
 extern const char* CRCSS_TXT;
 
@@ -25,8 +25,7 @@ extern const char* CRCSS_TXT;
 int LVDocFormatFromExtension(lString16 &pathName) {
     if (pathName.endsWith(".fb2"))
         return doc_format_fb2;
-    if (pathName.endsWith(".txt")
-			|| pathName.endsWith(".pml"))
+    if (pathName.endsWith(".txt") || pathName.endsWith(".pml"))
         return doc_format_txt;
     if (pathName.endsWith(".rtf"))
         return doc_format_rtf;

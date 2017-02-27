@@ -1,20 +1,25 @@
 #include "docformats.h"
 
 const char* CRCSS_CHM = R"delimiter(
+
+body, p {
+  /* def.all */
+  text-align: justify;
+  text-indent: 1.2em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
+}
+.empty-line, empty-line {
+  height: 1em;
+}
+
 head, style, form, script {
   display: none;
 }
-
-body {
-  /* def.all */ text-align: justify; text-indent: 1.2em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em;
-}
-
 DocFragment {
   page-break-before: always;
-}
-
-p {
-  /* def.all */ text-align: justify; text-indent: 1.2em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em;
 }
 
 *.justindent {
@@ -22,10 +27,6 @@ p {
   text-indent: 1.3em;
   margin-top: 0em;
   margin-bottom: 0em;
-}
-
-empty-line {
-  height: 0.2em;
 }
 
 hr {
@@ -113,14 +114,27 @@ h6 {
   font-size: 105%;
 }
 
-h1,h2 {
+h1, h2 {
   display: block;
-  /* title.all */ text-align: center; text-indent: 0em; margin-top: 0.3em; margin-bottom: 0.3em; margin-left: 0em; margin-right: 0em; font-size: 110%; font-weight: bolder;
+  /* title.all */
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-size: 110%;
+  font-weight: bolder;
 }
 
-h3,h4,h5,h6 {
+h3, h4, h5, h6 {
   display: block;
-  /* subtitle.all */ text-align: center; text-indent: 0em; margin-top: 0.2em; margin-bottom: 0.2em; font-style: italic;
+  /* subtitle.all */
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  font-style: italic;
 }
 
 ul, ol, dl {

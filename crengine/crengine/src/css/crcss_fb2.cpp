@@ -1,17 +1,17 @@
 #include "docformats.h"
 
 const char* CRCSS_FB2 = R"delimiter(
-body {
-  text-align: left;
-  margin: 0;
-  text-indent: 0px;
-}
 
-p {
-  /* def.all */ text-align: left; text-indent: 1.2em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em;
+body, p {
+  /* def.all */
+  text-align: justify;
+  text-indent: 1.2em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
 }
-
-empty-line {
+.empty-line, empty-line {
   height: 1em;
 }
 
@@ -102,11 +102,24 @@ cite, cite p {
 }
 
 title p, h1 p, h2 p {
-  /* title.all */ text-align: center; text-indent: 0em; margin-top: 0.3em; margin-bottom: 0.3em; margin-left: 0em; margin-right: 0em; font-size: 110%; font-weight: bolder;
+  /* title.all */
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-size: 110%;
+  font-weight: bolder;
 }
 
 subtitle, subtitle p, h3 p, h4 p, h5 p, h6 p {
-  /* subtitle.all */ text-align: center; text-indent: 0em; margin-top: 0.2em; margin-bottom: 0.2em; font-style: italic;
+  /* subtitle.all */
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  font-style: italic;
 }
 
 title, h1, h2, h3, h4, h5, h6, subtitle {

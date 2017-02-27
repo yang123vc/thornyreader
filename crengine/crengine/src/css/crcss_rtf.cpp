@@ -1,15 +1,17 @@
 #include "docformats.h"
 
 const char* CRCSS_RTF = R"delimiter(
-body {
-  /* def.all */ text-align: justify; text-indent: 1.2em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em;
-}
 
-p {
-  /* def.all */ text-align: justify; text-indent: 1.2em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em;
+body, p {
+  /* def.all */
+  text-align: justify;
+  text-indent: 1.2em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
 }
-
-empty-line {
+.empty-line, empty-line {
   height: 1em;
 }
 
@@ -124,16 +126,31 @@ h5 {
 }
 
 title, h1, h2 {
-  $title.all hyphenate: none;
+  hyphenate: none;
   page-break-before: always;
   page-break-inside: avoid;
   page-break-after: avoid;
+  /* title.all */
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-size: 110%;
+  font-weight: bolder;
 }
 
 subtitle, h3, h4, h5, h6 {
-  $subtitle.all hyphenate: none;
+  hyphenate: none;
   page-break-inside: avoid;
   page-break-after: avoid;
+  /* subtitle.all */
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  font-style: italic;
 }
 
 table {
@@ -254,11 +271,6 @@ head, form, script {
   display: none;
 }
 
-body {
-  margin: 0;
-  text-align: justify;
-}
-
 hr {
   height: 2px;
   background-color: #808080;
@@ -333,7 +345,7 @@ h1,h2,h3,h4,h5,h6 {
 
 h1 {
   font-size: 150%;
-/*     color: #FFFFFF; background-color: #000000; */
+  /* color: #FFFFFF; background-color: #000000; */
   padding: 10px;
   margin-top: 0.5em;
   margin-bottom: 0.5em;
@@ -341,7 +353,7 @@ h1 {
 
 h2 {
   font-size: 135%;
-/*     color: #FFFFFF; background-color: #808080;   */
+  /* color: #FFFFFF; background-color: #808080; */
   padding: 10px;
   margin-top: 0.5em;
   margin-bottom: 0.5em;
@@ -371,7 +383,7 @@ ul, ol, dl {
   margin-left: 1em;
   margin-top: 0.3em;
   margin-bottom: 0.3em;
-/*   background-color: #808080; */;
+  /* background-color: #808080; */;
 }
 
 li {

@@ -1,19 +1,18 @@
 #include "docformats.h"
 
 const char* CRCSS_EPUB = R"delimiter(
-body {
-  /* def.all */ text-align: justify; text-indent: 1.2em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em;
-}
 
-*.justindent {
+body, p {
+  /* def.all */
   text-align: justify;
-  text-indent: 1.3em;
+  text-indent: 1.2em;
   margin-top: 0em;
   margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
 }
-
-DocFragment {
-  page-break-before: always;
+.empty-line, empty-line {
+  height: 1em;
 }
 
 h1, .title {
@@ -36,24 +35,37 @@ h5, .title4 {
   font-size: 110%;
 }
 
+h1, h2, .title, .title1, .title2 {
+  display: block;
+  hyphenate: none;
+  adobe-hyphenate: none;
+  /* title.all */
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-size: 110%;
+  font-weight: bolder;
+}
+
 .subtitle {
   font-style: italic;
   margin-top: 0.5em;
   margin-bottom: 0.3em;
 }
 
-h1, h2, .title, .title1, .title2 {
-  display: block;
-  $title.all
-	hyphenate: none;
-  adobe-hyphenate: none;
-}
-
 h3, h4, h5, h6, .title3, .title4, .title5, .subtitle {
   display: block;
-  $subtitle.all
-	hyphenate: none;
+  hyphenate: none;
   adobe-hyphenate: none;
+  /* subtitle.all */
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  font-style: italic;
 }
 
 h1, h2, h3, .title, .title1, .title2, .title3 {
@@ -67,42 +79,31 @@ h1, h2, h3, .title, .title1, .title2, .title3 {
   page-break-after: avoid;
 }
 
-img {
+img, image, .section_image, .coverpage {
   text-align: center;
   text-indent: 0px;
   display: block;
-  margin: 0.5em;
-  border-style: solid;
-  border-width: medium;
+  margin: 6em;
 }
-
-.section_image {
-  text-align: center;
-}
-
-.coverpage {
-  text-align: center;
-}
-
-p image {
+p image, li image {
   display: inline;
 }
 
-li image {
-  display: inline;
+*.justindent {
+  text-align: justify;
+  text-indent: 1.3em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+}
+
+DocFragment {
+  page-break-before: always;
 }
 
 a {
   display: inline;
-  /* link.all */ text-decoration: underline;
-}
-
-p {
-  /* def.all */ text-align: justify; text-indent: 1.2em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em;
-}
-
-.empty-line {
-  height: 1em;
+  /* link.all */
+  text-decoration: underline;
 }
 
 hr {
@@ -122,21 +123,51 @@ sup {
   font-size: 70%;
 }
 
-li {
-  display: list-item;
-  text-indent: 0em;
+ol {
+  display: block;
+  list-style-type: decimal;
+  margin-left: 1em;
 }
-
 ul {
   display: block;
   list-style-type: disc;
   margin-left: 1em;
 }
+li {
+  display: list-item;
+  text-indent: 0em;
+}
 
-ol {
+dl {
+  margin-left: 0em;
+}
+dt {
   display: block;
-  list-style-type: decimal;
-  margin-left: 1em;
+  margin-left: 0em;
+  margin-top: 0.3em;
+  font-weight: bold;
+}
+dd {
+  display: block;
+  margin-left: 1.3em;
+}
+
+table {
+  font-size: 80%;
+}
+td, th {
+  text-indent: 0px;
+  padding: 3px;
+}
+th {
+  font-weight: bold;
+  text-align: center;
+  background-color: #DDD;
+}
+table caption {
+  text-indent: 0px;
+  padding: 4px;
+  background-color: #EEE;
 }
 
 span {
@@ -148,11 +179,25 @@ div {
 }
 
 .citation p {
-  /* cite.all */ text-align: justify; text-indent: 1.2em; margin-top: 0.3em; margin-bottom: 0.3em; margin-left: 1em; margin-right: 1em; font-style: italic;
+  /* cite.all */
+  text-align: justify;
+  text-indent: 1.2em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 1em;
+  margin-right: 1em;
+  font-style: italic;
 }
 
 .epigraph p {
-  /* epigraph.all */ text-align: left; text-indent: 1.2em; margin-top: 0.3em; margin-bottom: 0.3em; margin-left: 15%; margin-right: 1em; font-style: italic;
+  /* epigraph.all */
+  text-align: left;
+  text-indent: 1.2em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 15%;
+  margin-right: 1em;
+  font-style: italic;
 }
 
 .v {
@@ -166,7 +211,14 @@ div {
 }
 
 .stanza {
-  /* poem.all */ text-align: left; text-indent: 0em; margin-top: 0.3em; margin-bottom: 0.3em; margin-left: 15%; margin-right: 1em; font-style: italic;
+  /* poem.all */
+  text-align: left;
+  text-indent: 0em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 15%;
+  margin-right: 1em;
+  font-style: italic;
 }
 
 .poem {
@@ -188,34 +240,9 @@ div {
   margin-right: 10%;
 }
 
-table {
-  font-size: 80%;
-}
-
-td, th {
-  text-indent: 0px;
-  padding: 3px;
-}
-
-th {
-  font-weight: bold;
-  text-align: center;
-  background-color: #DDD;
-}
-
-table caption {
-  text-indent: 0px;
-  padding: 4px;
-  background-color: #EEE;
-}
-
 .fb2_info {
   display: block;
   page-break-before: always;
-}
-
-head, form, script {
-  display: none;
 }
 
 b, strong, i, em, dfn, var, q, u, del, s, strike, small, big, sub, sup, acronym, tt, sa mp, kbd, code {
@@ -249,12 +276,28 @@ big {
 pre {
   display: block;
   white-space: pre;
-  /* pre.all */ text-align: left; text-indent: 0em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em; font-family: "Courier New", "Droid Sans Mono", monospace;
+  /* pre.all */
+  text-align: left;
+  text-indent: 0em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-family: "Courier New", "Droid Sans Mono",
+  monospace;
 }
 
 .code, code {
   display: inline;
-  /* pre.all */ text-align: left; text-indent: 0em; margin-top: 0em; margin-bottom: 0em; margin-left: 0em; margin-right: 0em; font-family: "Courier New", "Droid Sans Mono", monospace;
+  /* pre.all */
+  text-align: left;
+  text-indent: 0em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-family: "Courier New", "Droid Sans Mono",
+  monospace;
 }
 
 nobr {
@@ -263,19 +306,8 @@ nobr {
   white-space: nowrap;
 }
 
-dl {
-  margin-left: 0em;
+head, form, script {
+  display: none;
 }
 
-dt {
-  display: block;
-  margin-left: 0em;
-  margin-top: 0.3em;
-  font-weight: bold;
-}
-
-dd {
-  display: block;
-  margin-left: 1.3em;
-}
 )delimiter";
