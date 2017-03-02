@@ -1,0 +1,3 @@
+Significant changes compared to The Common CLI viewer interface Project original sources:
+
+    - Value of owned_external flag is default to true

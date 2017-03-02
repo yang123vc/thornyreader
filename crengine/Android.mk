@@ -15,7 +15,7 @@ LOCAL_CFLAGS            += -DCR3_ANTIWORD_PATCH=1
 
 LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/../thornyreader/include \
-    $(LOCAL_PATH)/crengine/include \
+    $(LOCAL_PATH)/include \
     $(LOCAL_PATH)/libpng \
     $(LOCAL_PATH)/freetype/include \
     $(LOCAL_PATH)/libjpeg \
@@ -23,38 +23,36 @@ LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/chmlib/src
 
 LOCAL_SRC_FILES := \
-	CreBridge.cpp \
-	CreMain.cpp
-
-LOCAL_SRC_FILES += \
-	crengine/src/bookmark.cpp \
-	crengine/src/chmfmt.cpp \
-    crengine/src/cp_stats.cpp \
-    crengine/src/crtxtenc.cpp \
-    crengine/src/epubfmt.cpp \
-    crengine/src/hyphman.cpp \
-    crengine/src/lstridmap.cpp \
-    crengine/src/lvbmpbuf.cpp \
-    crengine/src/lvdocview.cpp \
-    crengine/src/lvdrawbuf.cpp \
-    crengine/src/lvfnt.cpp \
-    crengine/src/lvfntman.cpp \
-    crengine/src/lvimg.cpp \
-    crengine/src/lvmemman.cpp \
-    crengine/src/lvpagesplitter.cpp \
-    crengine/src/lvrend.cpp \
-    crengine/src/lvstream.cpp \
-    crengine/src/lvstring.cpp \
-    crengine/src/lvstsheet.cpp \
-    crengine/src/lvstyles.cpp \
-    crengine/src/lvtextfm.cpp \
-    crengine/src/lvtinydom.cpp \
-    crengine/src/lvxml.cpp \
-    crengine/src/pdbfmt.cpp \
-    crengine/src/props.cpp \
-    crengine/src/rtfimp.cpp \
-    crengine/src/txtselector.cpp \
-    crengine/src/wordfmt.cpp
+	src/CreBridge.cpp \
+	src/CreMain.cpp \
+	src/bookmark.cpp \
+	src/chmfmt.cpp \
+    src/cp_stats.cpp \
+    src/crtxtenc.cpp \
+    src/epubfmt.cpp \
+    src/hyphman.cpp \
+    src/lstridmap.cpp \
+    src/lvbmpbuf.cpp \
+    src/lvdocview.cpp \
+    src/lvdrawbuf.cpp \
+    src/lvfnt.cpp \
+    src/lvfntman.cpp \
+    src/lvimg.cpp \
+    src/lvmemman.cpp \
+    src/lvpagesplitter.cpp \
+    src/lvrend.cpp \
+    src/lvstream.cpp \
+    src/lvstring.cpp \
+    src/lvstsheet.cpp \
+    src/lvstyles.cpp \
+    src/lvtextfm.cpp \
+    src/lvtinydom.cpp \
+    src/lvxml.cpp \
+    src/pdbfmt.cpp \
+    src/props.cpp \
+    src/rtfimp.cpp \
+    src/txtselector.cpp \
+    src/wordfmt.cpp
 
 LOCAL_SRC_FILES += \
     libpng/pngerror.c  \

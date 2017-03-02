@@ -33,7 +33,6 @@
 
 static const char* CRCSS = R"delimiter(
 body, p {
-  /* def.all */
   text-align: justify;
   text-indent: 1.2em;
   margin-top: 0em;
@@ -43,7 +42,7 @@ body, p {
 }
 *.justindent {
   text-align: justify;
-  text-indent: 1.3em;
+  text-indent: 1.2em;
   margin-top: 0em;
   margin-bottom: 0em;
 }
@@ -2052,7 +2051,7 @@ void LVDocView::UpdateScroll()
 		scroll_info_.pagesize = npage;
 		scroll_info_.scale = shift;
 		char str[32];
-		sprintf(str, "%d%%", (int) (fh > 0 ? (100 * npos / fh) : 0));
+		sprintf(str, "%d%%", fh > 0 ? (100 * npos / fh) : 0);
 		scroll_info_.posText = lString16(str);
 	} else {
 		int page = GetCurrPage();

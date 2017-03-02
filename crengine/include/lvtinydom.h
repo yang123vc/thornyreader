@@ -430,9 +430,7 @@ class ldomNode
     friend class tinyNodeCollection;
     friend class RenderRectAccessor;
     friend class NodeImageProxy;
-
 private:
-
     static CrDom * _documentInstances[MAX_DOCUMENT_INSTANCE_COUNT];
 
     /// adds document to list, returns ID of allocated document, -1 if no space in instance array
@@ -2063,8 +2061,4 @@ CrDom * LVParseHTMLStream(
         const elem_def_t * elem_table=NULL,
         const attr_def_t * attr_table=NULL,
         const ns_def_t * ns_table=NULL);
-
-/// unit test for DOM
-void runTinyDomUnitTests();
-
 #endif
