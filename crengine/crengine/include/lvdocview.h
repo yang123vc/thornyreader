@@ -18,7 +18,6 @@
 #include "lvpagesplitter.h"
 #include "lvdrawbuf.h"
 #include "lvptrvec.h"
-#include "docformats.h"
 #include "bookmark.h"
 
 /// document view mode: pages/scroll

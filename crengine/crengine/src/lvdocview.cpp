@@ -18,8 +18,6 @@
 #include "lvdocview.h"
 #include "rtfimp.h"
 #include "lvrend.h"
-#include "lvstsheet.h"
-#include "crtxtenc.h"
 #include "epubfmt.h"
 #include "chmfmt.h"
 #include "wordfmt.h"
@@ -32,6 +30,356 @@
 #define REQUEST_RENDER(caller) RequestRender();
 #define CHECK_RENDER(caller) RenderIfDirty();
 #endif
+
+static const char* CRCSS = R"delimiter(
+body, p {
+  /* def.all */
+  text-align: justify;
+  text-indent: 1.2em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
+}
+*.justindent {
+  text-align: justify;
+  text-indent: 1.3em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+}
+DocFragment {
+  page-break-before: always;
+}
+
+.empty-line, empty-line {
+  height: 1em;
+}
+hr {
+  height: 2px;
+  background-color: #808080;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+div {
+  display: block;
+}
+a,b,strong,i,em,dfn,var,q,u,del,s,strike,small,big,sub,sup,acronym,tt,sa mp,kbd,code,span,font {
+  display: inline;
+}
+
+b, strong {
+  font-weight: bold;
+}
+i, em, dfn, var, emphasis {
+  font-style: italic;
+}
+a, u {
+  text-decoration: underline;
+}
+del, s, strike, strikethrough {
+  text-decoration: line-through;
+}
+small {
+  font-size: 80%;
+}
+big {
+  font-size: 120%;
+}
+sub {
+  vertical-align: sub;
+  font-size: 70%;
+}
+sup {
+  vertical-align: super;
+  font-size: 70%;
+}
+nobr {
+  display: inline;
+  hyphenate: none;
+  white-space: nowrap;
+}
+
+img, image, .section_image, .coverpage {
+  text-align: center;
+  text-indent: 0px;
+  display: block;
+  margin: 1em;
+}
+p image, li image {
+  display: inline;
+}
+
+pre, code, .code {
+  display: block;
+  white-space: pre;
+  text-align: left;
+  text-indent: 0em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-family: "Droid Sans Mono", monospace;
+  /* background-color: #BFBFBF; */
+}
+tt, samp, kbd, code, pre {
+  font-family: "Droid Sans Mono", monospace;
+}
+blockquote {
+  display: block;
+  margin-left: 1.5em;
+  margin-right: 1.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+/* HTML5
+cite {
+  display: inline;
+  font-style: italic;
+}
+*/
+cite, .citation p, cite p {
+  display: block;
+  text-align: justify;
+  text-indent: 1.2em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 1em;
+  margin-right: 1em;
+  font-style: italic;
+}
+
+ol, ul {
+  display: block;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  margin-left: 0em;
+  margin-right: 0em;
+  padding-left: 40px;
+}
+ol {
+  list-style-type: decimal;
+}
+ul {
+  list-style-type: disc;
+}
+li {
+  display: list-item;
+  text-indent: 0em;
+  /*
+  display: block;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  */
+}
+
+dl {
+  display: block;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  margin-left: 0em;
+  margin-right: 0em;
+}
+dt {
+  display: block;
+  margin-left: 0em;
+  margin-top: 0.3em;
+  font-weight: bold;
+}
+dd {
+  display: block;
+  margin-left: 1.3em;
+}
+
+table {
+  font-size: 80%;
+}
+td, th {
+  text-indent: 0px;
+  padding: 3px;
+}
+th {
+  font-weight: bold;
+  text-align: center;
+}
+table caption, table > caption {
+  text-indent: 0px;
+  padding: 4px;
+}
+
+h1, title, .title, .title0, .title1 {
+  font-size: 150%;
+}
+h2, .title2 {
+  font-size: 140%;
+}
+h3, .title3 {
+  font-size: 130%;
+}
+h4, .title4, h5, .title5, h6, .title6 {
+  font-size: 110%;
+}
+h1, h2, h3, title, h1 p, h2 p, h3 p, title p, .title, .title0, .title1, .title2, .title3 {
+  display: block;
+  hyphenate: none;
+  adobe-hyphenate: none;
+  page-break-before: always;
+  page-break-inside: avoid;
+  page-break-after: avoid;
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-weight: bolder;
+}
+h4, h5, h6, subtitle, h4 p, h5 p, h6 p, subtitle p, .subtitle, .title4, .title5, .title6 {
+  display: block;
+  hyphenate: none;
+  adobe-hyphenate: none;
+  font-weight: bold;
+  page-break-inside: avoid;
+  page-break-after: avoid;
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  font-style: italic;
+}
+
+/* DOC, FB2, RTF */
+genre, author, book-title, keywords, lang, src-lang, translator {
+  display: none;
+}
+/* DOC, FB2, RTF */
+document-info, publish-info, custom-info {
+  display: none;
+}
+/* DOC, FB2, RTF */
+coverpage {
+  display: none;
+}
+head, style, form, script {
+  display: none;
+}
+
+.epigraph p, epigraph, epigraph p {
+  text-align: left;
+  text-indent: 1em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 15%;
+  margin-right: 1em;
+  font-style: italic;
+}
+
+v, .v {
+  text-align: left;
+  text-align-last: right;
+  text-indent: 1em hanging;
+}
+
+.stanza + .stanza, stanza + stanza {
+  margin-top: 1em;
+}
+
+.stanza, stanza {
+  /* poem.all */
+  text-align: left;
+  text-indent: 0em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 15%;
+  margin-right: 1em;
+  font-style: italic;
+}
+
+.poem, poem {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  text-indent: 0px;
+}
+
+text-author {
+  font-size: 70%;
+  font-style: italic;
+  font-weight: bolder;
+  margin-left: 1em;
+}
+
+.epigraph_author {
+  font-weight: bold;
+  font-style: italic;
+  margin-left: 15%;
+}
+
+.citation_author {
+  font-weight: bold;
+  font-style: italic;
+  margin-left: 15%;
+  margin-right: 10%;
+}
+
+.fb2_info {
+  display: block;
+  page-break-before: always;
+}
+
+body[name="notes"], body[name="comments"] {
+  font-size: 70%;
+}
+
+body[name="notes"] section title {
+  display: run-in;
+  text-align: left;
+  page-break-before: auto;
+  page-break-inside: auto;
+  page-break-after: auto;
+}
+
+body[name="notes"] section title p {
+  display: inline;
+}
+
+body[name="comments"] section title {
+  display: run-in;
+  text-align: left;
+  page-break-before: auto;
+  page-break-inside: auto;
+  page-break-after: auto;
+}
+
+body[name="comments"] section title p {
+  display: inline;
+}
+
+annotation {
+  font-size: 80%;
+  margin-left: 1em;
+  margin-right: 1em;
+  font-style: italic;
+  text-align: justify;
+  text-indent: 1.2em;
+}
+
+description, title-info {
+  display: block;
+}
+
+date {
+  display: block;
+  font-size: 80%;
+  font-style: italic;
+  text-align: center;
+}
+
+a[type="note"] {
+  vertical-align: super;
+  font-size: 70%;
+  text-decoration: none;
+}
+)delimiter";
 
 static const css_font_family_t DEF_FONT_FAMILY = css_ff_sans_serif;
 
@@ -109,6 +457,7 @@ void LVDocView::CreateEmptyDom()
 {
 	Clear();
 	cr_dom_ = new CrDom();
+    cr_dom_->setStylesheet(CRCSS, true);
 	SetDocFormat(doc_format_none);
 	cr_dom_->setProps(doc_props_);
 	cr_dom_->setDocFlags(0);
@@ -915,12 +1264,7 @@ void LVDocView::CheckRenderProps(int width, int height)
 	//	width = page_rects_[0].width() - margins_.left - margins_.right;
 	//if (height == 0)
 	//	height = page_rects_[0].height() - margins_.top - margins_.bottom;
-	base_font_ = fontMan->GetFont(
-	        config_font_size_,
-	        400,
-	        false,
-	        DEF_FONT_FAMILY,
-	        config_font_face_);
+	base_font_ = fontMan->GetFont(config_font_size_, 400, false, DEF_FONT_FAMILY, config_font_face_);
 	if (!base_font_) {
 		return;
 	}
@@ -1329,28 +1673,37 @@ void LVDocView::Resize(int width, int height)
 	}
 }
 
+/*
+int LVDocFormatFromExtension(lString16 &pathName) {
+    if (pathName.endsWith(".fb2"))
+        return doc_format_fb2;
+    if (pathName.endsWith(".txt") || pathName.endsWith(".pml"))
+        return doc_format_txt;
+    if (pathName.endsWith(".rtf"))
+        return doc_format_rtf;
+    if (pathName.endsWith(".epub"))
+        return doc_format_epub;
+    if (pathName.endsWith(".htm")
+    		|| pathName.endsWith(".html")
+			|| pathName.endsWith(".shtml")
+			|| pathName.endsWith(".xhtml"))
+        return doc_format_html;
+    if (pathName.endsWith(".chm"))
+        return doc_format_chm;
+    if (pathName.endsWith(".doc"))
+        return doc_format_doc;
+    if (pathName.endsWith(".pdb")
+    		|| pathName.endsWith(".prc")
+			|| pathName.endsWith(".mobi")
+			|| pathName.endsWith(".azw"))
+        return doc_format_mobi;
+    return doc_format_none;
+}
+*/
+
 void LVDocView::SetDocFormat(doc_format_t format)
 {
 	doc_format_ = format;
-	const char* css;
-	if (doc_format_ == doc_format_epub) {
-	    css = CRCSS_EPUB;
-	} else if (doc_format_ == doc_format_fb2) {
-        css = CRCSS_FB2;
-    } else if (doc_format_ == doc_format_doc) {
-        css = CRCSS_DOC;
-    } else if (doc_format_ == doc_format_rtf) {
-        css = CRCSS_RTF;
-    } else if (doc_format_ == doc_format_txt) {
-        css = CRCSS_TXT;
-    } else if (doc_format_ == doc_format_chm) {
-        css = CRCSS_CHM;
-    } else if (doc_format_ == doc_format_html || doc_format_ == doc_format_mobi) {
-        css = CRCSS_MOBI;
-    } else {
-        css = "";
-    }
-	cr_dom_->setStylesheet(css, true);
 }
 
 bool LVDocView::LoadDoc(const char* cr_uri_chars)

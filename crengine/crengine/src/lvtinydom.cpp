@@ -1527,11 +1527,7 @@ public:
 };
 
 /// renders (formats) document in memory
-bool CrDom::setRenderProps(
-        int width,
-        int height,
-        font_ref_t def_font,
-        int def_interline_space)
+bool CrDom::setRenderProps(int width, int height, font_ref_t def_font, int interline_space)
 {
     bool changed = false;
     _renderedBlockCache.clear();
@@ -1601,7 +1597,7 @@ bool CrDom::setRenderProps(
     s->text_indent.type = css_val_px;
     s->text_indent.value = 0;
     s->line_height.type = css_val_percent;
-    s->line_height.value = def_interline_space;
+    s->line_height.value = interline_space;
     //lUInt32 defStyleHash = (((stylesheet_.getHash() * 31) + calcHash(_def_style))*31 + calcHash(_def_font));
     //defStyleHash = defStyleHash * 31 + getDocFlags();
     if ( _last_docflags != getDocFlags() ) {
@@ -1791,19 +1787,18 @@ bool CrDom::checkRenderContext()
     return res;
 }
 
-int CrDom::render(
-        LVRendPageList* pages,
+int CrDom::render(LVRendPageList* pages,
         int width,
         int dy,
 		bool showCover,
 		int y0,
 		font_ref_t def_font,
-		int def_interline_space)
+		int interline_space)
 {
     CRLog::trace("Render is called for width %d, pageHeight=%d, fontFace=%s, docFlags=%d",
-    		width, dy, def_font->getTypeFace().c_str(), getDocFlags() );
+    		width, dy, def_font->getTypeFace().c_str(), getDocFlags());
 
-    setRenderProps(width, dy, def_font, def_interline_space);
+    setRenderProps(width, dy, def_font, interline_space);
 
     // update styles
 //    if ( getRootNode()->getStyle().isNull() || getRootNode()->getFont().isNull()
@@ -1821,12 +1816,12 @@ int CrDom::render(
         //ldomNode * root = getRootNode();
         //css_style_ref_t roots = root->getStyle();
         CRLog::trace("Save stylesheet");
-       stylesheet_.push();
+        stylesheet_.push();
         CRLog::trace("Init node styles");
         applyDocStylesheet();
         getRootNode()->initNodeStyleRecursive();
         CRLog::trace("Restoring stylesheet");
-       stylesheet_.pop();
+        stylesheet_.pop();
         CRLog::trace("init render method");
         getRootNode()->initNodeRendMethodRecursive();
 //        getRootNode()->setFont( _def_font );
@@ -1863,7 +1858,6 @@ int CrDom::render(
         CRLog::trace("%d rendered pages found", pages->length());
         return getFullHeight();
     }
-
 }
 
 void CrXmlDom::setNodeTypes( const elem_def_t * node_scheme )
@@ -6319,10 +6313,8 @@ bool tinyNodeCollection::updateLoadedStyles( bool enabled )
     return res;
 }
 
-
-void CrXmlDom::setStylesheet(const char * css, bool replace)
+void CrXmlDom::setStylesheet(const char* css, bool replace)
 {
-
     lUInt32 oldHash = stylesheet_.getHash();
     if (replace) {
        stylesheet_.clear();
@@ -6330,10 +6322,12 @@ void CrXmlDom::setStylesheet(const char * css, bool replace)
     if (css && *css) {
        stylesheet_.parse(css);
     }
+#ifdef AXYDEBUG
     lUInt32 newHash = stylesheet_.getHash();
     if (oldHash != newHash) {
         CRLog::trace("New stylesheet hash: %08x", newHash);
     }
+#endif
 }
 
 //=====================================================

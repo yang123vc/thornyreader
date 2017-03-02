@@ -36,7 +36,6 @@
 #include "lvhashtable.h"
 #include "lvimg.h"
 #include "props.h"
-#include "docformats.h"
 
 #define LXML_NO_DATA       0 ///< to mark data storage record as empty
 #define LXML_ELEMENT_NODE  1 ///< element node
@@ -72,6 +71,18 @@
 
 // 25 to 100
 #define DEF_MIN_SPACE_CONDENSING_PERCENT 100
+
+typedef enum {
+    doc_format_none,
+    doc_format_fb2,
+    doc_format_txt,
+    doc_format_rtf,
+    doc_format_epub,
+    doc_format_chm,
+    doc_format_doc,
+    doc_format_mobi,
+    doc_format_html,
+} doc_format_t;
 
 /// final block cache
 typedef LVRef<LFormattedText> LFormattedTextRef;

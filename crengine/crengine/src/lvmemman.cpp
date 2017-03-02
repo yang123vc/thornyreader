@@ -11,8 +11,6 @@
 
 *******************************************************/
 
-#include <stdlib.h>
-
 #include "lvmemman.h"
 #include "lvref.h"
 #include "lvtinydom.h"
