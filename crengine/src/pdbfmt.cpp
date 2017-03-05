@@ -1027,7 +1027,7 @@ public:
 //    return LVStreamRef();
 //}
 
-bool DetectPDBFormat( LVStreamRef stream, doc_format_t & contentFormat)
+bool DetectPDBFormat(LVStreamRef stream, doc_format_t& contentFormat)
 {
     PDBFile pdb;
     if (!pdb.open(stream, NULL, false, contentFormat))
@@ -1082,11 +1082,10 @@ LVStreamRef GetPDBCoverpage(LVStreamRef stream)
         return LVCreateMemoryStream(coverStream);
     }
     return LVStreamRef();
- }
+}
 
 bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t & doc_format)
 {
-    doc_format = doc_format_none;
     PDBFile* pdb = new PDBFile();
     LVPDBContainer* container = new LVPDBContainer();
     if (!pdb->open(stream, container, true, doc_format)) {
@@ -1126,20 +1125,6 @@ bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t & doc_forma
                     return false;
                 }
             }
-        }
-        break;
-        // PML
-        {
-//            LvDomAutocloseWriter writerFilter(*doc, false, HTML_AUTOCLOSE_TABLE);
-//            LvHtmlParser parser(m_stream, &writerFilter);
-//            parser->setProgressCallback(progressCallback);
-//            if (!parser->CheckFormat() ) {
-//                return false;
-//            } else {
-//                if (!parser->Parse()) {
-//                    return false;
-//                }
-//            }
         }
         break;
     }

@@ -34,7 +34,6 @@ class ldomNode;
 class LvXMLParserCallback {
 protected:
     LVFileFormatParser * _parser;
-
 public:
     /// returns flags
     virtual lUInt32 getFlags() { return 0; }
