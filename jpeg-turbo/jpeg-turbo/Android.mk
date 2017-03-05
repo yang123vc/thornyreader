@@ -28,7 +28,6 @@ LOCAL_SRC_FILES := \
     src/jdarith.c   src/turbojpeg.c  src/transupp.c  src/jdatadst-tj.c \
     src/jdatasrc-tj.c
 
-LOCAL_SHARED_LIBRARIES := libcutils
 LOCAL_STATIC_LIBRARIES := libsimd
  
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/include 

@@ -4,7 +4,7 @@ LOCAL_MODULE := crengine
 LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
 LOCAL_STATIC_LIBRARIES  := thornyreader
-LOCAL_LDLIBS            += -llog -latomic -lz -ldl
+LOCAL_LDLIBS            += -llog -latomic -lz
 LOCAL_CPP_FEATURES      += exceptions
 
 LOCAL_CFLAGS            += -DHAVE_CONFIG_H
