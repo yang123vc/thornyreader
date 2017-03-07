@@ -8,20 +8,20 @@
 
 static inline int CeilToEvenInt(int n)
 {
-	return n += (n & 1);
+    return (n + 1) & ~1;
 }
 
 static inline int FloorToEvenInt(int n)
 {
-	return n &= ~1;
+    return n & ~1;
 }
 
-static inline int ExportPagesCount(int columns, int pages)
+static inline uint32_t ExportPagesCount(int columns, int pages)
 {
 	if (columns == 2) {
-		return CeilToEvenInt(pages) / columns;
+		return (uint32_t) (CeilToEvenInt(pages) / columns);
 	}
-	return pages;
+	return (uint32_t) pages;
 }
 
 static inline int ExportPage(int columns, int page)
@@ -34,7 +34,7 @@ static inline int ExportPage(int columns, int page)
 
 static inline int ImportPage(int columns, int page)
 {
-	return page* columns;
+	return page * columns;
 }
 
 static const int ALLOWED_INTERLINE_SPACES[] =
@@ -248,8 +248,9 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 response.result = RES_BAD_REQ_DATA;
                 return;
             }
-            doc_view_->config_embeded_styles_ = int_val;
-            doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_EMBEDDED_STYLES, int_val);
+            bool bool_val = (bool) int_val;
+            doc_view_->config_embeded_styles_ = bool_val;
+            doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_EMBEDDED_STYLES, bool_val);
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRENGINE_EMBEDDED_FONTS) {
             int int_val = atoi(val);
@@ -257,8 +258,9 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 response.result = RES_BAD_REQ_DATA;
                 return;
             }
-            doc_view_->config_embeded_fonts_ = int_val;
-            doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_EMBEDDED_FONTS, int_val);
+            bool bool_val = (bool) int_val;
+            doc_view_->config_embeded_fonts_ = bool_val;
+            doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_EMBEDDED_FONTS, bool_val);
             doc_view_->RequestRender();
         } else if (key == CONFIG_CRENGINE_FOOTNOTES) {
             int int_val = atoi(val);
@@ -266,8 +268,9 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 response.result = RES_BAD_REQ_DATA;
                 return;
             }
-            doc_view_->config_enable_footnotes_ = int_val;
-            doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_ENABLE_FOOTNOTES, int_val);
+            bool bool_val = (bool) int_val;
+            doc_view_->config_enable_footnotes_ = bool_val;
+            doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_ENABLE_FOOTNOTES, bool_val);
             doc_view_->RequestRender();
         } else {
             CRLog::warn("processConfig unknown key: key=%d, val=%s", key, val);
@@ -333,7 +336,7 @@ void CreBridge::processPageRender(CmdRequest& request, CmdResponse& response)
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-    doc_view_->GoToPage(page * doc_view_->GetColumns());
+    doc_view_->GoToPage(ImportPage(page, doc_view_->GetColumns()));
 
     CmdData* resp = new CmdData();
     unsigned char* pixels = resp->newByteArray(width * height * 4);
@@ -370,7 +373,7 @@ void CreBridge::processPageByXPath(CmdRequest& request, CmdResponse& response)
         doc_view_->GoToBookmark(bm);
         page = (ExportPage(doc_view_->GetColumns(), doc_view_->GetCurrPage()));
     }
-    response.addInt(page);
+    response.addInt((uint32_t) page);
 }
 
 void CreBridge::processPageXPath(CmdRequest& request, CmdResponse& response)
@@ -385,7 +388,7 @@ void CreBridge::processPageXPath(CmdRequest& request, CmdResponse& response)
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-    ldomXPointer xptr = doc_view_->getPageBookmark(page * doc_view_->GetColumns());
+    ldomXPointer xptr = doc_view_->getPageBookmark(ImportPage(page, doc_view_->GetColumns()));
     if (xptr.isNull()) {
         CRLog::error("processPageXPath null ldomXPointer");
         response.result = RES_BAD_REQ_DATA;
