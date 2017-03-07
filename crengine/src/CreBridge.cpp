@@ -180,18 +180,6 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 doc_view_->RequestRender();
                 doc_view_->position_is_set_ = false;
             }
-        } else if (key == CONFIG_CRENGINE_TXT_SMART_FORMAT) {
-            int int_val = atoi(val);
-            if (int_val < 0 || int_val > 1) {
-                response.result = RES_BAD_REQ_DATA;
-                return;
-            }
-            if (doc_view_->config_txt_smart_format_ != int_val) {
-                doc_view_->config_txt_smart_format_ = (bool) int_val;
-                if (doc_view_->doc_format_ == doc_format_txt) {
-                    doc_view_->RequestRender();
-                }
-            }
         } else if (key == CONFIG_CRENGINE_FONT_COLOR) {
             doc_view_->text_color_ = (lUInt32) (atoi(val) & 0xFFFFFF);
             doc_view_->RequestRender();
