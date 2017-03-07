@@ -13,14 +13,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include "crsetup.h"
+#include "crengine.h"
 #include "lvfnt.h"
 #include "lvtextfm.h"
-#include "lvdrawbuf.h"
 
 #ifdef __cplusplus
-#include "lvimg.h"
 #include "lvtinydom.h"
 #endif
 

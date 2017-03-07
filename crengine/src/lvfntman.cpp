@@ -13,10 +13,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "crsetup.h"
+#include "crengine.h"
 #include "lvfntman.h"
-#include "lvstream.h"
-#include "lvdrawbuf.h"
 #include "lvstyles.h"
 
 #define GAMMA_TABLES_IMPL

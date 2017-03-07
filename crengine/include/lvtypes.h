@@ -11,7 +11,7 @@
 #define LVTYPES_H_INCLUDED
 
 #include <stdlib.h>
-#include "crsetup.h"
+#include "crengine.h"
 
 #ifdef _WIN32
 #include <windows.h>

@@ -16,7 +16,7 @@
 #define __LV_FNT_MAN_H_INCLUDED__
 
 #include <stdlib.h>
-#include "crsetup.h"
+#include "crengine.h"
 #include "lvfnt.h"
 #include "cssdef.h"
 #include "lvstring.h"

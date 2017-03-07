@@ -1,7 +1,7 @@
-#include "../include/crsetup.h"
-#include "../include/lvstring.h"
-#include "../include/lvstream.h"
-#include "../include/lvtinydom.h"
+#include "crengine.h"
+#include "lvstring.h"
+#include "lvstream.h"
+#include "lvtinydom.h"
 
 //#ifndef ENABLE_ANTIWORD
 //#define ENABLE_ANTIWORD 1
@@ -18,7 +18,7 @@
 #define NDEBUG
 #endif
 
-#include "../include/wordfmt.h"
+#include "wordfmt.h"
 
 #ifdef _WIN32
 extern "C" {

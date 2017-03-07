@@ -1,8 +1,4 @@
-/** \file crengine.h
-    \brief CREngine main include file
-
-    Include this file to use CR engine.
-
+/**
     (c) Vadim Lopatin, 2000-2008
 
     This source code is distributed under the terms of
@@ -10,133 +6,150 @@
 
     See LICENSE file for details.
 */
-
 #ifndef CRENGINE_H_INCLUDED
 #define CRENGINE_H_INCLUDED
 
-/**
-    \mainpage CoolReader Engine Library
-    \author Vadim Lopatin
-    \date 2000-2008
+#if defined(_LINUX) || defined (LINUX)
+#define USE_LIBJPEG                          1
+#define USE_LIBPNG                           1
+#define USE_GIF                              1
+#define USE_ANSI_FILES                       1
+#define GRAY_INVERSE                         0
+#define USE_FREETYPE                         1
 
-    \section main_intro Introduction
+#ifndef ANDROID
+#ifndef MAC
+#ifndef TIZEN
+#ifndef USE_FONTCONFIG
 
-    CoolReader Engine is a XML/CSS based 
-    visualization library for writing e-book readers.
+#define USE_FONTCONFIG						 1
 
-    The goal is to write fast, compact and portable library
-    which allows to create e-book readers for different platform
-    including handheld devices with limited resources.
-    
-    This library is partially based on CoolReader2 e-book reader, 
-    but most parts are rewritten from scratch.
+#endif
+#endif
+#endif
+#endif
 
-    \b Features:
+#define ALLOW_KERNING                        1
+#define GLYPH_CACHE_SIZE                     0x40000
+#define ZIP_STREAM_BUFFER_SIZE               0x40000
+#define FILE_STREAM_BUFFER_SIZE              0x20000
+#endif //defined(_LINUX) || defined (LINUX)
 
-    - Different font engines support
-        - grayscale bitmap font engine
-        - Win32 font support
-        - TTF fonts support via Freetype library
-    - Text formatter with support of different paragraph and font styles, 
-        which allows to prepare text to be drawed
-    - XML parser with support of unicode (UTF-8 and UTF-16) and 8-bit encodings
-    - 2 different DOM tree implementations
-        - Tiny DOM - compact readonly DOM tree
-            - doesn't use RAM to store document text but reads it from file by demand
-            - doesn't store formatted text in memory, but generates it on the fly
-            - parsed tree can be saved to file to allow fast re-opening of documents
-            - compact tree structure requires minimum amount of RAM
-            - optimized element names, attribute names and values string storing
-        - Fast DOM (in progress, not included to distribution) - fast but compact read/write tree
-            - editable document tree
-            - faster implementation
-            - optimized element names, attribute names and values string storing
-    - Styles: CSS2 subset implementation
-        - only simple selectors ( element-name or universal selector * )
-        - definition for properties
-            - display
-            - white-space
-            - text-align
-            - vertical-align
-            - font-family
-            - font-size
-            - font-style
-            - font-weight
-            - text-indent
-            - line-height
-            - width
-            - height
-            - margin-left
-            - margin-right
-            - margin-top
-            - margin-bottom
-            - margin
-            - page-break-before
-            - page-break-after
-            - page-break-inside
-    - DOM/CSS formatter allows to prepare document for drawing
-    - Sample applications
-        - FB2 e-book reader for Windows
-        - FB2 e-book reader for X (Linux)
-    - Tools
-        - TrueType to grayscale bitmap font convertor
+#if (LBOOK==1)
+#define USE_DOM_UTF8_STORAGE                 1
+#ifndef MAX_IMAGE_SCALE_MUL
+#define MAX_IMAGE_SCALE_MUL                  2
+#endif
+#define USE_ANSI_FILES                       1
+#define GRAY_INVERSE                         0
+#define ALLOW_KERNING                        1
+#define USE_LIBJPEG                          1
+#define USE_LIBPNG                           1
+#define USE_GIF                              1
+#define USE_FREETYPE                         1
+#define GLYPH_CACHE_SIZE                     0x20000
+#define ZIP_STREAM_BUFFER_SIZE               0x80000
+#define FILE_STREAM_BUFFER_SIZE              0x40000
+#endif // LBOOK==1
 
-    \section main_authors Authors
+#if defined(_WIN32)
+/// maximum picture zoom (1, 2, 3)
+#define GRAY_INVERSE						 0
+#ifndef MAX_IMAGE_SCALE_MUL
+#define MAX_IMAGE_SCALE_MUL                  1
+#endif
+#if defined(CYGWIN)
+#define USE_FREETYPE                         0
+#else
+#define USE_FREETYPE                         1
+#endif
+#define ALLOW_KERNING                        1
+#define GLYPH_CACHE_SIZE                     0x20000
+#define ZIP_STREAM_BUFFER_SIZE               0x80000
+#define FILE_STREAM_BUFFER_SIZE              0x40000
+//#define USE_LIBJPEG 0
+#endif // defined(_WIN32)
 
-    - Vadim Lopatin (http://www.coolreader.org/) - most source code
-    - Alan (http://alreader.kms.ru/) - hyphenation sypport code
+#ifndef GLYPH_CACHE_SIZE
+/// freetype font glyph buffer size, in bytes
+#define GLYPH_CACHE_SIZE 0x40000
+#endif
 
-    \section main_install Installation
+#ifndef USE_GIF
+///allow GIF support via embedded decoder
+#define USE_GIF 1
+#endif
 
-    - download source code from CoolReader homepage http://www.coolreader.org/
-    - unpack archieve into some folder
-    - change options in crsetup.h file if necessary
-    - build library
-    - build sample applications located in /tools folder
+#ifndef USE_LIBJPEG
+///allow JPEG support via libjpeg
+#define USE_LIBJPEG 1
+#endif
 
-    \note current version supports only build under Win32 with MS VC++ 6.0
+#ifndef USE_LIBPNG
+///allow PNG support via libpng
+#define USE_LIBPNG 1
+#endif
 
-    \section getting_started Getting started
+#ifndef GRAY_INVERSE
+#define GRAY_INVERSE 1
+#endif
 
-    Please see Tools/Fb2Test/Fb2Test.cpp source code for sample code.
-
-    Library implements \a LVDocView class which can read XML document from 
-    file and draw it in grayscale buffer.
-
-    Before loading of document, you have to initialize font manager:
-
-    \b InitFontManager( lString8() );
-
-    Please register fonts you want to make available using call of RegisterFont method. 
-    For bitmap font manager, parameter is filename of bitmap font.
-
-    \b fontMan->RegisterFont( lString8(fn) );
-
-    Typical usage of LVDocView:
-    - Load document using LVDocView::LoadDoc() method.
-    - Call LVDocView::setStylesheet() to set stylesheet for document.
-    - Set draw buffer dimensions using LVDocView::Resize(dx, dy).
-    - LVDocView::Draw() draws document into gray buffer. 
-    - \a DrawBuf2DC() can be used to draw gray bitmap in Windows device context.
-    - LVDocView::GetPos() and LVDocView::SetPos() can be used to scroll throuh document.
-
-    \section main_license License
-
-    This source code is distributed under the terms of
-    GNU General Public License.
-
-    See LICENSE file for details.
+/** \def LVLONG_FILE_SUPPORT
+    \brief define to 1 to use 64 bits for file position types
 */
-#include "crsetup.h"
-#include "lvtypes.h"
-#include "lvref.h"
-#include "lvstring.h"
-#include "lvarray.h"
-#include "lvbmpbuf.h"
-#include "lvfntman.h"
-#include "lvstyles.h"
-#include "lvdocview.h"
-#include "lvstsheet.h"
-#include "lvdrawbuf.h"
+#define LVLONG_FILE_SUPPORT 0
 
-#endif//CRENGINE_H_INCLUDED
+//#define USE_ANSI_FILES 1
+
+/// zlib stream decode cache size, used to avoid restart of decoding from beginning to move back
+#ifndef ZIP_STREAM_BUFFER_SIZE
+#define ZIP_STREAM_BUFFER_SIZE 0x10000
+#endif
+
+/// document stream buffer size
+#ifndef FILE_STREAM_BUFFER_SIZE
+#define FILE_STREAM_BUFFER_SIZE 0x40000
+#endif
+
+#if (USE_FREETYPE!=1)
+
+#ifndef ALLOW_KERNING
+/// set to 1 to allow kerning
+#define ALLOW_KERNING 0
+#endif
+
+#endif
+
+#ifndef USE_FREETYPE
+#define USE_FREETYPE 0
+#endif
+
+#ifndef USE_DOM_UTF8_STORAGE
+#define USE_DOM_UTF8_STORAGE 0
+#endif
+
+#ifndef USE_BITMAP_FONTS
+
+#if (USE_FREETYPE==1)
+#define USE_BITMAP_FONTS 0
+#else
+#define USE_BITMAP_FONTS 1
+#endif
+
+#endif
+
+// max unpacked size of skin image to hold in cache unpacked
+#ifndef MAX_SKIN_IMAGE_CACHE_ITEM_UNPACKED_SIZE
+#define MAX_SKIN_IMAGE_CACHE_ITEM_UNPACKED_SIZE 80*80*4
+#endif
+
+// max skin image file size to hold as a packed copy in memory
+#ifndef MAX_SKIN_IMAGE_CACHE_ITEM_RAM_COPY_PACKED_SIZE
+#define MAX_SKIN_IMAGE_CACHE_ITEM_RAM_COPY_PACKED_SIZE 10000
+#endif
+
+#ifndef ENABLE_ANTIWORD
+#define ENABLE_ANTIWORD 1
+#endif
+
+#endif //CRENGINE_H_INCLUDED

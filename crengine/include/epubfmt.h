@@ -1,8 +1,8 @@
 #ifndef EPUBFMT_H
 #define EPUBFMT_H
 
-#include "../include/crsetup.h"
-#include "../include/lvtinydom.h"
+#include "crengine.h"
+#include "lvtinydom.h"
 
 class EncryptedItem;
 
