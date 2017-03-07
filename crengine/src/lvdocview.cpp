@@ -11,11 +11,13 @@
 
  *******************************************************/
 
-#include "crsetup.h"
+#include "lvdocview.h"
+// Yep, twice include single header with different define
 #include "fb2def.h"
 #define XS_IMPLEMENT_SCHEME 1
 #include "fb2def.h"
-#include "lvdocview.h"
+//#undef XS_IMPLEMENT_SCHEME
+#include "CreBridge.h"
 #include "rtfimp.h"
 #include "lvrend.h"
 #include "epubfmt.h"
@@ -2283,4 +2285,247 @@ ldomWordEx* LVPageWordSelector::ReducePattern()
     	UpdateSelection();
     }
     return res;
+}
+
+void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
+{
+    response.cmd = CMD_RES_CRE_METADATA;
+    CmdDataIterator iter(request.first);
+    uint8_t* cre_uri_chars;
+    iter.getByteArray(&cre_uri_chars);
+    if (!iter.isValid()) {
+        CRLog::error("processMetadata: iterator invalid data");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    lString16 cre_uri(reinterpret_cast<const char*>(cre_uri_chars));
+    lString16 to_archive_path;
+    lString16 in_archive_path;
+    bool is_archived = LVSplitArcName(cre_uri, to_archive_path, in_archive_path);
+    LVStreamRef doc_stream = LVOpenFileStream(
+            (is_archived ? to_archive_path : cre_uri).c_str(), LVOM_READ);
+    if (!doc_stream) {
+        CRLog::error("processMetadata: cannot open file");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    if (is_archived) {
+        LVContainerRef container = LVOpenArchieve(doc_stream);
+        if (container.isNull()) {
+            CRLog::error("processMetadata: cannot open archive container");
+            response.result = RES_BAD_REQ_DATA;
+            return;
+        }
+        doc_stream = container->OpenStream(in_archive_path.c_str(), LVOM_READ);
+        if (doc_stream.isNull()) {
+            CRLog::error("processMetadata: cannot open file from archive container");
+            response.result = RES_BAD_REQ_DATA;
+            return;
+        }
+    }
+
+    CRLog::trace("Parsing metadata for: %s", LCSTR(cre_uri));
+
+    LVStreamRef thumb_stream;
+    lString16 	doc_title;
+    lString16 	doc_author;
+    lString16 	doc_series;
+    int 		doc_series_number = 0;
+    lString16 	doc_lang;
+
+    if (DetectEpubFormat(doc_stream)) {
+        //EPUB
+        LVContainerRef doc_stream_zip = LVOpenArchieve(doc_stream);
+        //Check is this a ZIP archive
+        if (doc_stream_zip.isNull()) {
+            CRLog::error("processMetadata: EPUB doc_stream_zip.isNull()");
+            response.result = RES_BAD_REQ_DATA;
+            return;
+        }
+        //Check root media type
+        lString16 root_file_path = EpubGetRootFilePath(doc_stream_zip);
+        if (root_file_path.empty()) {
+            CRLog::error("processMetadata: malformed EPUB");
+            response.result = RES_BAD_REQ_DATA;
+            return;
+        }
+        EncryptedDataContainer* decryptor = new EncryptedDataContainer(doc_stream_zip);
+        if (decryptor->open()) {
+            CRLog::debug("processMetadata: EPUB encrypted items detected");
+        }
+        LVContainerRef doc_stream_encrypted = LVContainerRef(decryptor);
+        lString16 code_base = LVExtractPath(root_file_path, false);
+        LVStreamRef content_stream = doc_stream_encrypted->
+                OpenStream(root_file_path.c_str(), LVOM_READ);
+        if (content_stream.isNull()) {
+            CRLog::error("processMetadata: malformed EPUB");
+            response.result = RES_BAD_REQ_DATA;
+            return;
+        }
+        CrDom* dom = LVParseXMLStream(content_stream);
+        if (!dom) {
+            CRLog::error("processMetadata: malformed EPUB");
+            response.result = RES_BAD_REQ_DATA;
+            return;
+        }
+        lString16 thumb_id;
+        for (int i=1; i<20; i++) {
+            ldomNode * item = dom->nodeFromXPath(
+                    lString16("package/metadata/meta[") << fmt::decimal(i) << "]");
+            if (!item) {
+                break;
+            }
+            lString16 name = item->getAttributeValue("name");
+            lString16 content = item->getAttributeValue("content");
+            if (name == "cover") {
+                thumb_id = content;
+            }
+        }
+        for (int i=1; i<50000; i++) {
+            ldomNode* item = dom->nodeFromXPath(
+                    lString16("package/manifest/item[") << fmt::decimal(i) << "]");
+            if (!item) {
+                break;
+            }
+            lString16 href = item->getAttributeValue("href");
+            lString16 id = item->getAttributeValue("id");
+            if (!href.empty() && !id.empty()) {
+                if (id == thumb_id) {
+                    lString16 thumbnail_file_name = code_base + href;
+                    thumb_stream = doc_stream_encrypted->
+                            OpenStream(thumbnail_file_name.c_str(), LVOM_READ);
+                }
+            }
+        }
+        doc_author = dom->textFromXPath(lString16("package/metadata/creator")).trim();
+        doc_title = dom->textFromXPath(lString16("package/metadata/title")).trim();
+        doc_lang = dom->textFromXPath(lString16("package/metadata/language")).trim();
+        for (int i=1; i<20; i++) {
+            ldomNode* item = dom->nodeFromXPath(
+                    lString16("package/metadata/meta[") << fmt::decimal(i) << "]");
+            if (!item) {
+                break;
+            }
+            lString16 name = item->getAttributeValue("name");
+            lString16 content = item->getAttributeValue("content");
+            if (name == "calibre:series") {
+                doc_series = content.trim();
+            } else if (name == "calibre:series_index") {
+                doc_series_number = content.trim().atoi();
+            }
+        }
+        delete dom;
+    } else {
+        //FB2 or PDB
+        thumb_stream = GetFB2Coverpage(doc_stream);
+        if (thumb_stream.isNull()) {
+            doc_format_t fmt;
+            if (DetectPDBFormat(doc_stream, fmt)) {
+                thumb_stream = GetPDBCoverpage(doc_stream);
+            }
+        }
+        CrDom dom;
+        LvDomWriter writer(&dom, true);
+        dom.setNodeTypes(fb2_elem_table);
+        dom.setAttributeTypes(fb2_attr_table);
+        dom.setNameSpaceTypes(fb2_ns_table);
+        LvXmlParser parser(doc_stream, &writer);
+        if (parser.CheckFormat() && parser.Parse()) {
+            doc_author = ExtractDocAuthors(&dom, lString16("|"));
+            doc_title = ExtractDocTitle(&dom);
+            doc_lang = ExtractDocLanguage(&dom);
+            doc_series = ExtractDocSeries(&dom, &doc_series_number);
+        }
+    }
+
+    CmdData* doc_thumb = new CmdData();
+    int thumb_width = 0;
+    int thumb_height = 0;
+    doc_thumb->type = TYPE_ARRAY_POINTER;
+    if (!thumb_stream.isNull()) {
+        LVImageSourceRef thumb_image = LVCreateStreamCopyImageSource(thumb_stream);
+        if (!thumb_image.isNull() && thumb_image->GetWidth() > 0 && thumb_image->GetHeight() > 0) {
+            thumb_width = thumb_image->GetWidth();
+            thumb_height = thumb_image->GetHeight();
+            unsigned char* pixels = doc_thumb->newByteArray(thumb_width * thumb_height * 4);
+            LVColorDrawBuf* buf = new LVColorDrawBuf(thumb_width, thumb_height, pixels, 32);
+            buf->Draw(thumb_image, 0, 0, thumb_width, thumb_height, false);
+            convertBitmap(buf);
+            delete buf;
+            thumb_image.Clear();
+        }
+    }
+
+    response.addData(doc_thumb);
+    response.addInt(thumb_width);
+    response.addInt(thumb_height);
+    responseAddString(response, doc_title);
+    responseAddString(response, doc_author);
+    responseAddString(response, doc_series);
+    response.addInt(doc_series_number);
+    responseAddString(response, doc_lang);
+
+    /*
+    Empire V EPUB - не извлекается обложка, хотя она есть
+    LvStreamRef GetEpubCoverpage(LVContainerRef doc_stream_zip)
+    {
+    	// check root media type
+    	lString16 rootfilePath = EpubGetRootFilePath(doc_stream_zip);
+    	if (rootfilePath.empty()) {
+    		return LvStreamRef();
+    	}
+    	EncryptedDataContainer* decryptor = new EncryptedDataContainer(doc_stream_zip);
+    	if (decryptor->open()) {
+    		CRLog::debug("EPUB: encrypted items detected");
+    	}
+    	LVContainerRef doc_stream_encrypted = LVContainerRef(decryptor);
+    	lString16 codeBase = LVExtractPath(rootfilePath, false);
+    	LvStreamRef content_stream = doc_stream_encrypted->OpenStream(
+    	        rootfilePath.c_str(),
+    	        LVOM_READ);
+    	if (content_stream.isNull()) {
+    		return LvStreamRef();
+    	}
+    	LvStreamRef coverPageImageStream;
+    	// reading content stream
+    	{
+    		CrDom* doc_dom = LVParseXMLStream(content_stream);
+    		if (!doc_dom)
+    			return LvStreamRef();
+    		lString16 coverId;
+    		for ( int i=1; i<20; i++ ) {
+    			ldomNode * item = doc_dom->nodeFromXPath(
+    			        lString16("package/metadata/meta[") << fmt::decimal(i) << "]");
+    			if ( !item )
+    				break;
+    			lString16 name = item->getAttributeValue("name");
+    			lString16 content = item->getAttributeValue("content");
+    			if (name == "cover")
+    				coverId = content;
+    		}
+    		// items
+    		for (int i=1; i<50000; i++) {
+    			ldomNode * item = doc_dom->nodeFromXPath(
+    			        lString16("package/manifest/item[") << fmt::decimal(i) << "]");
+    			if (!item) {
+    				break;
+    			}
+    			lString16 href = item->getAttributeValue("href");
+    			lString16 id = item->getAttributeValue("id");
+    			if ( !href.empty() && !id.empty() ) {
+    				if (id == coverId) {
+    					// coverpage file
+    					lString16 coverFileName = codeBase + href;
+    					CRLog::info("EPUB coverpage file: %s", LCSTR(coverFileName));
+    					coverPageImageStream = doc_stream_encrypted->OpenStream(
+    					        coverFileName.c_str(),
+    					        LVOM_READ);
+    				}
+    			}
+    		}
+    		delete doc_dom;
+    	}
+    	return coverPageImageStream;
+    }
+    */
 }

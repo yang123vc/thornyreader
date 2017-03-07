@@ -208,12 +208,13 @@ protected:
     int _dy;
     int _rowsize;
     lvRect _clip;
-    unsigned char * _data;
+    unsigned char* _data;
     lUInt32 _backgroundColor;
     lUInt32 _textColor;
     bool _hidePartialGlyphs;
 public:
     virtual void setHidePartialGlyphs( bool hide ) { _hidePartialGlyphs = hide; }
+    virtual unsigned char* GetData() { return _data; }
     /// returns current background color
     virtual lUInt32 GetBackgroundColor() { return _backgroundColor; }
     /// sets current background color
@@ -346,6 +347,8 @@ public:
 #if defined(_WIN32) && !defined(QT_GL)
     /// draws buffer content to another buffer doing color conversion if necessary
     virtual void DrawTo( HDC dc, int x, int y, int options, lUInt32 * palette );
+    /// returns device context for bitmap buffer
+    HDC GetDC() { return _drawdc; }
 #endif
     /// invert image
     virtual void  Invert();
@@ -378,10 +381,6 @@ public:
     virtual ~LVColorDrawBuf();
     /// convert to 1-bit bitmap
     void ConvertToBitmap(bool flgDither);
-#if defined(_WIN32) && !defined(QT_GL)
-    /// returns device context for bitmap buffer
-    HDC GetDC() { return _drawdc; }
-#endif
 };
 
 #endif
