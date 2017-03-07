@@ -23,16 +23,17 @@
 #include "wordfmt.h"
 #include "pdbfmt.h"
 
-#if 0 // Log render requests caller
-#define REQUEST_RENDER(caller) { CRLog::trace("RequestRender from " caller); RequestRender(); }
-#define CHECK_RENDER(caller) { CRLog::trace("CheckRender from " caller); CheckRender(); }
+#if 0
+#define REQUEST_RENDER(caller) { CRLog::trace("RequestRender " caller); RequestRender(); }
+#define CHECK_RENDER(caller) { CRLog::trace("CheckRender " caller); CheckRender(); }
 #else
 #define REQUEST_RENDER(caller) RequestRender();
 #define CHECK_RENDER(caller) RenderIfDirty();
 #endif
 
 static const char* CRCSS = R"delimiter(
-body, p {
+body, p, .justindent {
+  display: block;
   text-align: justify;
   text-indent: 1.2em;
   margin-top: 0em;
@@ -40,37 +41,31 @@ body, p {
   margin-left: 0em;
   margin-right: 0em;
 }
-*.justindent {
-  text-align: justify;
-  text-indent: 1.2em;
-  margin-top: 0em;
-  margin-bottom: 0em;
-}
+
 DocFragment {
   page-break-before: always;
 }
 
 .empty-line, empty-line {
+  display: block;
   height: 1em;
 }
 hr {
+  display: block;
   height: 2px;
   background-color: #808080;
   margin-top: 0.5em;
   margin-bottom: 0.5em;
 }
 
-div {
-  display: block;
-}
-a,b,strong,i,em,dfn,var,q,u,del,s,strike,small,big,sub,sup,acronym,tt,sa mp,kbd,code,span,font {
+a, b, strong, q, u, del, s, strike, small, big, sub, sup, acronym, span, font {
   display: inline;
 }
-
 b, strong {
   font-weight: bold;
 }
-i, em, dfn, var, emphasis {
+i, em, emphasis, dfn, var {
+  display: inline;
   font-style: italic;
 }
 a, u {
@@ -99,14 +94,45 @@ nobr {
   white-space: nowrap;
 }
 
-img, image, .section_image, .coverpage {
-  text-align: center;
-  text-indent: 0px;
-  display: block;
-  margin: 1em;
+h1, title, .title, .title0, .title1 {
+  font-size: 150%;
 }
-p image, li image {
-  display: inline;
+h2, .title2 {
+  font-size: 140%;
+}
+h3, .title3 {
+  font-size: 130%;
+}
+h4, .title4, h5, .title5, h6, .title6 {
+  font-size: 110%;
+}
+h1, h2, h3, title, h1 p, h2 p, h3 p, title p, .title, .title0, .title1, .title2, .title3 {
+  display: block;
+  hyphenate: none;
+  adobe-hyphenate: none;
+  page-break-before: always;
+  page-break-inside: avoid;
+  page-break-after: avoid;
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-weight: bold;
+}
+h4, h5, h6, subtitle, h4 p, h5 p, h6 p, subtitle p, .subtitle, .title4, .title5, .title6 {
+  display: block;
+  hyphenate: none;
+  adobe-hyphenate: none;
+  font-weight: bold;
+  page-break-inside: avoid;
+  page-break-after: avoid;
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  font-style: italic;
 }
 
 pre, code, .code {
@@ -119,11 +145,12 @@ pre, code, .code {
   margin-left: 0em;
   margin-right: 0em;
   font-family: "Droid Sans Mono", monospace;
-  /* background-color: #BFBFBF; */
 }
-tt, samp, kbd, code, pre {
+tt, samp, kbd {
+  display: inline;
   font-family: "Droid Sans Mono", monospace;
 }
+
 blockquote {
   display: block;
   margin-left: 1.5em;
@@ -131,12 +158,6 @@ blockquote {
   margin-top: 0.5em;
   margin-bottom: 0.5em;
 }
-/* HTML5
-cite {
-  display: inline;
-  font-style: italic;
-}
-*/
 cite, .citation p, cite p {
   display: block;
   text-align: justify;
@@ -165,11 +186,6 @@ ul {
 li {
   display: list-item;
   text-indent: 0em;
-  /*
-  display: block;
-  margin-top: 0.3em;
-  margin-bottom: 0.3em;
-  */
 }
 
 dl {
@@ -206,73 +222,6 @@ table caption, table > caption {
   padding: 4px;
 }
 
-h1, title, .title, .title0, .title1 {
-  font-size: 150%;
-}
-h2, .title2 {
-  font-size: 140%;
-}
-h3, .title3 {
-  font-size: 130%;
-}
-h4, .title4, h5, .title5, h6, .title6 {
-  font-size: 110%;
-}
-h1, h2, h3, title, h1 p, h2 p, h3 p, title p, .title, .title0, .title1, .title2, .title3 {
-  display: block;
-  hyphenate: none;
-  adobe-hyphenate: none;
-  page-break-before: always;
-  page-break-inside: avoid;
-  page-break-after: avoid;
-  text-align: center;
-  text-indent: 0em;
-  margin-top: 0.3em;
-  margin-bottom: 0.3em;
-  margin-left: 0em;
-  margin-right: 0em;
-  font-weight: bolder;
-}
-h4, h5, h6, subtitle, h4 p, h5 p, h6 p, subtitle p, .subtitle, .title4, .title5, .title6 {
-  display: block;
-  hyphenate: none;
-  adobe-hyphenate: none;
-  font-weight: bold;
-  page-break-inside: avoid;
-  page-break-after: avoid;
-  text-align: center;
-  text-indent: 0em;
-  margin-top: 0.2em;
-  margin-bottom: 0.2em;
-  font-style: italic;
-}
-
-/* DOC, FB2, RTF */
-genre, author, book-title, keywords, lang, src-lang, translator {
-  display: none;
-}
-/* DOC, FB2, RTF */
-document-info, publish-info, custom-info {
-  display: none;
-}
-/* DOC, FB2, RTF */
-coverpage {
-  display: none;
-}
-head, style, form, script {
-  display: none;
-}
-
-.epigraph p, epigraph, epigraph p {
-  text-align: left;
-  text-indent: 1em;
-  margin-top: 0.3em;
-  margin-bottom: 0.3em;
-  margin-left: 15%;
-  margin-right: 1em;
-  font-style: italic;
-}
-
 v, .v {
   text-align: left;
   text-align-last: right;
@@ -284,7 +233,6 @@ v, .v {
 }
 
 .stanza, stanza {
-  /* poem.all */
   text-align: left;
   text-indent: 0em;
   margin-top: 0.3em;
@@ -300,29 +248,22 @@ v, .v {
   text-indent: 0px;
 }
 
-text-author {
-  font-size: 70%;
-  font-style: italic;
-  font-weight: bolder;
-  margin-left: 1em;
-}
-
-.epigraph_author {
-  font-weight: bold;
-  font-style: italic;
+.epigraph p, epigraph, epigraph p {
+  text-align: right;
+  text-indent: 1em;
+  margin-top: 0.3em;
+  margin-bottom: 0.3em;
   margin-left: 15%;
-}
-
-.citation_author {
-  font-weight: bold;
+  margin-right: 1em;
   font-style: italic;
-  margin-left: 15%;
-  margin-right: 10%;
 }
 
-.fb2_info {
-  display: block;
-  page-break-before: always;
+text-author, .epigraph_author, .citation_author {
+  font-size: 80%;
+  font-style: italic;
+  text-align: right;
+  margin-left: 15%;
+  margin-right: 1em;
 }
 
 body[name="notes"], body[name="comments"] {
@@ -336,7 +277,6 @@ body[name="notes"] section title {
   page-break-inside: auto;
   page-break-after: auto;
 }
-
 body[name="notes"] section title p {
   display: inline;
 }
@@ -348,12 +288,18 @@ body[name="comments"] section title {
   page-break-inside: auto;
   page-break-after: auto;
 }
-
 body[name="comments"] section title p {
   display: inline;
 }
 
+a[type="note"] {
+  vertical-align: super;
+  font-size: 70%;
+  text-decoration: none;
+}
+
 annotation {
+  display: block;
   font-size: 80%;
   margin-left: 1em;
   margin-right: 1em;
@@ -362,22 +308,32 @@ annotation {
   text-indent: 1.2em;
 }
 
+.fb2_info {
+  display: block;
+  page-break-before: always;
+}
+
 description, title-info {
   display: block;
 }
 
 date {
   display: block;
-  font-size: 80%;
   font-style: italic;
   text-align: center;
 }
 
-a[type="note"] {
-  vertical-align: super;
-  font-size: 70%;
-  text-decoration: none;
+genre, author, book-title, keywords, lang, src-lang, translator {
+  display: none;
 }
+document-info, publish-info, custom-info {
+  display: none;
+}
+
+head, style, form, script {
+  display: none;
+}
+
 )delimiter";
 
 static const css_font_family_t DEF_FONT_FAMILY = css_ff_sans_serif;
