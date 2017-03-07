@@ -13,6 +13,7 @@
 #ifndef __LV_STRING_H_INCLUDED__
 #define __LV_STRING_H_INCLUDED__
 
+#include "trlog.h"
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
@@ -988,7 +989,6 @@ void limitStringSize(lString16 & str, int maxSize);
 
 int TrimDoubleSpaces(lChar16 * buf, int len,  bool allowStartSpace, bool allowEndSpace, bool removeEolHyphens);
 
-
 #define LCSTR(x) (UnicodeToUtf8(x).c_str())
 bool splitIntegerList( lString16 s, lString16 delim, int & value1, int & value2 );
 
@@ -1090,41 +1090,5 @@ public:
     /// read crc32 code, comapare with CRC32 for last N bytes
     bool checkCRC( int N );
 };
-
-class CRLog
-{
-	public:
-		enum LogLevel {
-			FATAL,
-			ERROR,
-			WARN,
-			INFO,
-			DEBUG,
-			TRACE
-		};
-		static void set_log_level(LogLevel level);
-		static LogLevel log_level();
-		static bool isLogLevelEnabled(LogLevel level);
-		static bool inline isTraceEnabled() { return isLogLevelEnabled(TRACE); }
-		static bool inline isDebugEnabled() { return isLogLevelEnabled(DEBUG); }
-		static bool inline isInfoEnabled() { return isLogLevelEnabled(INFO); }
-		static bool inline isWarnEnabled() { return isLogLevelEnabled(WARN); }
-		static void fatal(const char* msg, ...);
-		static void error(const char* msg, ...);
-		static void warn(const char* msg, ...);
-		static void info(const char* msg, ...);
-		static void debug(const char* msg, ...);
-		static void trace(const char* msg, ...);
-		/// sets logger instance
-		static void setLogger(CRLog* logger);
-		virtual ~CRLog();
-	protected:
-		CRLog();
-		virtual void log(const char* level, const char* msg, va_list args) = 0;
-		LogLevel log_level_;
-		static CRLog * CRLOG;
-};
-
-void free_ls_storage();
 
 #endif // __LV_STRING_H_INCLUDED__

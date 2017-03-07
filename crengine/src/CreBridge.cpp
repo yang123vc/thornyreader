@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <android/log.h>
 #include "thornyreader.h"
 #include "StProtocol.h"
 #include "StSocket.h"
@@ -14,43 +13,18 @@
 #undef XS_IMPLEMENT_SCHEME
 #include "CreBridge.h"
 
-class AndroidLogger : public CRLog
-{
-public:
-	AndroidLogger()	{ }
-
-protected:
-	virtual void log(const char* lvl, const char* msg, va_list args)
-	{
-		int level = ANDROID_LOG_DEBUG;
-		if (!strcmp(lvl, "FATAL"))
-			level = ANDROID_LOG_FATAL;
-		else if (!strcmp(lvl, "ERROR"))
-			level = ANDROID_LOG_ERROR;
-		else if (!strcmp(lvl, "WARN"))
-			level = ANDROID_LOG_WARN;
-		else if (!strcmp(lvl, "INFO"))
-			level = ANDROID_LOG_INFO;
-		else if (!strcmp(lvl, "DEBUG"))
-			level = ANDROID_LOG_DEBUG;
-		else if (!strcmp(lvl, "TRACE"))
-			level = ANDROID_LOG_VERBOSE;
-		__android_log_vprint(level, THORNYREADER_LOG_TAG, msg, args);
-	}
-};
-
 class AndroidDrawBuf : public LVColorDrawBuf
 {
 public:
     void ToAndroidBitmap()
     {
         if (GetBitsPerPixel() == 32) {
-            //Convert Cre colors to Android
+            // Convert Cre colors to Android
             int size = GetWidth() * GetHeight();
             for (lUInt8* p = _data; --size >= 0; p+=4) {
-                //Invert A
+                // Invert A
                 p[3] ^= 0xFF;
-                //Swap R and B
+                // Swap R and B
                 lUInt8 temp = p[0];
                 p[0] = p[2];
                 p[2] = temp;
@@ -65,7 +39,7 @@ static void AddString(CmdResponse& response, lString16 str16)
 {
 	lString8 str8 = UnicodeToUtf8(str16);
 	uint32_t size = (uint32_t) str8.size();
-	//We will place null-terminator at the string end
+	// We will place null-terminator at the string end
 	size++;
 	CmdData* cmd_data = new CmdData();
 	unsigned char* str_buffer = cmd_data->newByteArray(size);
@@ -711,11 +685,10 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
 CreBridge::CreBridge() : StBridge(THORNYREADER_LOG_TAG)
 {
     doc_view_ = NULL;
-    CRLog::setLogger(new AndroidLogger());
 #ifdef AXYDEBUG
-    CRLog::set_log_level(CRLog::INFO);
+    CRLog::setLevel(CRLog::TRACE);
 #else
-    CRLog::set_log_level(CRLog::ERROR);
+    CRLog::setLevel(CRLog::FATAL);
 #endif
     InitFontManager(lString8::empty_str);
     // 0 - disabled, 1 - bytecode, 2 - auto
@@ -731,7 +704,6 @@ CreBridge::~CreBridge()
     }
     HyphMan::uninit();
     ShutdownFontManager();
-    CRLog::setLogger(NULL);
 }
 
 void CreBridge::process(CmdRequest& request, CmdResponse& response)

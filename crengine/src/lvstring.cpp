@@ -11,28 +11,11 @@
 
 *******************************************************/
 
-#include "../include/lvstring.h"
-#include <stdlib.h>
+#include "lvstring.h"
 #include <assert.h>
-#include <string.h>
 #include <stdio.h>
-#include <stddef.h>
-#include <stdarg.h>
-#include <time.h>
-#ifdef LINUX
-#include <sys/time.h>
-#if !defined(__APPLE__)
-#include <malloc.h>
-#endif
-#endif
 
 #include <zlib.h>
-
-#if defined(_WIN32)
-extern "C" {
-#include <windows.h>
-}
-#endif
 
 #define LS_DEBUG_CHECK
 
@@ -2958,75 +2941,6 @@ lString16 ByteToUnicode(const lString8& str, const lChar16* table)
     return buf;
 }
 
-
-#if defined(_WIN32)
-
-lString8 UnicodeToLocal( const lString16 & str )
-{
-   lString8 dst;
-   if (str.empty())
-      return dst;
-   char def_char[]="?";
-   int usedDefChar = false;
-   int len = WideCharToMultiByte(
-      CP_ACP,
-      WC_COMPOSITECHECK | WC_DISCARDNS
-       | WC_SEPCHARS | WC_DEFAULTCHAR,
-      str.c_str(),
-      str.length(),
-      NULL,
-      0,
-      def_char,
-      &usedDefChar
-      );
-   if (len)
-   {
-      dst.insert(0, len, ' ');
-      WideCharToMultiByte(
-         CP_ACP,
-         WC_COMPOSITECHECK | WC_DISCARDNS
-          | WC_SEPCHARS | WC_DEFAULTCHAR,
-         str.c_str(),
-         str.length(),
-         dst.modify(),
-         len,
-         def_char,
-         &usedDefChar
-         );
-   }
-   return dst;
-}
-
-lString16 LocalToUnicode( const lString8 & str )
-{
-   lString16 dst;
-   if (str.empty())
-      return dst;
-   int len = MultiByteToWideChar(
-      CP_ACP,
-      0,
-      str.c_str(),
-      str.length(),
-      NULL,
-      0
-      );
-   if (len)
-   {
-      dst.insert(0, len, ' ');
-      MultiByteToWideChar(
-         CP_ACP,
-         0,
-         str.c_str(),
-         str.length(),
-         dst.modify(),
-         len
-         );
-   }
-   return dst;
-}
-
-#else
-
 lString8 UnicodeToLocal( const lString16 & str )
 {
     return UnicodeToUtf8( str );
@@ -3036,8 +2950,6 @@ lString16 LocalToUnicode( const lString8 & str )
 {
     return Utf8ToUnicode( str );
 }
-
-#endif
 
 //0x410
 static const char * russian_capital[32] =
@@ -4134,101 +4046,6 @@ lUInt16 lGetCharProps( lChar16 ch )
     return getCharProp(ch);
 }
 
-CRLog* CRLog::CRLOG = NULL;
-
-void CRLog::setLogger(CRLog * logger)
-{
-    if (CRLOG != NULL) {
-        delete CRLOG;
-    }
-    CRLOG = logger;
-}
-
-void CRLog::set_log_level(CRLog::LogLevel level)
-{
-    if (!CRLOG)
-        return;
-    CRLOG->log_level_ = level;
-}
-
-CRLog::LogLevel CRLog::log_level()
-{
-    if (!CRLOG)
-        return INFO;
-    return CRLOG->log_level_;
-}
-
-bool CRLog::isLogLevelEnabled(CRLog::LogLevel level)
-{
-    if (!CRLOG)
-        return false;
-    return (CRLOG->log_level_ >= level);
-}
-
-void CRLog::fatal(const char * msg, ...)
-{
-    if (!CRLOG)
-        return;
-    va_list args;
-    va_start(args, msg);
-    CRLOG->log("FATAL", msg, args);
-    va_end(args);
-}
-
-void CRLog::error(const char * msg, ...)
-{
-    if (!CRLOG || CRLOG->log_level_ < ERROR)
-        return;
-    va_list args;
-    va_start( args, msg );
-    CRLOG->log("ERROR", msg, args);
-    va_end(args);
-}
-
-void CRLog::warn( const char * msg, ...)
-{
-    if (!CRLOG || CRLOG->log_level_ < WARN)
-        return;
-    va_list args;
-    va_start(args, msg);
-    CRLOG->log("WARN", msg, args);
-    va_end(args);
-}
-
-void CRLog::info(const char * msg, ...)
-{
-    if (!CRLOG || CRLOG->log_level_ < INFO)
-        return;
-    va_list args;
-    va_start(args, msg);
-    CRLOG->log("INFO", msg, args);
-    va_end(args);
-}
-
-void CRLog::debug(const char * msg, ...)
-{
-    if (!CRLOG || CRLOG->log_level_ < DEBUG)
-        return;
-    va_list args;
-    va_start( args, msg );
-    CRLOG->log("DEBUG", msg, args);
-    va_end(args);
-}
-
-void CRLog::trace(const char * msg, ...)
-{
-    if (!CRLOG || CRLOG->log_level_ < TRACE)
-        return;
-    va_list args;
-    va_start(args, msg);
-    CRLOG->log("TRACE", msg, args);
-    va_end(args);
-}
-
-CRLog::CRLog() : log_level_(TRACE) {}
-
-CRLog::~CRLog() {}
-
 /// returns true if string starts with specified substring, case insensitive
 bool lString16::startsWithNoCase ( const lString16 & substring ) const
 {
@@ -4821,53 +4638,3 @@ void limitStringSize(lString16 & str, int maxSize) {
 	str = str.substr(0, split);
     str += "...";
 }
-
-
-#ifdef _WIN32
-static bool __timerInitialized = false;
-static double __timeTicksPerMillis;
-static lUInt64 __timeStart;
-static lUInt64 __timeAbsolute;
-static lUInt64 __startTimeMillis;
-#endif
-
-void CRReinitTimer() {
-#ifdef _WIN32
-    LARGE_INTEGER tps;
-    QueryPerformanceFrequency(&tps);
-    __timeTicksPerMillis = (double)(tps.QuadPart / 1000L);
-    LARGE_INTEGER queryTime;
-    QueryPerformanceCounter(&queryTime);
-    __timeStart = (lUInt64)(queryTime.QuadPart / __timeTicksPerMillis);
-    __timerInitialized = true;
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    __startTimeMillis = (ft.dwLowDateTime | (((lUInt64)ft.dwHighDateTime) << 32)) / 10000;
-#else
-    // do nothing. it's for win32 only
-#endif
-}
-
-
-lUInt64 GetCurrentTimeMillis() {
-#if defined(LINUX) || defined(ANDROID) || defined(_LINUX)
-    timeval ts;
-    gettimeofday(&ts, NULL);
-    return ts.tv_sec * (lUInt64)1000 + ts.tv_usec / 1000;
-#else
- #ifdef _WIN32
-    if (!__timerInitialized) {
-        CRReinitTimer();
-        return __startTimeMillis;
-    } else {
-        LARGE_INTEGER queryTime;
-        QueryPerformanceCounter(&queryTime);
-        __timeAbsolute = (lUInt64)(queryTime.QuadPart / __timeTicksPerMillis);
-        return __startTimeMillis + (lUInt64)(__timeAbsolute - __timeStart);
-    }
- #else
- #error * You should define GetCurrentTimeMillis() *
- #endif
-#endif
-}
-

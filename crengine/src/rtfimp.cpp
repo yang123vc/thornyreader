@@ -399,11 +399,8 @@ void LVRtfParser::CommitText()
         return;
     txtbuf[txtpos] = 0;
 #ifdef LOG_RTF_PARSING
-    if ( CRLog::isLogLevelEnabled(CRLog::TRACE ) ) {
-        lString16 s = txtbuf;
-        lString8 s8 = UnicodeToUtf8( s );
-        CRLog::trace( "Text(%s)", s8.c_str() );
-    }
+    lString16 s = txtbuf;
+    CRLog::trace("Text(%s)", UnicodeToUtf8(s).c_str());
 #endif
     m_stack.getDestination()->OnText( txtbuf, txtpos, TXTFLG_RTF );
     txtpos = 0;
