@@ -20,6 +20,7 @@
 #include "config/ftheader.h"
 #include "freetype.h"
 
+#define ALLOW_KERNING 1
 #define MAX_LINE_CHARS 2048
 // freetype font glyph buffer size, in bytes
 // 0x20000 (_WIN32, LBOOK), 0x40000 (LINUX)
@@ -391,9 +392,6 @@ public:
     { }
     virtual ~LVFontCache() { }
 };
-
-
-#if (USE_FREETYPE==1)
 
 static lChar16 getReplacementChar(lUInt16 code)
 {
@@ -2550,155 +2548,13 @@ public:
         return (_library != NULL);
     }
 };
-#endif
-
-#if (USE_BITMAP_FONTS==1)
-class LVBitmapFontManager : public LVFontManager
-{
-private:
-    lString8    _path;
-    LVFontCache _cache;
-    //FILE * _log;
-public:
-    virtual int GetFontCount()
-    {
-        return _cache.length();
-    }
-    virtual ~LVBitmapFontManager()
-    {
-        //if (_log)
-        //    fclose(_log);
-    }
-    LVBitmapFontManager()
-    {
-        //_log = fopen( "fonts.log", "wt" );
-    }
-    virtual void gc() // garbage collector
-    {
-        _cache.gc();
-    }
-    lString8 makeFontFileName( lString8 name )
-    {
-        lString8 filename = _path;
-        if (!filename.empty() && _path[filename.length()-1]!=PATH_SEPARATOR_CHAR)
-            filename << PATH_SEPARATOR_CHAR;
-        filename << name;
-        return filename;
-    }
-    virtual LVFontRef GetFont(int size, int weight, bool italic, css_font_family_t family, lString8 typeface, int documentId)
-    {
-        LVFontDef * def = new LVFontDef(
-            lString8::empty_str,
-            size,
-            weight,
-            italic,
-            family,
-            typeface,
-            documentId
-        );
-        //fprintf( _log, "GetFont: %s %d %s %s\n",
-        //    typeface.c_str(),
-        //    size,
-        //    weight>400?"bold":"",
-        //    italic?"italic":"" );
-        LVFontCacheItem * item = _cache.find( def );
-	delete def;
-        if (!item->getFont().isNull())
-        {
-            //fprintf(_log, "    : fount existing\n");
-            return item->getFont();
-        }
-        LBitmapFont * font = new LBitmapFont;
-        lString8 fname = makeFontFileName( item->getDef()->getName() );
-        //printf("going to load font file %s\n", fname.c_str());
-        if (font->LoadFromFile( fname.c_str() ) )
-        {
-            //fprintf(_log, "    : loading from file %s : %s %d\n", item->getDef()->getName().c_str(),
-            //    item->getDef()->getTypeFace().c_str(), item->getDef()->getSize() );
-            LVFontRef ref(font);
-            item->setFont( ref );
-            return ref;
-        }
-        else
-        {
-            //printf("    not found!\n");
-        }
-        delete font;
-        return LVFontRef(NULL);
-    }
-    virtual bool RegisterFont( lString8 name )
-    {
-        lString8 fname = makeFontFileName( name );
-        //printf("going to load font file %s\n", fname.c_str());
-        LVStreamRef stream = LVOpenFileStream( fname.c_str(), LVOM_READ );
-        if (!stream)
-        {
-            //printf("    not found!\n");
-            return false;
-        }
-        tag_lvfont_header hdr;
-        bool res = false;
-        lvsize_t bytes_read = 0;
-        if ( stream->Read( &hdr, sizeof(hdr), &bytes_read ) == LVERR_OK && bytes_read == sizeof(hdr) )
-        {
-            LVFontDef def(
-                name,
-                hdr.fontHeight,
-                hdr.flgBold?700:400,
-                hdr.flgItalic?true:false,
-                (css_font_family_t)hdr.fontFamily,
-                lString8(hdr.fontName)
-            );
-            //fprintf( _log, "Register: %s %s %d %s %s\n",
-            //    name.c_str(), hdr.fontName,
-            //    hdr.fontHeight,
-            //    hdr.flgBold?"bold":"",
-            //    hdr.flgItalic?"italic":"" );
-            _cache.update( &def, LVFontRef(NULL) );
-            res = true;
-        }
-        return res;
-    }
-    virtual bool Init( lString8 path )
-    {
-        _path = path;
-        return true;
-    }
-};
-#endif
-
-
-
-#if (USE_BITMAP_FONTS==1)
-
-LVFontRef LoadFontFromFile( const char * fname )
-{
-    LVFontRef ref;
-    LBitmapFont * font = new LBitmapFont;
-    if (font->LoadFromFile(fname))
-    {
-        ref = font;
-    }
-    else
-    {
-        delete font;
-    }
-    return ref;
-}
-
-#endif
 
 bool InitFontManager(lString8 path)
 {
-    if ( fontMan ) {
+    if (fontMan) {
     	return true;
-        //delete fontMan;
     }
-#if (USE_FREETYPE==1)
     fontMan = new LVFreeTypeFontManager;
-#else
-    fontMan = new LVBitmapFontManager;
-#endif
     return fontMan->Init(path);
 }
 
@@ -2766,135 +2622,6 @@ int LVFontDef::CalcFallbackMatch( lString8 face, int size ) const
         + (weight_match   * 5)
         + (italic_match   * 5);
 }
-
-#if (USE_BITMAP_FONTS==1)
-/// returns font baseline offset
-int LBitmapFont::getBaseline()
-{
-    const lvfont_header_t * hdr = lvfontGetHeader( m_font );
-    return hdr->fontBaseline;
-}
-
-void LBitmapFont::DrawTextString(LVDrawBuf* buf, int x, int y, const lChar16* text, int len,
-                   lChar16 def_char, lUInt32* palette, bool addHyphen,
-                   lUInt32, int)
-{
-    //static lUInt8 glyph_buf[16384];
-    //LVFont::glyph_info_t info;
-    int baseline = getBaseline();
-    while (len >= (addHyphen ? 0 : 1)) {
-      if (len <= 1 || *text != UNICODE_SOFT_HYPHEN_CODE) {
-          lChar16 ch = ((len == 0) ? UNICODE_SOFT_HYPHEN_CODE : *text);
-          LVFontGlyphCacheItem * item = getGlyph(ch, def_char);
-          int w  = 0;
-          if ( item ) {
-              // avoid soft hyphens inside text string
-              w = item->advance;
-              if ( item->bmp_width && item->bmp_height ) {
-                  buf->Draw( x + item->origin_x,
-                      y + baseline - item->origin_y,
-                      item->bmp,
-                      item->bmp_width,
-                      item->bmp_height,
-                      palette);
-              }
-          }
-          x  += w; // + letter_spacing;
-//          if ( !getGlyphInfo( ch, &info, def_char ) )
-//          {
-//              ch = def_char;
-//              if ( !getGlyphInfo( ch, &info, def_char ) )
-//                  ch = 0;
-//          }
-//          if (ch && getGlyphImage( ch, glyph_buf, def_char ))
-//          {
-//              if (info.blackBoxX && info.blackBoxY)
-//              {
-//                  buf->Draw( x + info.originX,
-//                      y + baseline - info.originY,
-//                      glyph_buf,
-//                      info.blackBoxX,
-//                      info.blackBoxY,
-//                      palette);
-//              }
-//              x += info.width;
-//          }
-      } else if (*text != UNICODE_SOFT_HYPHEN_CODE) {
-          //len = len;
-      }
-      len--;
-      text++;
-    }
-}
-
-bool LBitmapFont::getGlyphInfo( lUInt16 code, LVFont::glyph_info_t * glyph, lChar16 def_char )
-{
-    const lvfont_glyph_t * ptr = lvfontGetGlyph( m_font, code );
-    if (!ptr)
-        return false;
-    glyph->blackBoxX = ptr->blackBoxX;
-    glyph->blackBoxY = ptr->blackBoxY;
-    glyph->originX = ptr->originX;
-    glyph->originY = ptr->originY;
-    glyph->width = ptr->width;
-    return true;
-}
-
-lUInt16 LBitmapFont::measureText(const lChar16* text, int len, lUInt16* widths,
-                    lUInt8* flags, int max_width, lChar16 def_char,
-                    int letter_spacing, bool allow_hyphenation)
-{
-    return lvfontMeasureText( m_font, text, len, widths, flags, max_width, def_char );
-}
-
-lUInt32 LBitmapFont::getTextWidth( const lChar16 * text, int len )
-{
-    //
-    static lUInt16 widths[MAX_LINE_CHARS+1];
-    static lUInt8 flags[MAX_LINE_CHARS+1];
-    if ( len>MAX_LINE_CHARS )
-        len = MAX_LINE_CHARS;
-    if ( len<=0 )
-        return 0;
-    // 2048  - max_width, L' ' - def_char
-    lUInt16 res = measureText(text, len, widths, flags, 2048, L' ', 0, true);
-    if (res > 0 && res < MAX_LINE_CHARS)
-        return widths[res-1];
-    return 0;
-}
-
-/// returns font height
-int LBitmapFont::getHeight() const
-{
-    const lvfont_header_t * hdr = lvfontGetHeader( m_font );
-    return hdr->fontHeight;
-}
-
-
-
-bool LBitmapFont::getGlyphImage(lUInt16 code, lUInt8 * buf, lChar16 def_char)
-{
-    const lvfont_glyph_t * ptr = lvfontGetGlyph( m_font, code );
-    if (!ptr)
-        return false;
-    const hrle_decode_info_t * pDecodeTable = lvfontGetDecodeTable( m_font );
-    int sz = ptr->blackBoxX*ptr->blackBoxY;
-    if (sz)
-        lvfontUnpackGlyph(ptr->glyph, pDecodeTable, buf, sz);
-    return true;
-}
-int LBitmapFont::LoadFromFile( const char * fname )
-{
-    Clear();
-    int res = (void*)lvfontOpen( fname, &m_font )!=NULL;
-    if (!res)
-        return 0;
-    lvfont_header_t * hdr = (lvfont_header_t*) m_font;
-    _typeface = lString8( hdr->fontName );
-    _family = (css_font_family_t) hdr->fontFamily;
-    return 1;
-}
-#endif
 
 LVFontCacheItem * LVFontCache::findDuplicate( const LVFontDef * def )
 {
