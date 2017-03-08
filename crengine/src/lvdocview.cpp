@@ -24,6 +24,7 @@
 #include "chmfmt.h"
 #include "wordfmt.h"
 #include "pdbfmt.h"
+#include "crcss.h"
 
 #if 0
 #define REQUEST_RENDER(caller) { CRLog::trace("RequestRender " caller); RequestRender(); }
@@ -32,311 +33,6 @@
 #define REQUEST_RENDER(caller) RequestRender();
 #define CHECK_RENDER(caller) RenderIfDirty();
 #endif
-
-static const char* CRCSS = R"delimiter(
-body, p, .justindent {
-  display: block;
-  text-align: justify;
-  text-indent: 1.2em;
-  margin-top: 0em;
-  margin-bottom: 0em;
-  margin-left: 0em;
-  margin-right: 0em;
-}
-
-DocFragment {
-  page-break-before: always;
-}
-
-.empty-line, empty-line {
-  display: block;
-  height: 1em;
-}
-hr {
-  display: block;
-  height: 2px;
-  background-color: #808080;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-}
-
-a, b, strong, q, u, del, s, strike, small, big, sub, sup, acronym, span, font {
-  display: inline;
-}
-b, strong {
-  font-weight: bold;
-}
-i, em, emphasis, dfn, var {
-  display: inline;
-  font-style: italic;
-}
-a, u {
-  text-decoration: underline;
-}
-del, s, strike, strikethrough {
-  text-decoration: line-through;
-}
-small {
-  font-size: 80%;
-}
-big {
-  font-size: 120%;
-}
-sub {
-  vertical-align: sub;
-  font-size: 70%;
-}
-sup {
-  vertical-align: super;
-  font-size: 70%;
-}
-nobr {
-  display: inline;
-  hyphenate: none;
-  white-space: nowrap;
-}
-
-h1, title, .title, .title0, .title1 {
-  font-size: 150%;
-}
-h2, .title2 {
-  font-size: 140%;
-}
-h3, .title3 {
-  font-size: 130%;
-}
-h4, .title4, h5, .title5, h6, .title6 {
-  font-size: 110%;
-}
-h1, h2, h3, title, h1 p, h2 p, h3 p, title p, .title, .title0, .title1, .title2, .title3 {
-  display: block;
-  hyphenate: none;
-  adobe-hyphenate: none;
-  page-break-before: always;
-  page-break-inside: avoid;
-  page-break-after: avoid;
-  text-align: center;
-  text-indent: 0em;
-  margin-top: 0.3em;
-  margin-bottom: 0.3em;
-  margin-left: 0em;
-  margin-right: 0em;
-  font-weight: bold;
-}
-h4, h5, h6, subtitle, h4 p, h5 p, h6 p, subtitle p, .subtitle, .title4, .title5, .title6 {
-  display: block;
-  hyphenate: none;
-  adobe-hyphenate: none;
-  font-weight: bold;
-  page-break-inside: avoid;
-  page-break-after: avoid;
-  text-align: center;
-  text-indent: 0em;
-  margin-top: 0.2em;
-  margin-bottom: 0.2em;
-  font-style: italic;
-}
-
-pre, code, .code {
-  display: block;
-  white-space: pre;
-  text-align: left;
-  text-indent: 0em;
-  margin-top: 0em;
-  margin-bottom: 0em;
-  margin-left: 0em;
-  margin-right: 0em;
-  font-family: "Droid Sans Mono", monospace;
-}
-tt, samp, kbd {
-  display: inline;
-  font-family: "Droid Sans Mono", monospace;
-}
-
-blockquote {
-  display: block;
-  margin-left: 1.5em;
-  margin-right: 1.5em;
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-}
-cite, .citation p, cite p {
-  display: block;
-  text-align: justify;
-  text-indent: 1.2em;
-  margin-top: 0.3em;
-  margin-bottom: 0.3em;
-  margin-left: 1em;
-  margin-right: 1em;
-  font-style: italic;
-}
-
-ol, ul {
-  display: block;
-  margin-top: 1em;
-  margin-bottom: 1em;
-  margin-left: 0em;
-  margin-right: 0em;
-  padding-left: 40px;
-}
-ol {
-  list-style-type: decimal;
-}
-ul {
-  list-style-type: disc;
-}
-li {
-  display: list-item;
-  text-indent: 0em;
-}
-
-dl {
-  display: block;
-  margin-top: 1em;
-  margin-bottom: 1em;
-  margin-left: 0em;
-  margin-right: 0em;
-}
-dt {
-  display: block;
-  margin-left: 0em;
-  margin-top: 0.3em;
-  font-weight: bold;
-}
-dd {
-  display: block;
-  margin-left: 1.3em;
-}
-
-table {
-  font-size: 80%;
-}
-td, th {
-  text-indent: 0px;
-  padding: 3px;
-}
-th {
-  font-weight: bold;
-  text-align: center;
-}
-table caption, table > caption {
-  text-indent: 0px;
-  padding: 4px;
-}
-
-v, .v {
-  text-align: left;
-  text-align-last: right;
-  text-indent: 1em hanging;
-}
-
-.stanza + .stanza, stanza + stanza {
-  margin-top: 1em;
-}
-
-.stanza, stanza {
-  text-align: left;
-  text-indent: 0em;
-  margin-top: 0.3em;
-  margin-bottom: 0.3em;
-  margin-left: 15%;
-  margin-right: 1em;
-  font-style: italic;
-}
-
-.poem, poem {
-  margin-top: 1em;
-  margin-bottom: 1em;
-  text-indent: 0px;
-}
-
-.epigraph p, epigraph, epigraph p {
-  text-align: right;
-  text-indent: 1em;
-  margin-top: 0.3em;
-  margin-bottom: 0.3em;
-  margin-left: 15%;
-  margin-right: 1em;
-  font-style: italic;
-}
-
-text-author, .epigraph_author, .citation_author {
-  font-size: 80%;
-  font-style: italic;
-  text-align: right;
-  margin-left: 15%;
-  margin-right: 1em;
-}
-
-body[name="notes"], body[name="comments"] {
-  font-size: 70%;
-}
-
-body[name="notes"] section title {
-  display: run-in;
-  text-align: left;
-  page-break-before: auto;
-  page-break-inside: auto;
-  page-break-after: auto;
-}
-body[name="notes"] section title p {
-  display: inline;
-}
-
-body[name="comments"] section title {
-  display: run-in;
-  text-align: left;
-  page-break-before: auto;
-  page-break-inside: auto;
-  page-break-after: auto;
-}
-body[name="comments"] section title p {
-  display: inline;
-}
-
-a[type="note"] {
-  vertical-align: super;
-  font-size: 70%;
-  text-decoration: none;
-}
-
-annotation {
-  display: block;
-  font-size: 80%;
-  margin-left: 1em;
-  margin-right: 1em;
-  font-style: italic;
-  text-align: justify;
-  text-indent: 1.2em;
-}
-
-.fb2_info {
-  display: block;
-  page-break-before: always;
-}
-
-description, title-info {
-  display: block;
-}
-
-date {
-  display: block;
-  font-style: italic;
-  text-align: center;
-}
-
-genre, author, book-title, keywords, lang, src-lang, translator {
-  display: none;
-}
-document-info, publish-info, custom-info {
-  display: none;
-}
-
-head, style, form, script {
-  display: none;
-}
-
-)delimiter";
 
 static const css_font_family_t DEF_FONT_FAMILY = css_ff_sans_serif;
 
@@ -351,10 +47,8 @@ LVDocView::LVDocView()
 		  margins_(),
 		  show_cover_(true),
           background_tiled_(true),
-
 		  position_is_set_(false),
 		  doc_format_(doc_format_none),
-
 		  width_(200),
           height_(400),
           page_columns_(1),
@@ -429,38 +123,6 @@ void LVDocView::CreateEmptyDom()
     bookmark_ranges_.clear();
 }
 
-void LVDocView::UpdatePageMargins()
-{
-    int new_margin_left = config_margins_.left;
-    int new_margin_right = config_margins_.right;
-    if (gFlgFloatingPunctuationEnabled) {
-        int align = 0;
-        base_font_ = fontMan->GetFont(
-                config_font_size_,
-                400,
-                false,
-                DEF_FONT_FAMILY,
-                config_font_face_);
-        align = base_font_->getVisualAligmentWidth() / 2;
-        if (align > new_margin_right) {
-            align = new_margin_right;
-        }
-        new_margin_left += align;
-        new_margin_right -= align;
-    }
-    if (margins_.left != new_margin_left
-        || margins_.right != new_margin_right
-        || margins_.top != config_margins_.top
-        || margins_.bottom != config_margins_.bottom) {
-        margins_.left = new_margin_left;
-        margins_.right = new_margin_right;
-        margins_.top = config_margins_.top;
-        margins_.bottom = config_margins_.bottom;
-        UpdateLayout();
-        REQUEST_RENDER("UpdatePageMargins")
-    }
-}
-
 void LVDocView::RenderIfDirty()
 {
 	if (is_rendered_) {
@@ -518,6 +180,38 @@ void LVDocView::CheckPos() {
 			GoToOffset(pt.y, false);
 		}
 	}
+}
+
+void LVDocView::UpdatePageMargins()
+{
+    int new_margin_left = config_margins_.left;
+    int new_margin_right = config_margins_.right;
+    if (gFlgFloatingPunctuationEnabled) {
+        int align = 0;
+        base_font_ = fontMan->GetFont(
+                config_font_size_,
+                400,
+                false,
+                DEF_FONT_FAMILY,
+                config_font_face_);
+        align = base_font_->getVisualAligmentWidth() / 2;
+        if (align > new_margin_right) {
+            align = new_margin_right;
+        }
+        new_margin_left += align;
+        new_margin_right -= align;
+    }
+    if (margins_.left != new_margin_left
+        || margins_.right != new_margin_right
+        || margins_.top != config_margins_.top
+        || margins_.bottom != config_margins_.bottom) {
+        margins_.left = new_margin_left;
+        margins_.right = new_margin_right;
+        margins_.top = config_margins_.top;
+        margins_.bottom = config_margins_.bottom;
+        UpdateLayout();
+        REQUEST_RENDER("UpdatePageMargins")
+    }
 }
 
 static lString16 GetSectionHeader(ldomNode* section) {
