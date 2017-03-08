@@ -1,23 +1,10 @@
-#include "crengine.h"
 #include "lvstring.h"
 #include "lvstream.h"
 #include "lvtinydom.h"
 
-//#ifndef ENABLE_ANTIWORD
-//#define ENABLE_ANTIWORD 1
-//#endif
-
 #if ENABLE_ANTIWORD==1
-#if defined(_DEBUG) && !defined(DEBUG)
-#define DEBUG
-#endif
-#if defined(_NDEBUG) && !defined(NDEBUG)
-#define NDEBUG
-#endif
-#if !defined(DEBUG) && !defined(NDEBUG)
-#define NDEBUG
-#endif
 
+//#define ANTIWORD_DEBUG
 #include "wordfmt.h"
 
 #ifdef _WIN32
@@ -30,7 +17,7 @@ extern "C" {
 }
 #endif
 
-#ifdef _DEBUG
+#ifdef ANTIWORD_DEBUG
 #define TRACE(x, ...) CRLog::trace(x)
 #else
 #define TRACE(x, ...)
@@ -726,7 +713,7 @@ bTranslateImage(diagram_type *pDiag, FILE *pFile, BOOL bMinimalInformation,
 } /* end of bTranslateImage */
 
 
-bool DetectWordFormat( LVStreamRef stream )
+bool DetectWordFormat(LVStreamRef stream)
 {
     AntiwordStreamGuard file(stream);
 
@@ -749,7 +736,7 @@ bool DetectWordFormat( LVStreamRef stream )
     return true;
 }
 
-bool ImportWordDocument(LVStreamRef stream,	CrDom * m_doc)
+bool ImportWordDocument(LVStreamRef stream,	CrDom* m_doc)
 {
     AntiwordStreamGuard file(stream);
 

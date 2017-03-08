@@ -12,6 +12,7 @@ LOCAL_CFLAGS            += -DLINUX=1
 LOCAL_CFLAGS            += -D_LINUX=1
 LOCAL_CFLAGS            += -DFT2_BUILD_LIBRARY=1
 LOCAL_CFLAGS            += -DCR3_ANTIWORD_PATCH=1
+LOCAL_CFLAGS            += -DENABLE_ANTIWORD=1
 
 LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/../thornyreader/include \

@@ -1,7 +1,6 @@
 #ifndef __CHMFMT_H__
 #define __CHMFMT_H__
 
-#include "crengine.h"
 #include "lvtinydom.h"
 
 bool DetectCHMFormat(LVStreamRef stream);

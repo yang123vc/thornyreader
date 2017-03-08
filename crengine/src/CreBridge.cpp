@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "crengine.h"
 #include "thornyreader.h"
 #include "StProtocol.h"
 #include "StSocket.h"

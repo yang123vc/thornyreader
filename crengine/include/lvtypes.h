@@ -11,7 +11,6 @@
 #define LVTYPES_H_INCLUDED
 
 #include <stdlib.h>
-#include "crengine.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -391,6 +390,5 @@ public:
 #define CR_UNUSED8(x,x2,x3,x4,x5,x6,x7,x8) (void)x;(void)x2;(void)x3;(void)x4;(void)x5;(void)x6;(void)x7;(void)x8;
 #define CR_UNUSED9(x,x2,x3,x4,x5,x6,x7,x8,x9) (void)x;(void)x2;(void)x3;(void)x4;(void)x5;(void)x6;(void)x7;(void)x8;(void)x9;
 #define CR_UNUSED10(x,x2,x3,x4,x5,x6,x7,x8,x9,x10) (void)x;(void)x2;(void)x3;(void)x4;(void)x5;(void)x6;(void)x7;(void)x8;(void)x9;(void)x10;
-#define CR_UNUSED11(x,x2,x3,x4,x5,x6,x7,x8,x9,x11) (void)x;(void)x2;(void)x3;(void)x4;(void)x5;(void)x6;(void)x7;(void)x8;(void)x9;(void)x10;(void)x11;
 
 #endif//LVTYPES_H_INCLUDED

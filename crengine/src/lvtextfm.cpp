@@ -13,7 +13,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "crengine.h"
 #include "lvfnt.h"
 #include "lvtextfm.h"
 

@@ -13,7 +13,6 @@
 #ifndef __LV_TEXT_VIEW_H_INCLUDED__
 #define __LV_TEXT_VIEW_H_INCLUDED__
 
-#include "crengine.h"
 #include "lvtinydom.h"
 #include "lvpagesplitter.h"
 #include "lvdrawbuf.h"

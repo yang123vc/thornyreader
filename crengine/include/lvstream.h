@@ -31,6 +31,8 @@
 #include "lvarray.h"
 #include "lvptrvec.h"
 
+// Define to 1 to use 64 bits for file position types
+#define LVLONG_FILE_SUPPORT 0
 #if LVLONG_FILE_SUPPORT == 1
 typedef   lUInt64   lvsize_t;    ///< file size type
 typedef   lInt64    lvoffset_t;  ///< file offset type

@@ -1,7 +1,6 @@
 #ifndef PDBFMT_H
 #define PDBFMT_H
 
-#include "crengine.h"
 #include "lvtinydom.h"
 
 bool DetectPDBFormat(LVStreamRef stream, doc_format_t& contentFormat);

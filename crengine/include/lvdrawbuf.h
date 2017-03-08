@@ -14,8 +14,6 @@
 #ifndef __LVDRAWBUF_H_INCLUDED__
 #define __LVDRAWBUF_H_INCLUDED__
 
-#include "crengine.h"
-
 #if defined(_WIN32) && !defined(QT_GL)
 extern "C" {
 #include <windows.h>

@@ -75,7 +75,6 @@ Installation
 
 - download source code from CoolReader homepage http://www.coolreader.org/
 - unpack archieve into some folder
-- change options in crengine.h file if necessary
 - build library
 - build sample applications located in /tools folder
 
@@ -102,3 +101,26 @@ Typical usage of LVDocView:
 - LVDocView::Draw() draws document into gray buffer.
 - \a DrawBuf2DC() can be used to draw gray bitmap in Windows device context.
 - LVDocView::GetPos() and LVDocView::SetPos() can be used to scroll throuh document.
+
+Configuration:
+
+    // Define to 1 to use 64 bits for file position types
+    #define LVLONG_FILE_SUPPORT 0
+
+    // Max unpacked size of skin image to hold in cache unpacked
+    #define MAX_SKIN_IMAGE_CACHE_ITEM_UNPACKED_SIZE 80*80*4
+
+    // freetype font glyph buffer size, in bytes
+    // 0x20000 (_WIN32, LBOOK), 0x40000 (LINUX)
+    #define GLYPH_CACHE_SIZE 0x40000
+
+    // zlib stream decode cache size, used to avoid restart
+    // of decoding from beginning to move back
+    // 0x80000 (_WIN32, LBOOK), 0x40000 (LINUX)
+    #define ZIP_STREAM_BUFFER_SIZE 0x80000
+
+    // document stream buffer size
+    // 0x40000 (_WIN32, LBOOK), 0x20000 (LINUX)
+    #define FILE_STREAM_BUFFER_SIZE 0x40000
+
+    #define GRAY_INVERSE 0

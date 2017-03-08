@@ -1,7 +1,6 @@
 #ifndef READERA_CREBRIDGE_H
 #define READERA_CREBRIDGE_H
 
-#include "crengine.h"
 #include "StBridge.h"
 #include "lvdocview.h"
 

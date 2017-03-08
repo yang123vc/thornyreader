@@ -24,18 +24,15 @@
 
 *******************************************************/
 
-#include "../include/lvstream.h"
-#include "../include/lvptrvec.h"
-#include "../include/crtxtenc.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "lvstream.h"
+#include "crtxtenc.h"
 
 //#define USE_UNRAR 1
 #include <zlib.h>
 #if (USE_UNRAR==1)
 #include <rar.hpp>
 #endif
+
 #if defined(_WIN32)
 extern "C" {
 #include <windows.h>
@@ -48,6 +45,7 @@ extern "C" {
 #include <fcntl.h>
 #include <sys/mman.h>
 #endif
+
 #ifdef _LINUX
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -55,16 +53,22 @@ extern "C" {
 #include <dlfcn.h>
 #include <errno.h>
 #endif
-#ifndef USE_ANSI_FILES
 
+#ifndef USE_ANSI_FILES
 #if defined(_WIN32)
 #define USE_ANSI_FILES 0
 #else
 #define USE_ANSI_FILES 1
 #endif
-
 #endif
 
+// zlib stream decode cache size, used to avoid restart
+// of decoding from beginning to move back
+// 0x80000 (_WIN32, LBOOK), 0x40000 (LINUX)
+#define ZIP_STREAM_BUFFER_SIZE 0x80000
+// document stream buffer size
+// 0x40000 (_WIN32, LBOOK), 0x20000 (LINUX)
+#define FILE_STREAM_BUFFER_SIZE 0x40000
 
 static LVAssetContainerFactory * _assetContainerFactory = NULL;
 
@@ -824,7 +828,6 @@ public:
 };
 #endif
 
-
 /// Open memory mapped file
 /**
     \param pathname is file name to open (unicode)
@@ -838,13 +841,11 @@ LVStreamRef LVMapFileStream( const lChar8 * pathname, lvopen_mode_t mode, lvsize
 	return LVMapFileStream( fn.c_str(), mode, minSize );
 }
 
-
 //#ifdef _LINUX
 #undef USE_ANSI_FILES
 //#endif
 
 #if (USE_ANSI_FILES==1)
-
 class LVFileStream : public LVNamedStream
 {
 private:

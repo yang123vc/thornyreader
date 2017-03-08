@@ -16,7 +16,6 @@
 #define __LV_FNT_MAN_H_INCLUDED__
 
 #include <stdlib.h>
-#include "crengine.h"
 #include "lvfnt.h"
 #include "cssdef.h"
 #include "lvstring.h"
@@ -24,6 +23,15 @@
 #include "lvptrvec.h"
 #include "hyphman.h"
 #include "lvdrawbuf.h"
+
+#define USE_FREETYPE                         1
+#define ALLOW_KERNING                        1
+
+#if (USE_FREETYPE==1)
+#define USE_BITMAP_FONTS 0
+#else
+#define USE_BITMAP_FONTS 1
+#endif
 
 class LVDrawBuf;
 

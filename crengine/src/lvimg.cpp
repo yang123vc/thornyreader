@@ -14,12 +14,14 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
+#define USE_LIBJPEG                          1
+#define USE_LIBPNG                           1
+#define USE_GIF                              1
 #define XMD_H
 
-#include "../include/lvimg.h"
-#include "../include/lvtinydom.h"
+#include "lvimg.h"
+#include "lvtinydom.h"
 
 #if (USE_LIBPNG==1)
 #include <png.h>
@@ -30,6 +32,8 @@ extern "C" {
 #include <jpeglib.h>
 }
 #include <jerror.h>
+
+
 typedef boolean wxjpeg_boolean;
 #endif
 

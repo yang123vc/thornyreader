@@ -13,28 +13,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "crengine.h"
 #include "lvfntman.h"
 #include "lvstyles.h"
-
 #define GAMMA_TABLES_IMPL
 #include "gammatbl.h"
-
-#ifdef ANDROID
-#include "freetype/config/ftheader.h"
-#include "freetype/freetype.h"
-#else //#ifdef ANDROID
-
-#include <freetype/config/ftheader.h>
-#include FT_FREETYPE_H
-
-#endif //#ifdef ANDROID
-
-#if (USE_FONTCONFIG==1)
-#include <fontconfig/fontconfig.h>
-#endif
+#include "config/ftheader.h"
+#include "freetype.h"
 
 #define MAX_LINE_CHARS 2048
+// freetype font glyph buffer size, in bytes
+// 0x20000 (_WIN32, LBOOK), 0x40000 (LINUX)
+#define GLYPH_CACHE_SIZE 0x40000
 
 inline int myabs(int n) { return n < 0 ? -n : n; }
 
@@ -257,7 +246,15 @@ private:
     int               _documentId;
     LVByteArrayRef    _buf;
 public:
-    LVFontDef(const lString8 & name, int size, int weight, int italic, css_font_family_t family, const lString8 & typeface, int index=-1, int documentId=-1, LVByteArrayRef buf = LVByteArrayRef())
+    LVFontDef(const lString8 & name,
+              int size,
+              int weight,
+              int italic,
+              css_font_family_t family,
+              const lString8 & typeface,
+              int index=-1,
+              int documentId=-1,
+              LVByteArrayRef buf = LVByteArrayRef())
     : _size(size)
     , _weight(weight)
     , _italic(italic)
@@ -1187,7 +1184,7 @@ public:
         LVFontGlyphCacheItem * item = _glyph_cache.get( ch );
         if ( !item ) {
 
-            int rend_flags = FT_LOAD_RENDER | ( !_drawMonochrome ? FT_LOAD_TARGET_NORMAL : (FT_LOAD_TARGET_MONO) ); //|FT_LOAD_MONOCHROME|FT_LOAD_FORCE_AUTOHINT
+            int rend_flags = FT_LOAD_RENDER | (!_drawMonochrome ? FT_LOAD_TARGET_NORMAL : (FT_LOAD_TARGET_MONO) ); //|FT_LOAD_MONOCHROME|FT_LOAD_FORCE_AUTOHINT
             if (_hintingMode == HINTING_MODE_AUTOHINT)
                 rend_flags |= FT_LOAD_FORCE_AUTOHINT;
             else if (_hintingMode == HINTING_MODE_DISABLED)
@@ -1806,13 +1803,6 @@ public:
 //    }
 //}
 
-#if (DEBUG_FONT_SYNTHESIS==1)
-static LVFontRef dumpFontRef( LVFontRef fnt ) {
-    CRLog::trace("%s %d (%d) w=%d %s", fnt->getTypeFace().c_str(), fnt->getSize(), fnt->getHeight(), fnt->getWeight(), fnt->getItalic()?"italic":"" );
-    return fnt;
-}
-#endif
-
 class LVFreeTypeFontManager : public LVFontManager
 {
 private:
@@ -1934,231 +1924,6 @@ public:
     virtual int GetFontCount()
     {
         return _cache.length();
-    }
-
-    bool initSystemFonts()
-    {
-        #if (DEBUG_FONT_SYNTHESIS==1)
-            fontMan->RegisterFont(lString8("/usr/share/fonts/liberation/LiberationSans-Regular.ttf"));
-            CRLog::trace("fonts:");
-            LVFontRef fnt4 = dumpFontRef( fontMan->GetFont(24, 200, true, css_ff_sans_serif, cs8("Arial, Helvetica") ) );
-            LVFontRef fnt1 = dumpFontRef( fontMan->GetFont(18, 200, false, css_ff_sans_serif, cs8("Arial, Helvetica") ) );
-            LVFontRef fnt2 = dumpFontRef( fontMan->GetFont(20, 400, false, css_ff_sans_serif, cs8("Arial, Helvetica") ) );
-            LVFontRef fnt3 = dumpFontRef( fontMan->GetFont(22, 600, false, css_ff_sans_serif, cs8("Arial, Helvetica") ) );
-            LVFontRef fnt5 = dumpFontRef( fontMan->GetFont(26, 400, true, css_ff_sans_serif, cs8("Arial, Helvetica") ) );
-            LVFontRef fnt6 = dumpFontRef( fontMan->GetFont(28, 600, true, css_ff_sans_serif, cs8("Arial, Helvetica") ) );
-            CRLog::trace("end of font testing");
-        #elif (USE_FONTCONFIG==1)
-        {
-            CRLog::trace("Reading list of system fonts using FONTCONFIG");
-            lString16Collection fonts;
-
-            int facesFound = 0;
-
-            FcFontSet *fontset;
-
-            FcObjectSet *os = FcObjectSetBuild(FC_FILE, FC_WEIGHT, FC_FAMILY,
-                                               FC_SLANT, FC_SPACING, FC_INDEX,
-                                               FC_STYLE, NULL);
-            FcPattern *pat = FcPatternCreate();
-            //FcBool b = 1;
-            FcPatternAddBool(pat, FC_SCALABLE, 1);
-
-            fontset = FcFontList(NULL, pat, os);
-
-            FcPatternDestroy(pat);
-            FcObjectSetDestroy(os);
-
-            // load fonts from file
-            CRLog::trace("FONTCONFIG: %d font files found", fontset->nfont);
-            for(int i = 0; i < fontset->nfont; i++) {
-                FcChar8 *s=(FcChar8*)"";
-                FcChar8 *family=(FcChar8*)"";
-                FcChar8 *style=(FcChar8*)"";
-                //FcBool b;
-                FcResult res;
-                //FC_SCALABLE
-                //res = FcPatternGetBool( fontset->fonts[i], FC_OUTLINE, 0, (FcBool*)&b);
-                //if(res != FcResultMatch)
-                //    continue;
-                //if ( !b )
-                //    continue; // skip non-scalable fonts
-                res = FcPatternGetString(fontset->fonts[i], FC_FILE, 0, (FcChar8 **)&s);
-                if(res != FcResultMatch) {
-                    continue;
-                }
-                lString8 fn( (const char *)s );
-                lString16 fn16( fn.c_str() );
-                fn16.lowercase();
-                if (!fn16.endsWith(".ttf") && !fn16.endsWith(".odf") && !fn16.endsWith(".otf") && !fn16.endsWith(".pfb") && !fn16.endsWith(".pfa")  ) {
-                    continue;
-                }
-                int weight = FC_WEIGHT_MEDIUM;
-                res = FcPatternGetInteger(fontset->fonts[i], FC_WEIGHT, 0, &weight);
-                if(res != FcResultMatch) {
-                    CRLog::trace("no FC_WEIGHT for %s", s);
-                    //continue;
-                }
-                switch ( weight ) {
-                case FC_WEIGHT_THIN:          //    0
-                    weight = 100;
-                    break;
-                case FC_WEIGHT_EXTRALIGHT:    //    40
-                //case FC_WEIGHT_ULTRALIGHT        FC_WEIGHT_EXTRALIGHT
-                    weight = 200;
-                    break;
-                case FC_WEIGHT_LIGHT:         //    50
-                case FC_WEIGHT_BOOK:          //    75
-                case FC_WEIGHT_REGULAR:       //    80
-                //case FC_WEIGHT_NORMAL:            FC_WEIGHT_REGULAR
-                    weight = 400;
-                    break;
-                case FC_WEIGHT_MEDIUM:        //    100
-                    weight = 500;
-                    break;
-                case FC_WEIGHT_DEMIBOLD:      //    180
-                //case FC_WEIGHT_SEMIBOLD:          FC_WEIGHT_DEMIBOLD
-                    weight = 600;
-                    break;
-                case FC_WEIGHT_BOLD:          //    200
-                    weight = 700;
-                    break;
-                case FC_WEIGHT_EXTRABOLD:     //    205
-                //case FC_WEIGHT_ULTRABOLD:         FC_WEIGHT_EXTRABOLD
-                    weight = 800;
-                    break;
-                case FC_WEIGHT_BLACK:         //    210
-                //case FC_WEIGHT_HEAVY:             FC_WEIGHT_BLACK
-                    weight = 900;
-                    break;
-#ifdef FC_WEIGHT_EXTRABLACK
-                case FC_WEIGHT_EXTRABLACK:    //    215
-                //case FC_WEIGHT_ULTRABLACK:        FC_WEIGHT_EXTRABLACK
-                    weight = 900;
-                    break;
-#endif
-                default:
-                    weight = 400;
-                    break;
-                }
-                FcBool scalable = 0;
-                res = FcPatternGetBool(fontset->fonts[i], FC_SCALABLE, 0, &scalable);
-                int index = 0;
-                res = FcPatternGetInteger(fontset->fonts[i], FC_INDEX, 0, &index);
-                if(res != FcResultMatch) {
-                    CRLog::trace("no FC_INDEX for %s", s);
-                    //continue;
-                }
-                res = FcPatternGetString(fontset->fonts[i], FC_FAMILY, 0, (FcChar8 **)&family);
-                if(res != FcResultMatch) {
-                    CRLog::trace("no FC_FAMILY for %s", s);
-                    continue;
-                }
-                res = FcPatternGetString(fontset->fonts[i], FC_STYLE, 0, (FcChar8 **)&style);
-                if(res != FcResultMatch) {
-                    CRLog::trace("no FC_STYLE for %s", s);
-                    style = (FcChar8*)"";
-                    //continue;
-                }
-                int slant = FC_SLANT_ROMAN;
-                res = FcPatternGetInteger(fontset->fonts[i], FC_SLANT, 0, &slant);
-                if(res != FcResultMatch) {
-                    CRLog::trace("no FC_SLANT for %s", s);
-                    //continue;
-                }
-                int spacing = 0;
-                res = FcPatternGetInteger(fontset->fonts[i], FC_SPACING, 0, &spacing);
-                if(res != FcResultMatch) {
-                    //CRLog::trace("no FC_SPACING for %s", s);
-                    //continue;
-                }
-//                int cr_weight;
-//                switch(weight) {
-//                    case FC_WEIGHT_LIGHT: cr_weight = 200; break;
-//                    case FC_WEIGHT_MEDIUM: cr_weight = 300; break;
-//                    case FC_WEIGHT_DEMIBOLD: cr_weight = 500; break;
-//                    case FC_WEIGHT_BOLD: cr_weight = 700; break;
-//                    case FC_WEIGHT_BLACK: cr_weight = 800; break;
-//                    default: cr_weight=300; break;
-//                }
-                css_font_family_t fontFamily = css_ff_sans_serif;
-                lString16 face16((const char *)family);
-                face16.lowercase();
-                if ( spacing==FC_MONO )
-                    fontFamily = css_ff_monospace;
-                else if (face16.pos("sans") >= 0)
-                    fontFamily = css_ff_sans_serif;
-                else if (face16.pos("serif") >= 0)
-                    fontFamily = css_ff_serif;
-
-                //css_ff_inherit,
-                //css_ff_serif,
-                //css_ff_sans_serif,
-                //css_ff_cursive,
-                //css_ff_fantasy,
-                //css_ff_monospace,
-                bool italic = (slant!=FC_SLANT_ROMAN);
-
-                lString8 face((const char*)family);
-                lString16 style16((const char*)style);
-                style16.lowercase();
-                if (style16.pos("condensed") >= 0)
-                    face << " Condensed";
-                else if (style16.pos("extralight") >= 0)
-                    face << " Extra Light";
-
-                LVFontDef def(
-                    lString8((const char*)s),
-                    -1, // height==-1 for scalable fonts
-                    weight,
-                    italic,
-                    fontFamily,
-                    face,
-                    index
-                );
-
-                CRLog::trace("FONTCONFIG: Font family:%s style:%s weight:%d slant:%d spacing:%d file:%s", family, style, weight, slant, spacing, s);
-                if ( _cache.findDuplicate( &def ) ) {
-                    CRLog::trace("is duplicate, skipping");
-                    continue;
-                }
-                _cache.update( &def, LVFontRef(NULL) );
-
-                if ( scalable && !def.getItalic() ) {
-                    LVFontDef newDef( def );
-                    newDef.setItalic(2); // can italicize
-                    if ( !_cache.findDuplicate( &newDef ) )
-                        _cache.update( &newDef, LVFontRef(NULL) );
-                }
-
-                facesFound++;
-
-
-            }
-
-            FcFontSetDestroy(fontset);
-            CRLog::trace("FONTCONFIG: %d fonts registered", facesFound);
-
-            const char * fallback_faces [] = {
-                "Arial Unicode MS",
-                "AR PL ShanHeiSun Uni",
-                "Liberation Sans",
-                NULL
-            };
-
-            for ( int i=0; fallback_faces[i]; i++ )
-                if ( SetFallbackFontFace(lString8(fallback_faces[i])) ) {
-                    CRLog::trace("Fallback font %s is found", fallback_faces[i]);
-                    break;
-                } else {
-                    CRLog::trace("Fallback font %s is not found", fallback_faces[i]);
-                }
-
-            return facesFound > 0;
-        }
-        #else
-        return false;
-        #endif
     }
 
     virtual ~LVFreeTypeFontManager()
@@ -2782,7 +2547,6 @@ public:
     virtual bool Init(lString8 path)
     {
         _path = path;
-        initSystemFonts();
         return (_library != NULL);
     }
 };
@@ -3004,7 +2768,6 @@ int LVFontDef::CalcFallbackMatch( lString8 face, int size ) const
 }
 
 #if (USE_BITMAP_FONTS==1)
-
 /// returns font baseline offset
 int LBitmapFont::getBaseline()
 {
@@ -3064,7 +2827,7 @@ void LBitmapFont::DrawTextString(LVDrawBuf* buf, int x, int y, const lChar16* te
     }
 }
 
-bool LBitmapFont::getGlyphInfo( lUInt16 code, LVFont::glyph_info_t * glyph, lChar16 def_char=0 )
+bool LBitmapFont::getGlyphInfo( lUInt16 code, LVFont::glyph_info_t * glyph, lChar16 def_char )
 {
     const lvfont_glyph_t * ptr = lvfontGetGlyph( m_font, code );
     if (!ptr)
@@ -3077,7 +2840,7 @@ bool LBitmapFont::getGlyphInfo( lUInt16 code, LVFont::glyph_info_t * glyph, lCha
     return true;
 }
 
-virtual lUInt16 LBitmapFont::measureText(const lChar16* text, int len, lUInt16* widths,
+lUInt16 LBitmapFont::measureText(const lChar16* text, int len, lUInt16* widths,
                     lUInt8* flags, int max_width, lChar16 def_char,
                     int letter_spacing, bool allow_hyphenation)
 {
@@ -3109,7 +2872,7 @@ int LBitmapFont::getHeight() const
 
 
 
-bool LBitmapFont::getGlyphImage(lUInt16 code, lUInt8 * buf, lChar16 def_char=0)
+bool LBitmapFont::getGlyphImage(lUInt16 code, lUInt8 * buf, lChar16 def_char)
 {
     const lvfont_glyph_t * ptr = lvfontGetGlyph( m_font, code );
     if (!ptr)
@@ -3338,4 +3101,3 @@ bool operator == (const LVFont & r1, const LVFont & r2)
             && r1.getHintingMode()==r2.getHintingMode()
             ;
 }
-

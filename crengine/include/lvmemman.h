@@ -14,7 +14,6 @@
 #ifndef __LV_MEM_MAN_H_INCLUDED__
 #define __LV_MEM_MAN_H_INCLUDED__
 
-#include "crengine.h"
 #include "lvtypes.h"
 
 /// fatal error function calls fatal error handler

@@ -23,7 +23,6 @@
 #endif
 
 #include <stdlib.h>
-#include "crengine.h"
 #include "lvxml.h"
 #include "hyphman.h"
 #include "lvfnt.h"
