@@ -1,45 +1,14 @@
-/** \file lvstsheet.h
-    \brief style sheet
-
+/**
     Implements CSS compiler for CoolReader Engine.
 
     Supports only subset of CSS.
-
-    Selectors supported:
-
-    - * { } - universal selector
-    - element-name { } - selector by element name
-    - element1, element2 { } - several selectors delimited by comma
-
-    Properties supported:
-
-    - display
-    - white-space
-    - text-align
-    - vertical-align
-    - font-family
-    - font-size
-    - font-style
-    - font-weight
-    - text-indent
-    - line-height
-    - width
-    - height
-    - margin-left
-    - margin-right
-    - margin-top
-    - margin-bottom
-    - margin
-    
 
     (c) Vadim Lopatin, 2000-2006
     This source code is distributed under the terms of
     GNU General Public License.
 
     See LICENSE file for details.
-
 */
-
 
 #ifndef __LVSTSHEET_H_INCLUDED__
 #define __LVSTSHEET_H_INCLUDED__
@@ -50,9 +19,8 @@
 class CrXmlDom;
 class ldomNode;
 
-/** \brief CSS property declaration
-    
-    Currently supports only subset of properties.
+/**
+    CSS property declaration. Currently supports only subset of properties.
 
     Properties supported:
 
@@ -135,8 +103,6 @@ public:
 */
 class LVCssSelector {
 private:
-
-
     lUInt16 _id;
     LVCssDeclRef _decl;
     int _specificity;
@@ -163,9 +129,7 @@ public:
     lUInt32 getHash();
 };
 
-
-/** \brief stylesheet
-    
+/**
     Can parse stylesheet and apply compiled rules.
 
     Currently supports only subset of CSS features.
@@ -176,7 +140,6 @@ public:
 class LVStyleSheet {
     CrXmlDom * _doc;
     LVPtrVector <LVCssSelector> _selectors;
-
     LVPtrVector <LVPtrVector <LVCssSelector> > _stack;
     LVPtrVector <LVCssSelector> * dup()
     {
@@ -190,19 +153,12 @@ class LVStyleSheet {
         }
         return res;
     }
-
     void set(LVPtrVector<LVCssSelector> & v );
 public:
-
-
     // save current state of stylesheet
-    void push()
-    {
-        _stack.add( dup() );
-    }
+    void push() { _stack.add(dup()); }
     // restore previously saved state
-    bool pop()
-    {
+    bool pop() {
         LVPtrVector <LVCssSelector> * v = _stack.pop();
         if ( !v )
             return false;
@@ -210,7 +166,6 @@ public:
         delete v;
         return true;
     }
-
     /// remove all rules from stylesheet
     void clear() { _selectors.clear(); _stack.clear(); }
     /// set document to retrieve ID values from
@@ -227,12 +182,9 @@ public:
     lUInt32 getHash();
 };
 
-/// parse color value like #334455, #345 or red
-bool parse_color_value( const char * & str, css_length_t & value );
-
 /// extract @import filename from beginning of CSS
-bool LVProcessStyleSheetImport( const char * &str, lString8 & import_file );
+bool LVProcessStyleSheetImport(const char*& str, lString8& import_file);
 /// load stylesheet from file, with processing of import
-bool LVLoadStylesheetFile( lString16 pathName, lString8 & css );
+bool LVLoadStylesheetFile(lString16 pathName, lString8& css);
 
 #endif // __LVSTSHEET_H_INCLUDED__

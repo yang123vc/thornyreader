@@ -1,7 +1,7 @@
 #ifndef CRENGINE_CRCSS_H
 #define CRENGINE_CRCSS_H
 
-static const char* CRCSS = R"delimiter(
+const char* CRCSS = R"delimiter(
 body, p, .justindent {
   display: block;
   text-align: justify;

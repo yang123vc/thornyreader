@@ -1170,10 +1170,12 @@ public:
             _indexes[ i ] = v._indexes[i];
         return *this;
     }
+
     /// returns true if ranges are equal
-    bool operator == ( const ldomXPointerEx & v ) const
+    bool operator==(const ldomXPointerEx& v) const
     {
-        return _data->getDocument()==v._data->getDocument() && _data->getNode()==v._data->getNode() && _data->getOffset()==v._data->getOffset();
+        return _data->getDocument() == v._data->getDocument() &&
+               _data->getNode() == v._data->getNode() && _data->getOffset() == v._data->getOffset();
     }
     /// searches path for element with specific id, returns level at which element is founs, 0 if not found
     int findElementInPath( lUInt16 id );
@@ -1426,7 +1428,8 @@ public:
     ldomNode * getNearestCommonParent();
 
     /// searches for specified text inside range
-    bool findText( lString16 pattern, bool caseInsensitive, bool reverse, LVArray<ldomWord> & words, int maxCount, int maxHeight, bool checkMaxFromStart = false );
+    bool findText(lString16 pattern, bool caseInsensitive, bool reverse, LVArray<ldomWord>& words,
+                  int maxCount, int maxHeight, bool checkMaxFromStart = false);
 };
 
 class ldomMarkedText
@@ -1790,8 +1793,8 @@ public:
     /// get rendered block cache object
     CVRendBlockCache & getRendBlockCache() { return _renderedBlockCache; }
 
-    bool findText( lString16 pattern, bool caseInsensitive, bool reverse, int minY, int maxY, LVArray<ldomWord> & words, int maxCount, int maxHeight );
-
+    bool findText(lString16 pattern, bool caseInsensitive, bool reverse, int minY, int maxY,
+                  LVArray<ldomWord>& words, int maxCount, int maxHeight);
 };
 
 class LvDomWriter;

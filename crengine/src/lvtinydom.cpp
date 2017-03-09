@@ -1719,7 +1719,7 @@ void CrDom::applyDocStylesheet()
         return;
     }
     CRLog::trace("applyDocStylesheet() using /FictionBook/stylesheet:\n%s", LCSTR(css));
-   stylesheet_.parse(LCSTR(css));
+    stylesheet_.parse(LCSTR(css));
 }
 
 bool CrDom::parseStyleSheet(lString16 codeBase, lString16 css)
@@ -2431,15 +2431,13 @@ bool ldomNode::applyNodeStylesheet()
 {
 #ifndef DISABLE_STYLESHEET_REL
 	//CRLog::trace("ldomNode::applyNodeStylesheet()");
-	if (!getDocument()->getDocFlag(DOC_FLAG_EMBEDDED_STYLES)
-	        || getNodeId() != el_DocFragment) {
+	if (!getDocument()->getDocFlag(DOC_FLAG_EMBEDDED_STYLES) || getNodeId() != el_DocFragment) {
 		return false;
 	}
 	CRLog::trace("applyNodeStylesheet DOC_FLAG_EMBEDDED_STYLES=true");
     if (getDocument()->getDocParentContainer().isNull()) {
         return false;
     }
-
     bool stylesheetChanged = false;
     if ( hasAttribute(attr_StyleSheet) ) {
         getDocument()->stylesheet_.push();
@@ -2591,8 +2589,8 @@ void LvDomWriter::OnTagClose(const lChar16*, const lChar16* tagname) {
     }
 
     bool isStyleSheetTag = !lStr_cmp(tagname, "stylesheet");
-    if ( isStyleSheetTag ) {
-        ldomNode *parentNode = _currNode->getElement()->getParentNode();
+    if (isStyleSheetTag) {
+        ldomNode* parentNode = _currNode->getElement()->getParentNode();
         if (parentNode && parentNode->isNodeName("DocFragment")) {
             if (doc_->getDocFlag(DOC_FLAG_EMBEDDED_STYLES)) {
                 doc_->parseStyleSheet(
@@ -5751,8 +5749,6 @@ void LvDocFragmentWriter::OnTagBody()
         styleDetectionState = 0;
 }
 
-
-
 /** \brief callback object to fill DOM tree
 
     To be used with XML parser as callback object.
@@ -5762,7 +5758,7 @@ void LvDocFragmentWriter::OnTagBody()
     Autoclose HTML tags.
 */
 
-void LvDomAutocloseWriter::setClass( const lChar16 * className, bool overrideExisting )
+void LvDomAutocloseWriter::setClass(const lChar16* className, bool overrideExisting)
 {
     ldomNode * node = _currNode->_element;
     if ( _classAttrId==0 ) {
@@ -5773,25 +5769,24 @@ void LvDomAutocloseWriter::setClass( const lChar16 * className, bool overrideExi
     }
 }
 
-void LvDomAutocloseWriter::appendStyle( const lChar16 * style )
+void LvDomAutocloseWriter::appendStyle(const lChar16* style )
 {
     ldomNode * node = _currNode->_element;
     if ( _styleAttrId==0 ) {
         _styleAttrId = doc_->getAttrNameIndex(L"style");
     }
     if (!doc_->getDocFlag(DOC_FLAG_EMBEDDED_STYLES)) {
-        return; // disabled
-    } else {
-        CRLog::trace("appendStyle DOC_FLAG_EMBEDDED_STYLES=true");
+        return;
     }
     lString16 oldStyle = node->getAttributeValue(_styleAttrId);
-    if ( !oldStyle.empty() && oldStyle.at(oldStyle.length()-1)!=';' )
+    if (!oldStyle.empty() && oldStyle.at(oldStyle.length() - 1) != ';') {
         oldStyle << "; ";
+    }
     oldStyle << style;
     node->setAttributeValue(LXML_NS_NONE, _styleAttrId, oldStyle.c_str());
 }
 
-void LvDomAutocloseWriter::AutoClose( lUInt16 tag_id, bool open )
+void LvDomAutocloseWriter::AutoClose(lUInt16 tag_id, bool open)
 {
     lUInt16 * rule = _rules[tag_id];
     if ( !rule )
@@ -5934,8 +5929,7 @@ void LvDomAutocloseWriter::OnTagClose(const lChar16* /*nsname*/, const lChar16* 
     //logfile << " !c!\n";
 }
 
-
-void LvDomAutocloseWriter::ElementCloseHandler( ldomNode * node )
+void LvDomAutocloseWriter::ElementCloseHandler(ldomNode * node)
 {
     ldomNode * parent = node->getParentNode();
     lUInt16 id = node->getNodeId();
@@ -6297,7 +6291,6 @@ bool tinyNodeCollection::updateLoadedStyles( bool enabled )
     if ( enabled && res) {
         //_styles.setIndex( *list );
         // correct list reference counters
-
         for ( int i=0; i<list->length(); i++ ) {
             if ( !list->get(i).isNull() ) {
                 // decrease reference counter
