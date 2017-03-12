@@ -156,6 +156,7 @@ static int substr_icompare(const char* sub, const char*& str)
     return 0;
 }
 
+/// Returns true if string not empty after skip
 static bool skip_spaces_and_comments(const char*& str)
 {
     const char* oldpos = str;
@@ -1208,6 +1209,9 @@ void LVCssSelector::insertRuleAfterStart(LVCssSelectorRule* rule)
 bool LVCssSelector::parse(const char*& str, CrXmlDom* doc)
 {
     if (!str || !*str) {
+#ifdef AXYDEBUG
+        CRLog::info("LVCssSelector::parse: empty string");
+#endif
         return false;
     }
     for (;;) {
@@ -1224,11 +1228,17 @@ bool LVCssSelector::parse(const char*& str, CrXmlDom* doc)
             // identificator
             char ident[64];
             if (!parse_ident(str, ident)) {
+#ifdef AXYDEBUG
+                CRLog::info("LVCssSelector::parse fail: !parse_ident");
+#endif
                 return false;
             }
             _id = doc->getElementNameIndex(lString16(ident).c_str());
             skip_spaces_and_comments(str);
         } else {
+#ifdef AXYDEBUG
+            CRLog::info("LVCssSelector::parse fail: unknown selector type");
+#endif
             return false;
         }
         if (*str == ',' || *str == '{') {
@@ -1239,6 +1249,9 @@ bool LVCssSelector::parse(const char*& str, CrXmlDom* doc)
         while (*str == '[' || *str == '.' || *str == '#') {
             LVCssSelectorRule* rule = parse_attr(str, doc);
             if (!rule) {
+#ifdef AXYDEBUG
+                CRLog::info("LVCssSelector::parse fail: parse_attr");
+#endif
                 return false;
             }
             insertRuleStart(rule);
@@ -1279,6 +1292,9 @@ bool LVCssSelector::parse(const char*& str, CrXmlDom* doc)
             continue;
         }
         if (!attr_rule) {
+#ifdef AXYDEBUG
+            CRLog::info("LVCssSelector::parse fail: !attr_rule");
+#endif
             return false;
         } else if (*str == ',' || *str == '{') {
             return true;
@@ -1371,13 +1387,12 @@ bool LVStyleSheet::parse(const char* str)
         prev_selector = NULL;
         bool err = false;
         for (; *str;) {
-            // parse selector(s)
+            // In single iteration parses single selector or single rule
+            // declaration block. Breaks after parsed list of selectors
+            // related to single declaration block and that declaration block.
             selector = new LVCssSelector;
             selector->setNext(prev_selector);
             if (!selector->parse(str, _doc)) {
-#ifdef AXYDEBUG
-                CRLog::info("LVCssSelector::parse fail");
-#endif
                 err = true;
                 break;
             } else {
@@ -1402,15 +1417,28 @@ bool LVStyleSheet::parse(const char* str)
                 }
                 rule_count++;
             }
+            // Fix preventing false error reporting on CSS trailing whitespace
+            skip_spaces_and_comments(str);
             break;
         }
         if (err) {
             // Error: delete chain of selectors
             delete selector;
             // Skip until end of rule
+#ifdef AXYDEBUG
+            if (skip_spaces_and_comments(str)) {
+                lString8 css_error;
+                while (*str && *str != '}') {
+                    css_error = css_error.append((const lString8::value_type*) *str);
+                    str++;
+                }
+                CRLog::info("LVStyleSheet::parse error: %s", css_error.c_str());
+            }
+#else
             while (*str && *str != '}') {
                 str++;
             }
+#endif
             if (*str == '}') {
                 str++;
             }
