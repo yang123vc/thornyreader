@@ -17,7 +17,7 @@
 #ifndef _THORNYREADER_H_
 #define _THORNYREADER_H_
 
-#define THORNYREADER_VERSION "1.0.17"
+#define THORNYREADER_VERSION "1.0.19"
 #define THORNYREADER_LOG_TAG "thornyreader"
 
 const char* ThornyReader_NDEBUG();
@@ -29,7 +29,6 @@ void StartThornyReader(const char* name);
  * 0 - no antialias, 1 - antialias big fonts, 2 antialias all
  */
 #define CONFIG_CRENGINE_FONT_ANTIALIASING       	101
-#define CONFIG_CRENGINE_TXT_SMART_FORMAT 			102
 #define CONFIG_CRENGINE_EMBEDDED_STYLES         	103
 #define CONFIG_CRENGINE_EMBEDDED_FONTS          	104
 
