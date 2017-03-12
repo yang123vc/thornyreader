@@ -2,19 +2,6 @@
 #define CRENGINE_CRCSS_H
 
 const char* CRCSS = R"delimiter(
-body, p, .justindent {
-  display: block;
-  text-align: justify;
-  text-indent: 1.2em;
-  margin-top: 0em;
-  margin-bottom: 0em;
-  margin-left: 0em;
-  margin-right: 0em;
-}
-
-DocFragment {
-  page-break-before: always;
-}
 
 .empty-line, empty-line {
   display: block;
@@ -76,7 +63,7 @@ h3, .title3 {
 h4, .title4, h5, .title5, h6, .title6 {
   font-size: 110%;
 }
-h1, h2, h3, title, h1 p, h2 p, h3 p, title p, .title, .title0, .title1, .title2, .title3 {
+h1, h2, h3, title, h1 > p, h2 > p, h3 > p, title > p, .title, .title0, .title1, .title2, .title3 {
   display: block;
   hyphenate: none;
   adobe-hyphenate: none;
@@ -91,7 +78,7 @@ h1, h2, h3, title, h1 p, h2 p, h3 p, title p, .title, .title0, .title1, .title2,
   margin-right: 0em;
   font-weight: bold;
 }
-h4, h5, h6, subtitle, h4 p, h5 p, h6 p, subtitle p, .subtitle, .title4, .title5, .title6 {
+h4, h5, h6, subtitle, h4 > p, h5 > p, h6 > p, subtitle > p, .subtitle, .title4, .title5, .title6 {
   display: block;
   hyphenate: none;
   adobe-hyphenate: none;
@@ -128,7 +115,7 @@ blockquote {
   margin-top: 0.5em;
   margin-bottom: 0.5em;
 }
-cite, .citation p, cite p {
+cite, .citation > p, cite > p {
   display: block;
   text-align: justify;
   text-indent: 1.2em;
@@ -187,7 +174,7 @@ th {
   font-weight: bold;
   text-align: center;
 }
-table caption, table > caption {
+table > caption {
   text-indent: 0px;
   padding: 4px;
 }
@@ -218,7 +205,7 @@ v, .v {
   text-indent: 0px;
 }
 
-.epigraph p, epigraph, epigraph p {
+.epigraph > p, epigraph, epigraph > p {
   text-align: right;
   text-indent: 1em;
   margin-top: 0.3em;
@@ -240,6 +227,7 @@ body[name="notes"], body[name="comments"] {
   font-size: 70%;
 }
 
+/*
 body[name="notes"] section title {
   display: run-in;
   text-align: left;
@@ -261,6 +249,7 @@ body[name="comments"] section title {
 body[name="comments"] section title p {
   display: inline;
 }
+*/
 
 a[type="note"] {
   vertical-align: super;
@@ -304,6 +293,19 @@ head, style, form, script {
   display: none;
 }
 
+body, p, .justindent {
+  display: block;
+  text-align: justify;
+  text-indent: 1.2em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
+}
+
+DocFragment {
+  page-break-before: always;
+}
 )delimiter";
 
 #endif //CRENGINE_CRCSS_H
