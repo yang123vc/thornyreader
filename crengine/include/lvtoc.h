@@ -1,0 +1,6 @@
+#ifndef THORNYREADER_LVTOC_H
+#define THORNYREADER_LVTOC_H
+
+//TODO Move LvTocItem here
+
+#endif //THORNYREADER_LVTOC_H

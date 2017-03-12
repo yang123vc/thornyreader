@@ -1690,8 +1690,6 @@ public:
     lString16 getPath();
     /// returns Y position
     int getY();
-    /// returns page number
-    //int getPageNum( LVRendPageList & pages );
     /// returns child node count
     int getChildCount() const { return _children.length(); }
     /// returns child node by index

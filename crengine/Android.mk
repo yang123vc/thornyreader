@@ -28,6 +28,7 @@ LOCAL_SRC_FILES := \
 	src/CreMain.cpp \
 	src/trlog.cpp \
 	src/bookmark.cpp \
+	src/lvtoc.cpp \
 	src/chmfmt.cpp \
     src/cp_stats.cpp \
     src/crtxtenc.cpp \
