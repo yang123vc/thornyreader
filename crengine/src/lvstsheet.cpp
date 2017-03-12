@@ -196,7 +196,7 @@ static css_decl_code parse_property_name(const char*& res)
             skip_spaces_and_comments(str);
             if (substr_compare(":", str)) {
 #ifdef DUMP_CSS_PARSING
-                CRLog::trace("property name: %s", lString8(res, str-res).c_str() );
+                CRLog::trace("property name: %s", lString8(res, str - res).c_str());
 #endif
                 skip_spaces_and_comments(str);
                 res = str;
@@ -204,6 +204,9 @@ static css_decl_code parse_property_name(const char*& res)
             }
         }
     }
+#ifdef AXYDEBUG
+    CRLog::debug("parse_property_name cssd_unknown");
+#endif
     return cssd_unknown;
 }
 
@@ -550,207 +553,204 @@ static const char* css_lsp_names[] =
 
 bool LVCssDeclaration::parse(const char*& decl)
 {
-#define MAX_DECL_SIZE 512
-    int buf[MAX_DECL_SIZE];
-    int buf_pos = 0;
-
     if (!decl) {
         return false;
     }
-
     skip_spaces_and_comments(decl);
     if (*decl != '{') {
         return false;
     }
+    // 512 - MAX_DECL_SIZE
+    int buf[512];
+    int buf_pos = 0;
     decl++;
     while (*decl && *decl != '}') {
         skip_spaces_and_comments(decl);
         css_decl_code prop_code = parse_property_name(decl);
         skip_spaces_and_comments(decl);
+        if (prop_code == cssd_unknown) {
+            next_property(decl);
+            continue;
+        }
         lString8 strValue;
-        if (prop_code != cssd_unknown) {
-            // parsed ok
-            int n = -1;
-            switch (prop_code) {
-                case cssd_display:
-                    n = parse_name(decl, css_d_names, -1);
-                    break;
-                case cssd_white_space:
-                    n = parse_name(decl, css_ws_names, -1);
-                    break;
-                case cssd_text_align:
-                    n = parse_name(decl, css_ta_names, -1);
-                    break;
-                case cssd_text_align_last:
-                    n = parse_name(decl, css_ta_names, -1);
-                    break;
-                case cssd_text_decoration:
-                    n = parse_name(decl, css_td_names, -1);
-                    break;
-                case cssd_hyphenate:
-                case cssd_hyphenate2:
-                case cssd_hyphenate3:
-                case cssd_hyphenate4:
-                    prop_code = cssd_hyphenate;
-                    n = parse_name(decl, css_hyph_names, -1);
-                    if (n == -1) {
-                        n = parse_name(decl, css_hyph_names2, -1);
-                    }
-                    if (n == -1) {
-                        n = parse_name(decl, css_hyph_names3, -1);
-                    }
-                    break;
-                case cssd_page_break_before:
-                    n = parse_name(decl, css_pb_names, -1);
-                    break;
-                case cssd_page_break_inside:
-                    n = parse_name(decl, css_pb_names, -1);
-                    break;
-                case cssd_page_break_after:
-                    n = parse_name(decl, css_pb_names, -1);
-                    break;
-                case cssd_list_style_type:
-                    n = parse_name(decl, css_lst_names, -1);
-                    break;
-                case cssd_list_style_position:
-                    n = parse_name(decl, css_lsp_names, -1);
-                    break;
-                case cssd_vertical_align:
-                    n = parse_name(decl, css_va_names, -1);
-                    break;
-                case cssd_font_family: {
-                    lString8Collection list;
-                    int processed = splitPropertyValueList(decl, list);
-                    decl += processed;
-                    n = -1;
-                    if (list.length()) {
-                        for (int i = list.length() - 1; i >= 0; i--) {
-                            const char* name = list[i].c_str();
-                            int nn = parse_name(name, css_ff_names, -1);
-                            if (n == -1 && nn != -1) {
-                                n = nn;
-                            }
-                            if (nn != -1) {
-                                // remove family name from font list
-                                list.erase(i, 1);
-                            }
+        // parsed ok
+        int n = -1;
+        switch (prop_code) {
+            case cssd_display:
+                n = parse_name(decl, css_d_names, -1);
+                break;
+            case cssd_white_space:
+                n = parse_name(decl, css_ws_names, -1);
+                break;
+            case cssd_text_align:
+                n = parse_name(decl, css_ta_names, -1);
+                break;
+            case cssd_text_align_last:
+                n = parse_name(decl, css_ta_names, -1);
+                break;
+            case cssd_text_decoration:
+                n = parse_name(decl, css_td_names, -1);
+                break;
+            case cssd_hyphenate:
+            case cssd_hyphenate2:
+            case cssd_hyphenate3:
+            case cssd_hyphenate4:
+                prop_code = cssd_hyphenate;
+                n = parse_name(decl, css_hyph_names, -1);
+                if (n == -1) {
+                    n = parse_name(decl, css_hyph_names2, -1);
+                }
+                if (n == -1) {
+                    n = parse_name(decl, css_hyph_names3, -1);
+                }
+                break;
+            case cssd_page_break_before:
+                n = parse_name(decl, css_pb_names, -1);
+                break;
+            case cssd_page_break_inside:
+                n = parse_name(decl, css_pb_names, -1);
+                break;
+            case cssd_page_break_after:
+                n = parse_name(decl, css_pb_names, -1);
+                break;
+            case cssd_list_style_type:
+                n = parse_name(decl, css_lst_names, -1);
+                break;
+            case cssd_list_style_position:
+                n = parse_name(decl, css_lsp_names, -1);
+                break;
+            case cssd_vertical_align:
+                n = parse_name(decl, css_va_names, -1);
+                break;
+            case cssd_font_family: {
+                lString8Collection list;
+                int processed = splitPropertyValueList(decl, list);
+                decl += processed;
+                n = -1;
+                if (list.length()) {
+                    for (int i = list.length() - 1; i >= 0; i--) {
+                        const char* name = list[i].c_str();
+                        int nn = parse_name(name, css_ff_names, -1);
+                        if (n == -1 && nn != -1) {
+                            n = nn;
                         }
-                        strValue = joinPropertyValueList(list);
-                    }
-                }
-                    break;
-                case cssd_font_style:
-                    n = parse_name(decl, css_fs_names, -1);
-                    break;
-                case cssd_font_weight:
-                    n = parse_name(decl, css_fw_names, -1);
-                    break;
-                case cssd_text_indent: {
-                    // read length
-                    css_length_t len;
-                    bool negative = false;
-                    if (*decl == '-') {
-                        decl++;
-                        negative = true;
-                    }
-                    if (parse_number_value(decl, len)) {
-                        // read optional "hanging" flag
-                        skip_spaces_and_comments(decl);
-                        int attr = parse_name(decl, css_ti_attribute_names, -1);
-                        if (attr == 0 || negative) {
-                            len.value = -len.value;
+                        if (nn != -1) {
+                            // remove family name from font list
+                            list.erase(i, 1);
                         }
-                        // save result
-                        buf[buf_pos++] = prop_code;
-                        buf[buf_pos++] = len.type;
-                        buf[buf_pos++] = len.value;
+                    }
+                    strValue = joinPropertyValueList(list);
+                }
+            }
+                break;
+            case cssd_font_style:
+                n = parse_name(decl, css_fs_names, -1);
+                break;
+            case cssd_font_weight:
+                n = parse_name(decl, css_fw_names, -1);
+                break;
+            case cssd_text_indent: {
+                // read length
+                css_length_t len;
+                bool negative = false;
+                if (*decl == '-') {
+                    decl++;
+                    negative = true;
+                }
+                if (parse_number_value(decl, len)) {
+                    // read optional "hanging" flag
+                    skip_spaces_and_comments(decl);
+                    int attr = parse_name(decl, css_ti_attribute_names, -1);
+                    if (attr == 0 || negative) {
+                        len.value = -len.value;
+                    }
+                    // save result
+                    buf[buf_pos++] = prop_code;
+                    buf[buf_pos++] = len.type;
+                    buf[buf_pos++] = len.value;
+                }
+            }
+                break;
+            case cssd_line_height:
+            case cssd_letter_spacing:
+            case cssd_font_size:
+            case cssd_width:
+            case cssd_height:
+            case cssd_margin_left:
+            case cssd_margin_right:
+            case cssd_margin_top:
+            case cssd_margin_bottom:
+            case cssd_padding_left:
+            case cssd_padding_right:
+            case cssd_padding_top:
+            case cssd_padding_bottom: {
+                css_length_t len;
+                if (parse_number_value(decl, len)) {
+                    buf[buf_pos++] = prop_code;
+                    buf[buf_pos++] = len.type;
+                    buf[buf_pos++] = len.value;
+                }
+            }
+                break;
+            case cssd_margin:
+            case cssd_padding: {
+                css_length_t len[4];
+                int i;
+                for (i = 0; i < 4; ++i) {
+                    if (!parse_number_value(decl, len[i])) {
+                        break;
                     }
                 }
-                    break;
-                case cssd_line_height:
-                case cssd_letter_spacing:
-                case cssd_font_size:
-                case cssd_width:
-                case cssd_height:
-                case cssd_margin_left:
-                case cssd_margin_right:
-                case cssd_margin_top:
-                case cssd_margin_bottom:
-                case cssd_padding_left:
-                case cssd_padding_right:
-                case cssd_padding_top:
-                case cssd_padding_bottom: {
-                    css_length_t len;
-                    if (parse_number_value(decl, len)) {
-                        buf[buf_pos++] = prop_code;
-                        buf[buf_pos++] = len.type;
-                        buf[buf_pos++] = len.value;
+                if (i) {
+                    switch (i) {
+                        case 1:
+                            len[1] = len[0]; /* fall through */
+                        case 2:
+                            len[2] = len[0]; /* fall through */
+                        case 3:
+                            len[3] = len[1];
                     }
-                }
-                    break;
-                case cssd_margin:
-                case cssd_padding: {
-                    css_length_t len[4];
-                    int i;
+                    buf[buf_pos++] = prop_code;
                     for (i = 0; i < 4; ++i) {
-                        if (!parse_number_value(decl, len[i])) {
-                            break;
-                        }
-                    }
-                    if (i) {
-                        switch (i) {
-                            case 1:
-                                len[1] = len[0]; /* fall through */
-                            case 2:
-                                len[2] = len[0]; /* fall through */
-                            case 3:
-                                len[3] = len[1];
-                        }
-                        buf[buf_pos++] = prop_code;
-                        for (i = 0; i < 4; ++i) {
-                            buf[buf_pos++] = len[i].type;
-                            buf[buf_pos++] = len[i].value;
-                        }
-                    }
-                }
-                    break;
-                case cssd_color:
-                case cssd_background_color: {
-                    css_length_t len;
-                    if (parse_color_value(decl, len)) {
-                        buf[buf_pos++] = prop_code;
-                        buf[buf_pos++] = len.type;
-                        buf[buf_pos++] = len.value;
-                    }
-                }
-                    break;
-                case cssd_stop:
-                case cssd_unknown:
-                default:
-                    break;
-            }
-            if (n != -1) {
-                // add enum property
-                buf[buf_pos++] = prop_code;
-                buf[buf_pos++] = n;
-            }
-            if (!strValue.empty()) {
-                // add string property
-                if (prop_code == cssd_font_family) {
-                    // font names
-                    buf[buf_pos++] = cssd_font_names;
-                    buf[buf_pos++] = strValue.length();
-                    for (int i = 0; i < strValue.length(); i++) {
-                        buf[buf_pos++] = strValue[i];
+                        buf[buf_pos++] = len[i].type;
+                        buf[buf_pos++] = len[i].value;
                     }
                 }
             }
-        } else {
-            // error: unknown property?
+                break;
+            case cssd_color:
+            case cssd_background_color: {
+                css_length_t len;
+                if (parse_color_value(decl, len)) {
+                    buf[buf_pos++] = prop_code;
+                    buf[buf_pos++] = len.type;
+                    buf[buf_pos++] = len.value;
+                }
+            }
+                break;
+            case cssd_stop:
+            case cssd_unknown:
+            default:
+                break;
+        }
+        if (n != -1) {
+            // add enum property
+            buf[buf_pos++] = prop_code;
+            buf[buf_pos++] = n;
+        }
+        if (!strValue.empty()) {
+            // add string property
+            if (prop_code == cssd_font_family) {
+                // font names
+                buf[buf_pos++] = cssd_font_names;
+                buf[buf_pos++] = strValue.length();
+                for (int i = 0; i < strValue.length(); i++) {
+                    buf[buf_pos++] = strValue[i];
+                }
+            }
         }
         next_property(decl);
     }
-
     // store parsed result
     if (buf_pos) {
         buf[buf_pos++] = cssd_stop; // add end marker
@@ -759,7 +759,6 @@ bool LVCssDeclaration::parse(const char*& decl)
             _data[i] = buf[i];
         }
     }
-
     // skip }
     skip_spaces_and_comments(decl);
     if (*decl == '}') {
