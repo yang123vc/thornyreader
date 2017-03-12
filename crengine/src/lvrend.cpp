@@ -1791,56 +1791,48 @@ inline void spreadParent( css_length_t & val, css_length_t & parent_val, bool in
         val = parent_val;
 }
 
-void setNodeStyle( ldomNode * enode, css_style_ref_t parent_style, LVFontRef parent_font )
+void setNodeStyle(ldomNode* enode, css_style_ref_t parent_style, LVFontRef parent_font)
 {
     CR_UNUSED(parent_font);
     //lvdomElementFormatRec * fmt = node->getRenderData();
-    css_style_ref_t style( new css_style_rec_t );
-    css_style_rec_t * pstyle = style.get();
-
-//    if ( parent_style.isNull() ) {
-//        CRLog::error("parent style is null!!!");
-//    }
-
-    // init default style attribute values
-    const css_elem_def_props_t * type_ptr = enode->getElementTypePtr();
-    if (type_ptr)
-    {
+    css_style_ref_t style(new css_style_rec_t);
+    css_style_rec_t* pstyle = style.get();
+#ifdef AXYDEBUG
+    if (parent_style.isNull()) {
+        CRLog::error("setNodeStyle: parent style is null");
+    }
+#endif
+    // Init default style attribute values
+    const css_elem_def_props_t* type_ptr = enode->getElementTypePtr();
+    if (type_ptr) {
         pstyle->display = type_ptr->display;
         pstyle->white_space = type_ptr->white_space;
     }
 
     int baseFontSize = enode->getDocument()->getDefaultFont()->getSize();
 
-    //////////////////////////////////////////////////////
-    // apply style sheet
-    //////////////////////////////////////////////////////
-    enode->getDocument()->applyStyle( enode, pstyle );
+    // Apply style sheet
+    enode->getDocument()->applyStyle(enode, pstyle);
 
     if (enode->getDocument()->getDocFlag(DOC_FLAG_EMBEDDED_STYLES)
-            && enode->hasAttribute( LXML_NS_ANY, attr_style )) {
-        lString16 nodeStyle = enode->getAttributeValue( LXML_NS_ANY, attr_style );
-        if ( !nodeStyle.empty() ) {
+        && enode->hasAttribute(LXML_NS_ANY, attr_style)) {
+        lString16 nodeStyle = enode->getAttributeValue(LXML_NS_ANY, attr_style);
+        if (!nodeStyle.empty()) {
             nodeStyle = cs16("{") + nodeStyle + "}";
             LVCssDeclaration decl;
             lString8 s8 = UnicodeToUtf8(nodeStyle);
-            const char * s = s8.c_str();
-            if ( decl.parse( s ) ) {
-                decl.apply( pstyle );
+            const char* s = s8.c_str();
+            if (decl.parse(s)) {
+                decl.apply(pstyle);
             }
         }
     }
 
-    // update inherited style attributes
-/*
-  #define UPDATE_STYLE_FIELD(fld,inherit_value) \
-  if (pstyle->fld == inherit_value) \
-      pstyle->fld = parent_style->fld
-*/
-    #define UPDATE_STYLE_FIELD(fld,inherit_value) \
+        // update inherited style attributes
+#define UPDATE_STYLE_FIELD(fld, inherit_value) \
         if (pstyle->fld == inherit_value) \
             pstyle->fld = parent_style->fld
-    #define UPDATE_LEN_FIELD(fld) \
+#define UPDATE_LEN_FIELD(fld) \
         switch( pstyle->fld.type ) \
         { \
         case css_val_inherited: \
@@ -1867,109 +1859,105 @@ void setNodeStyle( ldomNode * enode, css_style_ref_t parent_style, LVFontRef par
             pstyle->fld.value = 0; \
             break; \
         }
-
-    //if ( (pstyle->display == css_d_inline) && (pstyle->text_align==css_ta_inherit))
-    //{
-        //if (parent_style->text_align==css_ta_inherit)
-        //parent_style->text_align = css_ta_center;
-    //}
-
-    UPDATE_STYLE_FIELD( display, css_d_inherit );
-    UPDATE_STYLE_FIELD( white_space, css_ws_inherit );
-    UPDATE_STYLE_FIELD( text_align, css_ta_inherit );
-    UPDATE_STYLE_FIELD( text_decoration, css_td_inherit );
-    UPDATE_STYLE_FIELD( hyphenate, css_hyph_inherit );
-    UPDATE_STYLE_FIELD( list_style_type, css_lst_inherit );
-    UPDATE_STYLE_FIELD( list_style_position, css_lsp_inherit );
-    UPDATE_STYLE_FIELD( page_break_before, css_pb_inherit );
-    UPDATE_STYLE_FIELD( page_break_after, css_pb_inherit );
-    UPDATE_STYLE_FIELD( page_break_inside, css_pb_inherit );
-    UPDATE_STYLE_FIELD( vertical_align, css_va_inherit );
-    UPDATE_STYLE_FIELD( font_style, css_fs_inherit );
-    UPDATE_STYLE_FIELD( font_weight, css_fw_inherit );
-    if ( pstyle->font_family == css_ff_inherit ) {
-        UPDATE_STYLE_FIELD( font_name, "" );
+#if 0
+        if ( (pstyle->display == css_d_inline) && (pstyle->text_align==css_ta_inherit))
+        {
+            if (parent_style->text_align==css_ta_inherit)
+            parent_style->text_align = css_ta_center;
+        }
+#endif
+    UPDATE_STYLE_FIELD(display, css_d_inherit);
+    UPDATE_STYLE_FIELD(white_space, css_ws_inherit);
+    UPDATE_STYLE_FIELD(text_align, css_ta_inherit);
+    UPDATE_STYLE_FIELD(text_decoration, css_td_inherit);
+    UPDATE_STYLE_FIELD(hyphenate, css_hyph_inherit);
+    UPDATE_STYLE_FIELD(list_style_type, css_lst_inherit);
+    UPDATE_STYLE_FIELD(list_style_position, css_lsp_inherit);
+    UPDATE_STYLE_FIELD(page_break_before, css_pb_inherit);
+    UPDATE_STYLE_FIELD(page_break_after, css_pb_inherit);
+    UPDATE_STYLE_FIELD(page_break_inside, css_pb_inherit);
+    UPDATE_STYLE_FIELD(vertical_align, css_va_inherit);
+    UPDATE_STYLE_FIELD(font_style, css_fs_inherit);
+    UPDATE_STYLE_FIELD(font_weight, css_fw_inherit);
+    if (pstyle->font_family == css_ff_inherit) {
+        UPDATE_STYLE_FIELD(font_name, "");
     }
-    UPDATE_STYLE_FIELD( font_family, css_ff_inherit );
-    UPDATE_LEN_FIELD( font_size );
+    UPDATE_STYLE_FIELD(font_family, css_ff_inherit);
+    UPDATE_LEN_FIELD(font_size);
     //UPDATE_LEN_FIELD( text_indent );
-    spreadParent( pstyle->text_indent, parent_style->text_indent );
-    switch( pstyle->font_weight )
-    {
-    case css_fw_inherit:
-        pstyle->font_weight = parent_style->font_weight;
-        break;
-    case css_fw_normal:
-        pstyle->font_weight = css_fw_400;
-        break;
-    case css_fw_bold:
-        pstyle->font_weight = css_fw_600;
-        break;
-    case css_fw_bolder:
-        pstyle->font_weight = parent_style->font_weight;
-        if (pstyle->font_weight < css_fw_800)
-        {
-            pstyle->font_weight = (css_font_weight_t)((int)pstyle->font_weight + 2);
-        }
-        break;
-    case css_fw_lighter:
-        pstyle->font_weight = parent_style->font_weight;
-        if (pstyle->font_weight > css_fw_200)
-        {
-            pstyle->font_weight = (css_font_weight_t)((int)pstyle->font_weight - 2);
-        }
-        break;
-    case css_fw_100:
-    case css_fw_200:
-    case css_fw_300:
-    case css_fw_400:
-    case css_fw_500:
-    case css_fw_600:
-    case css_fw_700:
-    case css_fw_800:
-    case css_fw_900:
-        break;
+    spreadParent(pstyle->text_indent, parent_style->text_indent);
+    switch (pstyle->font_weight) {
+        case css_fw_inherit:
+            pstyle->font_weight = parent_style->font_weight;
+            break;
+        case css_fw_normal:
+            pstyle->font_weight = css_fw_400;
+            break;
+        case css_fw_bold:
+            pstyle->font_weight = css_fw_600;
+            break;
+        case css_fw_bolder:
+            pstyle->font_weight = parent_style->font_weight;
+            if (pstyle->font_weight < css_fw_800) {
+                pstyle->font_weight = (css_font_weight_t) ((int) pstyle->font_weight + 2);
+            }
+            break;
+        case css_fw_lighter:
+            pstyle->font_weight = parent_style->font_weight;
+            if (pstyle->font_weight > css_fw_200) {
+                pstyle->font_weight = (css_font_weight_t) ((int) pstyle->font_weight - 2);
+            }
+            break;
+        case css_fw_100:
+        case css_fw_200:
+        case css_fw_300:
+        case css_fw_400:
+        case css_fw_500:
+        case css_fw_600:
+        case css_fw_700:
+        case css_fw_800:
+        case css_fw_900:
+            break;
     }
-    switch( pstyle->font_size.type )
-    {
-    case css_val_inherited:
-        pstyle->font_size = parent_style->font_size;
-        break;
-    case css_val_px:
-        // nothing to do
-        break;
-    case css_val_ex: // not implemented: treat as em
-    case css_val_em: // value = em*256
-        pstyle->font_size.type = css_val_px;
-        pstyle->font_size.value = parent_style->font_size.value * pstyle->font_size.value / 256;
-        break;
-    case css_val_percent:
-        pstyle->font_size.type = css_val_px;
-        pstyle->font_size.value = parent_style->font_size.value * pstyle->font_size.value / 100;
-        break;
-    case css_val_unspecified:
-    case css_val_in: // 2.54 cm
-    case css_val_cm:
-    case css_val_mm:
-    case css_val_pt: // 1/72 in
-    case css_val_pc: // 12 pt
-    case css_val_color: // 12 pt
-        // not supported: use inherited value
-        pstyle->font_size = parent_style->font_size;
-        break;
+    switch (pstyle->font_size.type) {
+        case css_val_inherited:
+            pstyle->font_size = parent_style->font_size;
+            break;
+        case css_val_px:
+            // nothing to do
+            break;
+        case css_val_ex: // not implemented: treat as em
+        case css_val_em: // value = em*256
+            pstyle->font_size.type = css_val_px;
+            pstyle->font_size.value = parent_style->font_size.value * pstyle->font_size.value / 256;
+            break;
+        case css_val_percent:
+            pstyle->font_size.type = css_val_px;
+            pstyle->font_size.value = parent_style->font_size.value * pstyle->font_size.value / 100;
+            break;
+        case css_val_unspecified:
+        case css_val_in: // 2.54 cm
+        case css_val_cm:
+        case css_val_mm:
+        case css_val_pt: // 1/72 in
+        case css_val_pc: // 12 pt
+        case css_val_color: // 12 pt
+            // not supported: use inherited value
+            pstyle->font_size = parent_style->font_size;
+            break;
     }
     // line_height
-    spreadParent( pstyle->letter_spacing, parent_style->letter_spacing );
-    spreadParent( pstyle->line_height, parent_style->line_height );
-    spreadParent( pstyle->color, parent_style->color );
-    spreadParent( pstyle->background_color, parent_style->background_color, false );
+    spreadParent(pstyle->letter_spacing, parent_style->letter_spacing);
+    spreadParent(pstyle->line_height, parent_style->line_height);
+    spreadParent(pstyle->color, parent_style->color);
+    spreadParent(pstyle->background_color, parent_style->background_color, false);
 
     // set calculated style
     //enode->getDocument()->cacheStyle( style );
-    enode->setStyle( style );
-    if ( enode->getStyle().isNull() ) {
+    enode->setStyle(style);
+    if (enode->getStyle().isNull()) {
         CRLog::error("NULL style set!!!");
-        enode->setStyle( style );
+        enode->setStyle(style);
     }
 
     // set font
