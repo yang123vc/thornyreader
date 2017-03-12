@@ -20,14 +20,12 @@
 #include "lvtextfm.h"
 #include "lvfntman.h"
 
-/**
-    \brief Element style record.
-
-    Contains set of style properties.
-*/
+/// Element style record. Contains set of style properties.
 typedef struct css_style_rec_tag {
-    int                  refCount; // for reference counting
-    lUInt32              hash; // cache calculated hash value here
+    // for reference counting
+    int                  refCount;
+    // cache calculated hash value here
+    lUInt32              hash;
     css_display_t        display;
     css_white_space_t    white_space;
     css_text_align_t     text_align;
@@ -43,8 +41,10 @@ typedef struct css_style_rec_tag {
     css_length_t         line_height;
     css_length_t         width;
     css_length_t         height;
-    css_length_t         margin[4]; ///< margin-left, -right, -top, -bottom
-    css_length_t         padding[4]; ///< padding-left, -right, -top, -bottom
+    // -left, -right, -top, -bottom
+    css_length_t         margin[4];
+    // -left, -right, -top, -bottom
+    css_length_t         padding[4];
     css_length_t         color;
     css_length_t         background_color;
     css_length_t         letter_spacing;
@@ -85,8 +85,6 @@ typedef struct css_style_rec_tag {
     void AddRef() { refCount++; }
     int Release() { return --refCount; }
     int getRefCount() { return refCount; }
-    bool serialize( SerialBuf & buf );
-    bool deserialize( SerialBuf & buf );
 } css_style_rec_t;
 
 /// style record reference type
@@ -101,10 +99,10 @@ bool operator == (const css_style_rec_t & r1, const css_style_rec_t & r2);
 #define LV_STYLE_HASH_SIZE 0x100
 
 /// style cache: allows to avoid duplicate style object allocation
-class lvdomStyleCache : public LVRefCache< css_style_ref_t >
+class lvdomStyleCache : public LVRefCache<css_style_ref_t>
 {
 public:
-    lvdomStyleCache( int size = LV_STYLE_HASH_SIZE ) : LVRefCache< css_style_ref_t >( size ) {}
+    lvdomStyleCache(int size = LV_STYLE_HASH_SIZE) : LVRefCache<css_style_ref_t>(size) {}
 };
 
 /// element rendering methods
@@ -181,11 +179,10 @@ lUInt32 calcHash(font_ref_t & rec);
 inline lUInt32 calcHash(css_style_ref_t & rec) { return rec.isNull() ? 0 : calcHash( *rec.get() ); }
 
 /// splits string like "Arial", Times New Roman, Courier;  into list
-// returns number of characters processed
+/// returns number of characters processed
 int splitPropertyValueList( const char * fontNames, lString8Collection & list );
 
 /// joins list into string of comma separated quoted values
 lString8 joinPropertyValueList( const lString8Collection & list );
-
 
 #endif // __LV_STYLES_H_INCLUDED__
