@@ -214,20 +214,6 @@ void LVDocView::UpdatePageMargins()
     }
 }
 
-static lString16 GetSectionHeader(ldomNode* section)
-{
-    lString16 header;
-    if (!section || section->getChildCount() == 0) {
-        return header;
-    }
-    ldomNode* child = section->getChildElementNode(0, L"title");
-    if (!child) {
-        return header;
-    }
-    header = child->getText(L' ', 1024);
-    return header;
-}
-
 void LVDocView::Resize(int width, int height)
 {
     if (width < 80 || width > 5000) {
@@ -910,11 +896,9 @@ void LVDocView::Draw(LVDrawBuf& buf, bool auto_resize)
 	}
 	buf.SetBackgroundColor(background_color_);
 	buf.SetTextColor(text_color_);
-
 	if (!is_rendered_ || !cr_dom_ || base_font_.isNull()) {
 		return;
 	}
-
 	if (IsScrollMode()) {
 		buf.SetClipRect(NULL);
         DrawBackgroundTo(buf, 0, offset);
@@ -1466,8 +1450,7 @@ lString16 LVDocView::getNavigationPath() {
 void LVDocView::UpdateSelections() {
     CHECK_RENDER("updateSelections()")
 	ldomXRangeList ranges(cr_dom_->getSelections(), true);
-    CRLog::trace("updateSelections() : selection count = %d",
-            cr_dom_->getSelections().length());
+    CRLog::trace("updateSelections() : selection count = %d", cr_dom_->getSelections().length());
 	ranges.getRanges(marked_ranges_);
 }
 
@@ -1566,8 +1549,7 @@ ldomXPointer LVDocView::getCurrentPageMiddleParagraph() {
 			pageIndex = GetCurrPage();
 		LVRendPageInfo * page = pages_list_[pageIndex];
 		if (page->type == PAGE_TYPE_NORMAL)
-			ptr = cr_dom_->createXPointer(lvPoint(0, page->start + page->height
-					/ 2));
+			ptr = cr_dom_->createXPointer(lvPoint(0, page->start + page->height	/ 2));
 	}
 	if (ptr.isNull())
 		return ptr;
@@ -1604,6 +1586,20 @@ ldomXPointer LVDocView::getPageBookmark(int page) {
 	}
 	ldomXPointer ptr = cr_dom_->createXPointer(lvPoint(0, pages_list_[page]->start));
 	return ptr;
+}
+
+static lString16 GetSectionHeader(ldomNode* section)
+{
+    lString16 header;
+    if (!section || section->getChildCount() == 0) {
+        return header;
+    }
+    ldomNode* child = section->getChildElementNode(0, L"title");
+    if (!child) {
+        return header;
+    }
+    header = child->getText(L' ', 1024);
+    return header;
 }
 
 /// get bookmark position text
