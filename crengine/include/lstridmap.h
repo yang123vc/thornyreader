@@ -17,8 +17,8 @@
 #ifndef __LSTR_ID_MAP_H__INCLUDED__
 #define __LSTR_ID_MAP_H__INCLUDED__
 
-#include "lvstring.h"
 #include <stdio.h>
+#include "lvstring.h"
 
 struct css_elem_def_props_t;
 
@@ -31,10 +31,6 @@ public:
     /// value
     lString16 value;
 	const css_elem_def_props_t* getData() const { return data; }
-	/// serialize to byte array (pointer will be incremented by number of bytes written)
-	void serialize(SerialBuf & buf);
-	/// deserialize from byte array (pointer will be incremented by number of bytes read)
-	static CrStrIntPair* deserialize(SerialBuf& buf);
 	/// constructor
 	CrStrIntPair(lUInt16 _id, const lString16& _value, const css_elem_def_props_t* _data);
 	/// copy constructor
@@ -59,11 +55,6 @@ public:
     /// Copy constructor
     LvDomNameIdMap( LvDomNameIdMap & map );
     ~LvDomNameIdMap();
-
-	/// serialize to byte array (pointer will be incremented by number of bytes written)
-	void serialize( SerialBuf & buf );
-	/// deserialize from byte array (pointer will be incremented by number of bytes read)
-	bool deserialize( SerialBuf & buf );
 
     void Clear();
 

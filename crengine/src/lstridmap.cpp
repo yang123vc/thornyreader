@@ -11,56 +11,8 @@
 
 *******************************************************/
 
-#include "../include/lstridmap.h"
-#include "../include/dtddef.h"
-#include "../include/lvtinydom.h"
-#include <string.h>
-
-static const char id_map_item_magic[] = "IDMI";
-
-/// Serialize to byte array
-void CrStrIntPair::serialize(SerialBuf& buf) {
-    if (buf.error()) return;
-	buf.putMagic(id_map_item_magic);
-	buf << id;
-	buf << value;
-	if (data) {
-		buf << (lUInt8)1;
-		buf << (lUInt8)data->display;
-		buf << (lUInt8)data->white_space;
-		buf << data->allow_text;
-		buf << data->is_object;
-	} else {
-		buf << (lUInt8)0;
-	}
-}
-
-/// Deserialize from byte array
-CrStrIntPair* CrStrIntPair::deserialize(SerialBuf& buf)
-{
-    if ( buf.error() )
-        return NULL;
-	if ( !buf.checkMagic( id_map_item_magic ) )
-        return NULL;
-	lUInt16 id;
-	lString16 value;
-	lUInt8 flgData;
-    buf >> id >> value >> flgData;
-    if ( id>=MAX_TYPE_ID )
-        return NULL;
-    if ( flgData ) {
-        css_elem_def_props_t props;
-        lUInt8 display;
-        lUInt8 white_space;
-        buf >> display >> white_space >> props.allow_text >> props.is_object;
-        if ( display > css_d_none || white_space > css_ws_nowrap )
-            return NULL;
-        props.display = (css_display_t)display;
-        props.white_space = (css_white_space_t)white_space;
-    	return new CrStrIntPair(id, value, &props);
-    }
-   	return new CrStrIntPair(id, value, NULL);
-}
+#include "lstridmap.h"
+#include "dtddef.h"
 
 CrStrIntPair::CrStrIntPair(lUInt16 _id, const lString16& _value,
 		const css_elem_def_props_t* _data)
@@ -87,63 +39,6 @@ CrStrIntPair::~CrStrIntPair()
 	if (data)
 		delete data;
 }
-
-static const char id_map_magic[] = "IMAP";
-
-/// Serialize to byte array (pointer will be incremented by number of bytes written)
-void LvDomNameIdMap::serialize( SerialBuf & buf )
-{
-    if ( buf.error() )
-        return;
-    if (!m_sorted)
-        Sort();
-    int start = buf.pos();
-	buf.putMagic( id_map_magic );
-    buf << m_count;
-    for ( int i=0; i<m_size; i++ ) {
-        if ( m_by_id[i] )
-            m_by_id[i]->serialize( buf );
-    }
-    buf.putCRC( buf.pos() - start );
-    m_changed = false;
-}
-
-/// Deserialize from byte array (pointer will be incremented by number of bytes read)
-bool LvDomNameIdMap::deserialize(SerialBuf & buf)
-{
-    if (buf.error())
-        return false;
-    int start = buf.pos();
-    if (!buf.checkMagic(id_map_magic)) {
-        buf.seterror();
-        return false;
-    }
-    Clear();
-    lUInt16 count;
-    buf >> count;
-    if (count > m_size) {
-        buf.seterror();
-        return false;
-    }
-    for (int i = 0; i < count; i++) {
-        CrStrIntPair* item = CrStrIntPair::deserialize(buf);
-        // If invalid entry
-        if (!item || (item->id<m_size && m_by_id[item->id] != NULL)) {
-            if (item)
-                delete item;
-            buf.seterror();
-            return false;
-        }
-        AddItem(item);
-    }
-    m_sorted = false;
-    buf.checkCRC(buf.pos() - start);
-    m_changed = false;
-    if (!m_sorted)
-        Sort();
-    return !buf.error();
-}
-
 
 LvDomNameIdMap::LvDomNameIdMap(lUInt16 maxId)
 {
@@ -294,7 +189,6 @@ void LvDomNameIdMap::AddItem(lUInt16 id, const lString16& value, const css_elem_
     AddItem(item);
 }
 
-
 void LvDomNameIdMap::Clear()
 {
     for (lUInt16 i = 0; i<m_count; i++)
@@ -317,4 +211,3 @@ void LvDomNameIdMap::dumpUnknownItems( FILE * f, int start_id )
         }
     }
 }
-
