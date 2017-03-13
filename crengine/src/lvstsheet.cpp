@@ -785,8 +785,11 @@ static css_length_t read_length(int*& data)
 static lString16 GetNodeDesc(const ldomNode* node)
 {
     lUInt16 node_id = node->getNodeId();
+    ldomXPointer xptr = ldomXPointer((ldomNode*) node, 0);
     lString16 desc = node->getCrDom()->getElementName(node_id);
-    desc << "/" << lString16::itoa(node_id) << "[" << lString16::itoa(node->getNodeIndex()) << "]";
+    desc << "/" << lString16::itoa(node_id);
+    desc << "[" << lString16::itoa(node->getNodeIndex()) << "]";
+    desc << " " << xptr.toString();
     return desc;
 }
 
@@ -1138,7 +1141,7 @@ bool parse_attr_value(const char*& str, char* buf)
     }
 }
 
-LVCssSelectorRule* parse_attr(const char*& str, CrXmlDom* doc)
+LVCssSelectorRule* parse_attr(const char*& str, CrDomXml* doc)
 {
     char attrname[512];
     char attrvalue[512];
@@ -1225,7 +1228,7 @@ void LVCssSelector::insertRuleAfterStart(LVCssSelectorRule* rule)
     _rules->setNext(rule);
 }
 
-bool LVCssSelector::parse(const char*& str, CrXmlDom* doc)
+bool LVCssSelector::parse(const char*& str, CrDomXml* doc)
 {
     if (!str || !*str) {
 #ifdef AXYDEBUG

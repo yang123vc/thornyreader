@@ -470,14 +470,7 @@ struct ElementDataStorageItem : public DataStorageItemHeader {
     //font_ref_t      _font;
 };
 
-
-
-
-//=================================================================
-// tinyNodeCollection implementation
-//=================================================================
-
-tinyNodeCollection::tinyNodeCollection()
+CrDomBase::CrDomBase()
 		: _textCount(0),
 		  _textNextFree(0),
 		  _elemCount(0)
@@ -508,7 +501,7 @@ tinyNodeCollection::tinyNodeCollection()
     _docIndex = ldomNode::registerDocument((CrDom*) this);
 }
 
-void tinyNodeCollection::clearNodeStyle( lUInt32 dataIndex )
+void CrDomBase::clearNodeStyle( lUInt32 dataIndex )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
@@ -518,7 +511,7 @@ void tinyNodeCollection::clearNodeStyle( lUInt32 dataIndex )
     _styleStorage.setStyleData( dataIndex, &info );
 }
 
-void tinyNodeCollection::setNodeStyleIndex( lUInt32 dataIndex, lUInt16 index )
+void CrDomBase::setNodeStyleIndex( lUInt32 dataIndex, lUInt16 index )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
@@ -528,7 +521,7 @@ void tinyNodeCollection::setNodeStyleIndex( lUInt32 dataIndex, lUInt16 index )
     }
 }
 
-void tinyNodeCollection::setNodeFontIndex( lUInt32 dataIndex, lUInt16 index )
+void CrDomBase::setNodeFontIndex( lUInt32 dataIndex, lUInt16 index )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
@@ -538,14 +531,14 @@ void tinyNodeCollection::setNodeFontIndex( lUInt32 dataIndex, lUInt16 index )
     }
 }
 
-lUInt16 tinyNodeCollection::getNodeStyleIndex( lUInt32 dataIndex )
+lUInt16 CrDomBase::getNodeStyleIndex( lUInt32 dataIndex )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
     return info._styleIndex;
 }
 
-css_style_ref_t tinyNodeCollection::getNodeStyle( lUInt32 dataIndex )
+css_style_ref_t CrDomBase::getNodeStyle( lUInt32 dataIndex )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
@@ -553,14 +546,14 @@ css_style_ref_t tinyNodeCollection::getNodeStyle( lUInt32 dataIndex )
     return res;
 }
 
-font_ref_t tinyNodeCollection::getNodeFont( lUInt32 dataIndex )
+font_ref_t CrDomBase::getNodeFont( lUInt32 dataIndex )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
     return _fonts.get( info._fontIndex );
 }
 
-void tinyNodeCollection::setNodeStyle( lUInt32 dataIndex, css_style_ref_t & v )
+void CrDomBase::setNodeStyle( lUInt32 dataIndex, css_style_ref_t & v )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
@@ -568,7 +561,7 @@ void tinyNodeCollection::setNodeStyle( lUInt32 dataIndex, css_style_ref_t & v )
     _styleStorage.setStyleData( dataIndex, &info );
 }
 
-void tinyNodeCollection::setNodeFont( lUInt32 dataIndex, font_ref_t & v )
+void CrDomBase::setNodeFont( lUInt32 dataIndex, font_ref_t & v )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
@@ -576,7 +569,7 @@ void tinyNodeCollection::setNodeFont( lUInt32 dataIndex, font_ref_t & v )
     _styleStorage.setStyleData( dataIndex, &info );
 }
 
-lUInt16 tinyNodeCollection::getNodeFontIndex( lUInt32 dataIndex )
+lUInt16 CrDomBase::getNodeFontIndex( lUInt32 dataIndex )
 {
     ldomNodeStyleInfo info;
     _styleStorage.getStyleData( dataIndex, &info );
@@ -584,7 +577,7 @@ lUInt16 tinyNodeCollection::getNodeFontIndex( lUInt32 dataIndex )
 }
 
 /// get ldomNode instance pointer
-ldomNode * tinyNodeCollection::getTinyNode( lUInt32 index )
+ldomNode * CrDomBase::getTinyNode( lUInt32 index )
 {
     if ( !index )
         return NULL;
@@ -595,7 +588,7 @@ ldomNode * tinyNodeCollection::getTinyNode( lUInt32 index )
 }
 
 /// allocate new tiny node
-ldomNode * tinyNodeCollection::allocTinyNode( int type )
+ldomNode * CrDomBase::allocTinyNode( int type )
 {
     ldomNode * res;
     if ( type & 1 ) {
@@ -646,7 +639,7 @@ ldomNode * tinyNodeCollection::allocTinyNode( int type )
     return res;
 }
 
-void tinyNodeCollection::recycleTinyNode( lUInt32 index )
+void CrDomBase::recycleTinyNode( lUInt32 index )
 {
     if ( index & 1 ) {
         // element
@@ -669,7 +662,7 @@ void tinyNodeCollection::recycleTinyNode( lUInt32 index )
     }
 }
 
-tinyNodeCollection::~tinyNodeCollection()
+CrDomBase::~CrDomBase()
 {
     // clear all elem parts
     for ( int partindex = 0; partindex<=(_elemCount>>TNC_PART_SHIFT); partindex++ ) {
@@ -911,7 +904,7 @@ void ldomDataStorageManager::compact(int reservedSpace)
 }
 
 ldomDataStorageManager::ldomDataStorageManager(
-        tinyNodeCollection* owner, char type, int maxUnpackedSize, int chunkSize)
+        CrDomBase* owner, char type, int maxUnpackedSize, int chunkSize)
         : _owner(owner),
           _activeChunk(NULL),
           _recentChunk(NULL),
@@ -1280,7 +1273,7 @@ public:
     }
 };
 
-CrXmlDom::CrXmlDom()
+CrDomXml::CrDomXml()
 		: _elementNameTable(MAX_ELEMENT_TYPE_ID),
 		  _attrNameTable(MAX_ATTRIBUTE_TYPE_ID),
 		  _nsNameTable(MAX_NAMESPACE_TYPE_ID),
@@ -1300,9 +1293,9 @@ CrXmlDom::CrXmlDom()
    stylesheet_.setDocument(this);
 }
 
-CrXmlDom::~CrXmlDom() {}
+CrDomXml::~CrDomXml() {}
 
-void CrXmlDom::onAttributeSet( lUInt16 attrId, lUInt16 valueId, ldomNode * node )
+void CrDomXml::onAttributeSet( lUInt16 attrId, lUInt16 valueId, ldomNode * node )
 {
     if ( _idAttrId==0 )
         _idAttrId = _attrNameTable.IntByStr("id");
@@ -1317,7 +1310,7 @@ void CrXmlDom::onAttributeSet( lUInt16 attrId, lUInt16 valueId, ldomNode * node 
     }
 }
 
-lUInt16 CrXmlDom::getNsNameIndex( const lChar16 * name )
+lUInt16 CrDomXml::getNsNameIndex( const lChar16 * name )
 {
     const CrStrIntPair * item = _nsNameTable.FindPair( name );
     if (item)
@@ -1326,7 +1319,7 @@ lUInt16 CrXmlDom::getNsNameIndex( const lChar16 * name )
     return _nextUnknownNsId++;
 }
 
-lUInt16 CrXmlDom::getNsNameIndex( const lChar8 * name )
+lUInt16 CrDomXml::getNsNameIndex( const lChar8 * name )
 {
     const CrStrIntPair * item = _nsNameTable.FindPair( name );
     if (item)
@@ -1335,7 +1328,7 @@ lUInt16 CrXmlDom::getNsNameIndex( const lChar8 * name )
     return _nextUnknownNsId++;
 }
 
-lUInt16 CrXmlDom::getAttrNameIndex(const lChar16* name) {
+lUInt16 CrDomXml::getAttrNameIndex(const lChar16* name) {
     const CrStrIntPair* item = _attrNameTable.FindPair(name);
     if (item) {
     	//CRLog::warn("Found item: %s", LCSTR(lString16(name)));
@@ -1346,7 +1339,7 @@ lUInt16 CrXmlDom::getAttrNameIndex(const lChar16* name) {
     return _nextUnknownAttrId++;
 }
 
-lUInt16 CrXmlDom::getAttrNameIndex(const lChar8* name) {
+lUInt16 CrDomXml::getAttrNameIndex(const lChar8* name) {
     const CrStrIntPair* item = _attrNameTable.FindPair(name);
     if (item) {
     	//CRLog::warn("Found item: %s", LCSTR(lString16(name)));
@@ -1357,7 +1350,7 @@ lUInt16 CrXmlDom::getAttrNameIndex(const lChar8* name) {
     return _nextUnknownAttrId++;
 }
 
-lUInt16 CrXmlDom::getElementNameIndex( const lChar16 * name )
+lUInt16 CrDomXml::getElementNameIndex( const lChar16 * name )
 {
     const CrStrIntPair * item = _elementNameTable.FindPair( name );
     if (item)
@@ -1366,7 +1359,7 @@ lUInt16 CrXmlDom::getElementNameIndex( const lChar16 * name )
     return _nextUnknownElementId++;
 }
 
-lUInt16 CrXmlDom::findElementNameIndex( const lChar8 * name )
+lUInt16 CrDomXml::findElementNameIndex( const lChar8 * name )
 {
     const CrStrIntPair * item = _elementNameTable.FindPair( name );
     if (item)
@@ -1374,7 +1367,7 @@ lUInt16 CrXmlDom::findElementNameIndex( const lChar8 * name )
     return 0;
 }
 
-lUInt16 CrXmlDom::getElementNameIndex( const lChar8 * name )
+lUInt16 CrDomXml::getElementNameIndex( const lChar8 * name )
 {
     const CrStrIntPair * item = _elementNameTable.FindPair( name );
     if (item)
@@ -1384,7 +1377,7 @@ lUInt16 CrXmlDom::getElementNameIndex( const lChar8 * name )
 }
 
 /// create formatted text object with options set
-LFormattedText * CrXmlDom::createFormattedText()
+LFormattedText * CrDomXml::createFormattedText()
 {
     LFormattedText * p = new LFormattedText();
     p->setImageScalingOptions(&_imgScalingOptions);
@@ -1394,7 +1387,7 @@ LFormattedText * CrXmlDom::createFormattedText()
 }
 
 /// returns main element (i.e. FictionBook for FB2)
-ldomNode * CrXmlDom::getRootNode()
+ldomNode * CrDomXml::getRootNode()
 {
     return getTinyNode(17);
 }
@@ -1673,7 +1666,7 @@ bool CrDom::setRenderProps(int width, int height, font_ref_t def_font, int inter
     return changed;
 }
 
-void tinyNodeCollection::dropStyles()
+void CrDomBase::dropStyles()
 {
     _styles.clear(-1);
     _fonts.clear(-1);
@@ -1696,7 +1689,7 @@ void tinyNodeCollection::dropStyles()
     }
 }
 
-int tinyNodeCollection::calcFinalBlocks()
+int CrDomBase::calcFinalBlocks()
 {
     int cnt = 0;
     int count = ((_elemCount+TNC_PART_LEN-1) >> TNC_PART_SHIFT);
@@ -1722,8 +1715,8 @@ int tinyNodeCollection::calcFinalBlocks()
 inline LVStyleSheet* getStylesheet() { return &_stylesheet; }
 LVLoadStylesheetFile
 LVStyleSheet::parse
-void tinyNodeCollection::dropStyles()
-bool tinyNodeCollection::updateLoadedStyles( bool enabled )
+void CrDomBase::dropStyles()
+bool CrDomBase::updateLoadedStyles( bool enabled )
 DISABLE_STYLESHEET_REL
 */
 void CrDom::applyDocStylesheet()
@@ -1840,19 +1833,17 @@ int CrDom::render(LVRendPageList* pages,
 {
     CRLog::trace("Render is called for width %d, pageHeight=%d, fontFace=%s, docFlags=%d",
     		width, dy, def_font->getTypeFace().c_str(), getDocFlags());
-
     setRenderProps(width, dy, def_font, interline_space);
-
     // update styles
-//    if ( getRootNode()->getStyle().isNull() || getRootNode()->getFont().isNull()
-//        || _docFlags != _hdr.render_docflags
-//        || width!=_hdr.render_dx || dy!=_hdr.render_dy || defStyleHash!=_hdr.stylesheet_hash ) {
-//        CRLog::trace("init format data...");
-//        getRootNode()->recurseElements( initFormatData );
-//    } else {
-//        CRLog::trace("reusing existing format data...");
-//    }
-
+    //if (getRootNode()->getStyle().isNull() || getRootNode()->getFont().isNull()
+    //        || _docFlags != _hdr.render_docflags
+    //        || width!=_hdr.render_dx
+    //        || dy!=_hdr.render_dy || defStyleHash!=_hdr.stylesheet_hash ) {
+    //    CRLog::trace("init format data...");
+    //    getRootNode()->recurseElements( initFormatData );
+    //} else {
+    //    CRLog::trace("reusing existing format data...");
+    //}
     if (!checkRenderContext()) {
         CRLog::trace("rendering context is changed - full render required...");
         dropStyles();
@@ -1867,11 +1858,11 @@ int CrDom::render(LVRendPageList* pages,
         stylesheet_.pop();
         CRLog::trace("init render method");
         getRootNode()->initNodeRendMethodRecursive();
-//        getRootNode()->setFont( _def_font );
-//        getRootNode()->setStyle( _def_style );
+        // getRootNode()->setFont(_def_font);
+        //getRootNode()->setStyle(_def_style);
         updateRenderContext();
-//        lUInt32 styleHash = calcStyleHash();
-//        styleHash = styleHash * 31 + calcGlobalSettingsHash();
+        //lUInt32 styleHash = calcStyleHash();
+        //styleHash = styleHash * 31 + calcGlobalSettingsHash();
         _rendered = false;
     }
     if (!_rendered) {
@@ -1903,7 +1894,7 @@ int CrDom::render(LVRendPageList* pages,
     }
 }
 
-void CrXmlDom::setNodeTypes( const elem_def_t * node_scheme )
+void CrDomXml::setNodeTypes( const elem_def_t * node_scheme )
 {
     if (!node_scheme)
         return;
@@ -1918,7 +1909,7 @@ void CrXmlDom::setNodeTypes( const elem_def_t * node_scheme )
 }
 
 // set attribute types from table
-void CrXmlDom::setAttributeTypes( const attr_def_t * attr_scheme )
+void CrDomXml::setAttributeTypes( const attr_def_t * attr_scheme )
 {
     if ( !attr_scheme )
         return;
@@ -1933,7 +1924,7 @@ void CrXmlDom::setAttributeTypes( const attr_def_t * attr_scheme )
 }
 
 // set namespace types from table
-void CrXmlDom::setNameSpaceTypes( const ns_def_t * ns_scheme )
+void CrDomXml::setNameSpaceTypes( const ns_def_t * ns_scheme )
 {
     if ( !ns_scheme )
         return;
@@ -1946,7 +1937,7 @@ void CrXmlDom::setNameSpaceTypes( const ns_def_t * ns_scheme )
     }
 }
 
-void CrXmlDom::dumpUnknownEntities( const char * fname )
+void CrDomXml::dumpUnknownEntities( const char * fname )
 {
     FILE * f = fopen( fname, "wt" );
     if ( !f )
@@ -6266,7 +6257,7 @@ LvDomAutocloseWriter::~LvDomAutocloseWriter() {
     }
 }
 
-void tinyNodeCollection::setDocFlag(lUInt32 mask, bool value)
+void CrDomBase::setDocFlag(lUInt32 mask, bool value)
 {
     if (value)
         _docFlags |= mask;
@@ -6274,7 +6265,7 @@ void tinyNodeCollection::setDocFlag(lUInt32 mask, bool value)
         _docFlags &= ~mask;
 }
 
-void tinyNodeCollection::setDocFlags(lUInt32 value)
+void CrDomBase::setDocFlags(lUInt32 value)
 {
     _docFlags = value;
 }
@@ -6290,7 +6281,7 @@ void CrDom::clear()
     //_elemStorage.
 }
 
-lUInt32 tinyNodeCollection::calcStyleHash()
+lUInt32 CrDomBase::calcStyleHash()
 {
     int count = ((_elemCount+TNC_PART_LEN-1) >> TNC_PART_SHIFT);
     lUInt32 res = 0; //_elemCount;
@@ -6346,7 +6337,7 @@ static void validateChild( ldomNode * node )
 }
 
 /// called on document loading end
-bool tinyNodeCollection::validateDocument()
+bool CrDomBase::validateDocument()
 {
     ((CrDom*) this)->getRootNode()->recurseElements(validateChild);
     int count = ((_elemCount + TNC_PART_LEN - 1) >> TNC_PART_SHIFT);
@@ -6393,7 +6384,7 @@ bool tinyNodeCollection::validateDocument()
     return res;
 }
 
-bool tinyNodeCollection::updateLoadedStyles(bool enabled)
+bool CrDomBase::updateLoadedStyles(bool enabled)
 {
     int count = ((_elemCount + TNC_PART_LEN - 1) >> TNC_PART_SHIFT);
     bool res = true;
@@ -6470,7 +6461,7 @@ bool tinyNodeCollection::updateLoadedStyles(bool enabled)
     return res;
 }
 
-void CrXmlDom::setStylesheet(const char* css, bool replace)
+void CrDomXml::setStylesheet(const char* css, bool replace)
 {
     lUInt32 oldHash = stylesheet_.getHash();
     if (replace) {
@@ -6512,7 +6503,7 @@ public:
 //=====================================================
 
 /// allocate new tinyElement
-ldomNode * tinyNodeCollection::allocTinyElement( ldomNode * parent, lUInt16 nsid, lUInt16 id )
+ldomNode * CrDomBase::allocTinyElement( ldomNode * parent, lUInt16 nsid, lUInt16 id )
 {
     ldomNode * node = allocTinyNode( ldomNode::NT_ELEMENT );
     tinyElement * elem = new tinyElement( (CrDom*)this, parent, nsid, id );
@@ -8450,10 +8441,10 @@ ldomNode* ldomNode::modify()
     return this;
 }
 
-void tinyNodeCollection::dumpStatistics() {
+void CrDomBase::dumpStatistics() {
 //#define TINYNODECOLLECTION_DUMPSTATISTICS
 #ifdef TINYNODECOLLECTION_DUMPSTATISTICS
-    CRLog::trace("tinyNodeCollection::dumpStatistics: totalNodes: %d (%d kB)\n"
+    CRLog::trace("CrDomBase::dumpStatistics: totalNodes: %d (%d kB)\n"
     			"    elements: %d, textNodes: %d\n"
                 "    ptext: %d (uncomp.), ptelems: %d (uncomp.)\n"
                 "    rects: %d (uncomp.), nodestyles: %d (uncomp.), styles: %d\n"

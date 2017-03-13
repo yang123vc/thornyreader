@@ -146,7 +146,7 @@ class DataBuffer;
 class ldomTextStorageChunk;
 class ldomTextStorageChunkBuilder;
 struct ElementDataStorageItem;
-class tinyNodeCollection;
+class CrDomBase;
 
 struct ldomNodeStyleInfo
 {
@@ -171,7 +171,7 @@ class ldomDataStorageManager
 {
     friend class ldomTextStorageChunk;
 protected:
-    tinyNodeCollection * _owner;
+    CrDomBase * _owner;
     LVPtrVector<ldomTextStorageChunk> _chunks;
     ldomTextStorageChunk * _activeChunk;
     ldomTextStorageChunk * _recentChunk;
@@ -211,7 +211,7 @@ public:
     /// set element style data item
     void setStyleData( lUInt32 elemDataIndex, const ldomNodeStyleInfo * src );
 
-    ldomDataStorageManager(tinyNodeCollection* owner,
+    ldomDataStorageManager(CrDomBase* owner,
             char type,
             int maxUnpackedSize,
             int chunkSize);
@@ -276,7 +276,7 @@ class ldomNode;
 #define TNC_PART_MASK (TNC_PART_LEN-1)
 
 /// storage of ldomNode
-class tinyNodeCollection
+class CrDomBase
 {
     friend class ldomNode;
     friend class tinyElement;
@@ -392,9 +392,9 @@ public:
     /// dumps memory usage statistics to debug log
     void dumpStatistics();
     /// creates empty collection
-    tinyNodeCollection();
+    CrDomBase();
     /// destroys collection
-    virtual ~tinyNodeCollection();
+    virtual ~CrDomBase();
 };
 
 class CrDom;
@@ -436,7 +436,7 @@ class ldomTextNode;
 // optimized for 32 bit systems
 class ldomNode
 {
-    friend class tinyNodeCollection;
+    friend class CrDomBase;
     friend class RenderRectAccessor;
     friend class NodeImageProxy;
 private:
@@ -477,7 +477,7 @@ private:
 
     inline ldomNode* getTinyNode(lUInt32 index) const
     {
-        return ((tinyNodeCollection*) getCrDom())->getTinyNode(index);
+        return ((CrDomBase*) getCrDom())->getTinyNode(index);
     }
 
     void operator delete(void *)
@@ -720,15 +720,15 @@ public:
 
 	Manages data storage.
 */
-class CrXmlDom : public tinyNodeCollection {
+class CrDomXml : public CrDomBase {
     friend class ldomNode;
 	friend class ldomXPointer;
 public:
 
     /// Default constructor
-    CrXmlDom();
+    CrDomXml();
     /// Destructor
-    virtual ~CrXmlDom();
+    virtual ~CrDomXml();
 
     // Name <-> Id maps functions
 
@@ -1003,7 +1003,7 @@ protected:
 
         inline ldomNode* getNode()
         {
-            return _dataIndex > 0 ? ((CrXmlDom*) _doc)->getTinyNode(_dataIndex) : NULL;
+            return _dataIndex > 0 ? ((CrDomXml*) _doc)->getTinyNode(_dataIndex) : NULL;
         }
 
         inline int getOffset()
@@ -1707,7 +1707,7 @@ public:
 };
 typedef LVRef<ListNumberingProps> ListNumberingPropsRef;
 
-class CrDom : public CrXmlDom
+class CrDom : public CrDomXml
 {
     friend class LvDomWriter;
     friend class LvDomAutocloseWriter;

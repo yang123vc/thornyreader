@@ -16,7 +16,7 @@
 #include "cssdef.h"
 #include "lvstyles.h"
 
-class CrXmlDom;
+class CrDomXml;
 class ldomNode;
 
 /**
@@ -113,7 +113,7 @@ public:
     LVCssSelector( LVCssSelector & v );
     LVCssSelector() : _id(0), _specificity(0), _next(NULL), _rules(NULL) { }
     ~LVCssSelector() { if (_next) delete _next; if (_rules) delete _rules; }
-    bool parse( const char * &str, CrXmlDom * doc );
+    bool parse( const char * &str, CrDomXml * doc );
     lUInt16 getElementNameId() { return _id; }
     bool check( const ldomNode * node ) const;
     void applyCss(const ldomNode* node, css_style_rec_t* style) const
@@ -136,7 +136,7 @@ public:
     \sa LVCssDeclaration
 */
 class LVStyleSheet {
-    CrXmlDom * _doc;
+    CrDomXml * _doc;
     LVPtrVector <LVCssSelector> _selectors;
     LVPtrVector <LVPtrVector <LVCssSelector> > _stack;
     LVPtrVector <LVCssSelector> * dup()
@@ -167,9 +167,9 @@ public:
     /// remove all rules from stylesheet
     void clear() { _selectors.clear(); _stack.clear(); }
     /// set document to retrieve ID values from
-    void setDocument( CrXmlDom * doc ) { _doc = doc; }
+    void setDocument( CrDomXml * doc ) { _doc = doc; }
     /// constructor
-    LVStyleSheet( CrXmlDom * doc = NULL ) : _doc(doc) { }
+    LVStyleSheet( CrDomXml * doc = NULL ) : _doc(doc) { }
     /// copy constructor
     LVStyleSheet( LVStyleSheet & sheet );
     /// parse stylesheet, compile and add found rules to sheet
