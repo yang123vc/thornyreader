@@ -171,7 +171,7 @@ class ldomDataStorageManager
 {
     friend class ldomTextStorageChunk;
 protected:
-    CrDomBase * _owner;
+    CrDomBase* _owner;
     LVPtrVector<ldomTextStorageChunk> _chunks;
     ldomTextStorageChunk * _activeChunk;
     ldomTextStorageChunk * _recentChunk;
@@ -293,7 +293,6 @@ private:
     int _tinyElementCount;
     int _itemCount;
     int _docIndex;
-
 protected:
     /// final block cache
     CVRendBlockCache _renderedBlockCache;
@@ -302,10 +301,6 @@ protected:
     int  _mapSavingStage;
     img_scaling_options_t _imgScalingOptions;
     int  _minSpaceCondensingPercent;
-
-    int calcFinalBlocks();
-    void dropStyles();
-
     // Persistent text node data storage
     ldomDataStorageManager _textStorage;
     // Persistent element data storage
@@ -314,7 +309,6 @@ protected:
     ldomDataStorageManager _rectStorage;
     // Element style storage (font & style indexes ldomNodeStyleInfo)
     ldomDataStorageManager _styleStorage;
-
     CRPropRef _docProps;
     lUInt32 _docFlags;
     LVStyleSheet stylesheet_;
@@ -323,6 +317,8 @@ protected:
     /// Checks buffer sizes, compacts most unused chunks
     ldomBlobCache _blobCache;
 
+    int calcFinalBlocks();
+    void dropStyles();
     bool updateLoadedStyles(bool enabled);
     lUInt32 calcStyleHash();
     void setNodeStyleIndex( lUInt32 dataIndex, lUInt16 index );
@@ -335,48 +331,27 @@ protected:
     void setNodeFont( lUInt32 dataIndex, font_ref_t & v  );
     void clearNodeStyle( lUInt32 dataIndex );
     virtual void resetNodeNumberingProps() { }
-
 public:
+    CrDomBase();
+    virtual ~CrDomBase();
     /// add named BLOB data to document
     bool addBlob(lString16 name, const lUInt8* data, int size)
     {
         return _blobCache.addBlob(data, size, name);
     }
-
     /// get BLOB by name
-    LVStreamRef getBlob(lString16 name)
-    {
-        return _blobCache.getBlob(name);
-    }
-    /// called on document loading end
-    bool validateDocument();
-
-    inline bool getDocFlag( lUInt32 mask )
-    {
-        return (_docFlags & mask) != 0;
-    }
-
+    LVStreamRef getBlob(lString16 name) { return _blobCache.getBlob(name); }
+    inline bool getDocFlag( lUInt32 mask ) { return (_docFlags & mask) != 0; }
     void setDocFlag( lUInt32 mask, bool value );
-
-    inline lUInt32 getDocFlags()
-    {
-        return _docFlags;
-    }
-
-    inline int getDocIndex()
-    {
-        return _docIndex;
-    }
-
+    inline lUInt32 getDocFlags() { return _docFlags; }
+    inline int getDocIndex() { return _docIndex; }
     inline int getFontContextDocIndex()
     {
         return (_docFlags & DOC_FLAG_EMBEDDED_FONTS) && (_docFlags & DOC_FLAG_EMBEDDED_STYLES)
                 ? _docIndex
                 : -1;
     }
-
     void setDocFlags( lUInt32 value );
-
     /// returns doc properties collection
     inline CRPropRef getProps() { return _docProps; }
     /// returns doc properties collection
@@ -389,12 +364,9 @@ public:
     ldomNode * allocTinyElement( ldomNode * parent, lUInt16 nsid, lUInt16 id );
     /// recycle ldomNode on node removing
     void recycleTinyNode( lUInt32 index );
+    bool validateDocument();
     /// dumps memory usage statistics to debug log
     void dumpStatistics();
-    /// creates empty collection
-    CrDomBase();
-    /// destroys collection
-    virtual ~CrDomBase();
 };
 
 class CrDom;
@@ -424,12 +396,12 @@ public:
 
 /// compact 32bit value for node
 struct ldomNodeHandle {
-    unsigned _docIndex:8;   // index in ldomNode::_documentInstances[MAX_DOCUMENT_INSTANCE_COUNT];
+    unsigned _docIndex:8;   // index in ldomNode::_domInstances[MAX_DOM_INSTANCES];
     unsigned _dataIndex:24; // index of node in document's storage and type
 };
 
 /// max number which could be stored in ldomNodeHandle._docIndex
-#define MAX_DOCUMENT_INSTANCE_COUNT 256
+#define MAX_DOM_INSTANCES 256
 
 class ldomTextNode;
 // no vtable, very small size (16 bytes)
@@ -440,11 +412,11 @@ class ldomNode
     friend class RenderRectAccessor;
     friend class NodeImageProxy;
 private:
-    static CrDom* _documentInstances[MAX_DOCUMENT_INSTANCE_COUNT];
+    static CrDom* _domInstances[MAX_DOM_INSTANCES];
     /// adds document to list, returns ID of allocated document, -1 if no space in instance array
-    static int registerDocument( CrDom * doc );
+    static int registerDom( CrDom * doc );
     /// removes document from list
-    static void unregisterDocument( CrDom * doc );
+    static void unregisterDom( CrDom * doc );
 
     // types for _handle._type
     enum {
@@ -522,7 +494,7 @@ public:
     /// returns data index of node's registration in document data storage
     inline lInt32 getDataIndex() const { return TNINDEX; }
     /// returns pointer to document
-    inline CrDom * getCrDom() const { return _documentInstances[_handle._docIndex]; }
+    inline CrDom * getCrDom() const { return _domInstances[_handle._docIndex]; }
     /// returns pointer to parent node, NULL if node has no parent
     ldomNode * getParentNode() const;
     /// returns node type, either LXML_TEXT_NODE or LXML_ELEMENT_NODE
@@ -716,9 +688,7 @@ public:
     Helps to decrease memory usage and increase performance for DOM implementations.
     Maintains Name<->Id maps for element names, namespaces and attributes.
     It allows to use short IDs instead of strings in DOM internals,
-    and avoid duplication of string values.
-
-	Manages data storage.
+    and avoid duplication of string values. Manages data storage.
 */
 class CrDomXml : public CrDomBase {
     friend class ldomNode;
@@ -1727,77 +1697,56 @@ private:
 protected:
     void applyDocStylesheet();
 public:
+    CrDom();
+    virtual ~CrDom();
     void forceReinitStyles() {
         dropStyles();
         _hdr.render_style_hash = 0;
         _rendered = false;
     }
-
     ListNumberingPropsRef getNodeNumberingProps( lUInt32 nodeDataIndex );
     void setNodeNumberingProps( lUInt32 nodeDataIndex, ListNumberingPropsRef v );
     void resetNodeNumberingProps();
-
     /// returns object image stream
     LVStreamRef getObjectImageStream( lString16 refName );
     /// returns object image source
     LVImageSourceRef getObjectImageSource( lString16 refName );
-
-    bool isDefStyleSet()
-    {
-        return !_def_style.isNull();
-    }
-
+    bool isDefStyleSet() { return !_def_style.isNull(); }
     /// return document's embedded font list
     LVEmbeddedFontList & getEmbeddedFontList() { return _fontList; }
     /// register embedded document fonts in font manager, if any exist in document
     void registerEmbeddedFonts();
-
     /// returns pointer to TOC root node
     LvTocItem * getToc() { return &m_toc; }
-
     /// save document formatting parameters after render
     void updateRenderContext();
     /// check document formatting parameters before render,
     /// whether we need to reformat; returns false if render is necessary
     bool checkRenderContext();
-
     LVContainerRef getDocParentContainer() { return _container; }
     void setDocParentContainer( LVContainerRef cont ) { _container = cont; }
-
     void clearRendBlockCache() { _renderedBlockCache.clear(); }
     void clear();
-
-    CrDom();
-
     /// return selections collection
     ldomXRangeList & getSelections() { return _selections; }
-    
     /// get full document height
     int getFullHeight();
     /// returns page height setting
     int getPageHeight() { return _page_height; }
     /// saves document contents as XML to stream with specified encoding
     bool saveToStream( LVStreamRef stream, const char * codepage, bool treeLayout=false );
-
     /// get default font reference
     font_ref_t getDefaultFont() { return _def_font; }
     /// get default style reference
     css_style_ref_t getDefaultStyle() { return _def_style; }
-
     inline bool parseStyleSheet(lString16 codeBase, lString16 css);
     inline bool parseStyleSheet(lString16 cssFile);
-
-    /// destructor
-    virtual ~CrDom();
-
     /// renders (formats) document in memory
     virtual int render(LVRendPageList* pages, int width, int dy,
     		bool showCover, int y0, font_ref_t def_font, int def_interline_space );
-
     /// renders (formats) document in memory
     virtual bool
     setRenderProps(int width, int height, font_ref_t def_font, int def_interline_space);
-
     /// create xpointer from pointer string
     ldomXPointer createXPointer( const lString16 & xPointerStr );
     /// create xpointer from pointer string
@@ -1813,15 +1762,12 @@ public:
             return lString16::empty_str;
         return node->getText();
     }
-
     /// create xpointer from relative pointer string
     ldomXPointer createXPointer( ldomNode * baseNode, const lString16 & xPointerStr );
-
     /// create xpointer from doc point
     ldomXPointer createXPointer( lvPoint pt, int direction=0 );
     /// get rendered block cache object
     CVRendBlockCache & getRendBlockCache() { return _renderedBlockCache; }
-
     bool findText(lString16 pattern, bool caseInsensitive, bool reverse, int minY, int maxY,
                   LVArray<ldomWord>& words, int maxCount, int maxHeight);
 };

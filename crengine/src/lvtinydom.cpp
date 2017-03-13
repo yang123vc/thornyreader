@@ -56,30 +56,31 @@
 // Define to store new text nodes as persistent text, instead of mutable
 #define USE_PERSISTENT_TEXT 1
 
-static int _nextDocumentIndex = 0;
-CrDom* ldomNode::_documentInstances[MAX_DOCUMENT_INSTANCE_COUNT] = {NULL,};
+static int NextDomIndex = 0;
+CrDom* ldomNode::_domInstances[MAX_DOM_INSTANCES] = {NULL};
 
 /// adds document to list, returns ID of allocated document, -1 if no space in instance array
-int ldomNode::registerDocument(CrDom * doc)
+int ldomNode::registerDom(CrDom* doc)
 {
-    for (int i = 0; i < MAX_DOCUMENT_INSTANCE_COUNT; i++) {
-        if ( _nextDocumentIndex<0 || _nextDocumentIndex>=MAX_DOCUMENT_INSTANCE_COUNT )
-            _nextDocumentIndex = 0;
-        if ( _documentInstances[_nextDocumentIndex] == NULL) {
-            _documentInstances[_nextDocumentIndex] = doc;
-            return _nextDocumentIndex++;
+    for (int i = 0; i < MAX_DOM_INSTANCES; i++) {
+        if (NextDomIndex < 0 || NextDomIndex >= MAX_DOM_INSTANCES) {
+            NextDomIndex = 0;
         }
-        _nextDocumentIndex++;
+        if (_domInstances[NextDomIndex] == NULL) {
+            _domInstances[NextDomIndex] = doc;
+            return NextDomIndex++;
+        }
+        NextDomIndex++;
     }
     return -1;
 }
 
 /// removes document from list
-void ldomNode::unregisterDocument( CrDom * doc )
+void ldomNode::unregisterDom(CrDom* doc)
 {
-    for (int i=0; i<MAX_DOCUMENT_INSTANCE_COUNT; i++) {
-        if (_documentInstances[i] == doc) {
-            _documentInstances[i] = NULL;
+    for (int i = 0; i < MAX_DOM_INSTANCES; i++) {
+        if (_domInstances[i] == doc) {
+            _domInstances[i] = NULL;
         }
     }
 }
@@ -498,7 +499,7 @@ CrDomBase::CrDomBase()
 {
     memset( _textList, 0, sizeof(_textList) );
     memset( _elemList, 0, sizeof(_elemList) );
-    _docIndex = ldomNode::registerDocument((CrDom*) this);
+    _docIndex = ldomNode::registerDom((CrDom*) this);
 }
 
 void CrDomBase::clearNodeStyle( lUInt32 dataIndex )
@@ -686,7 +687,7 @@ CrDomBase::~CrDomBase()
             _textList[partindex] = NULL;
         }
     }
-    ldomNode::unregisterDocument((CrDom*)this);
+    ldomNode::unregisterDom((CrDom*)this);
 }
 
 /// get chunk pointer and update usage data
