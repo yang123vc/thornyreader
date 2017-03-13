@@ -6,7 +6,7 @@ lString16 CRBookmark::getChapterName(ldomXPointer ptr)
 	lString16 chapter;
 	int lastLevel = -1;
 	bool foundAnySection = false;
-    lUInt16 section_id = ptr.getNode()->getDocument()->getElementNameIndex(L"section");
+    lUInt16 section_id = ptr.getNode()->getCrDom()->getElementNameIndex(L"section");
 	if (!ptr.isNull())
 	{
 		ldomXPointerEx p(ptr);
@@ -46,7 +46,7 @@ CRBookmark::CRBookmark (ldomXPointer ptr)
     if (ptr.isNull())
         return;
     lvPoint pt = ptr.toPoint();
-    CrDom* doc = ptr.getNode()->getDocument();
+    CrDom* doc = ptr.getNode()->getCrDom();
     int h = doc->getFullHeight();
     if (pt.y > 0 && h > 0) {
         if (pt.y < h) {

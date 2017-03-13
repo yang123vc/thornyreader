@@ -999,7 +999,7 @@ public:
     void recurseToc( ldomNode * node, int level )
     {
         lString16 nodeName = node->getNodeName();
-        lUInt16 paramElemId = node->getDocument()->getElementNameIndex(L"param");
+        lUInt16 paramElemId = node->getCrDom()->getElementNameIndex(L"param");
         if (nodeName == "object") {
             if ( level>0 ) {
                 // process object

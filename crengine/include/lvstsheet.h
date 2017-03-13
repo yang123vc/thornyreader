@@ -46,7 +46,7 @@ class LVCssDeclaration {
 private:
     int * _data;
 public:
-    void apply( css_style_rec_t * style );
+    void apply(const ldomNode* node, css_style_rec_t* style);
     bool empty() { return _data==NULL; }
     bool parse( const char * & decl );
     lUInt32 getHash();
@@ -93,9 +93,8 @@ public:
     lUInt32 getHash();
 };
 
-/** \brief simple CSS selector
-    
-    Currently supports only element name and universal selector.
+/**
+    Simple CSS selector. Currently supports only element name and universal selector.
 
     - * { } - universal selector
     - element-name { } - selector by element name
@@ -117,10 +116,9 @@ public:
     bool parse( const char * &str, CrXmlDom * doc );
     lUInt16 getElementNameId() { return _id; }
     bool check( const ldomNode * node ) const;
-    void apply( const ldomNode * node, css_style_rec_t * style ) const
+    void applyCss(const ldomNode* node, css_style_rec_t* style) const
     {
-        if (check( node ))
-            _decl->apply(style);
+        _decl->apply(node, style);
     }
     void setDeclaration( LVCssDeclRef decl ) { _decl = decl; }
     int getSpecificity() { return _specificity; }
@@ -177,7 +175,7 @@ public:
     /// parse stylesheet, compile and add found rules to sheet
     bool parse( const char * str );
     /// apply stylesheet to node style
-    void apply( const ldomNode * node, css_style_rec_t * style );
+    void applyCss( const ldomNode * node, css_style_rec_t * style );
     /// calculate hash
     lUInt32 getHash();
 };

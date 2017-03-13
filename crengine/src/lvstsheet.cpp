@@ -20,6 +20,12 @@
 // define to dump all tokens
 //#define DUMP_CSS_PARSING
 
+#define LOG_CSS_APPLY
+
+#ifndef AXYDEBUG
+#undef LOG_CSS_APPLY
+#endif
+
 enum css_decl_code {
     cssd_unknown,
     cssd_display,
@@ -776,11 +782,25 @@ static css_length_t read_length(int*& data)
     return len;
 }
 
-void LVCssDeclaration::apply(css_style_rec_t* style)
+static lString16 GetNodeDesc(const ldomNode* node)
+{
+    lUInt16 node_id = node->getNodeId();
+    lString16 desc = node->getCrDom()->getElementName(node_id);
+    desc << "/" << lString16::itoa(node_id) << "[" << lString16::itoa(node->getNodeIndex()) << "]";
+    return desc;
+}
+
+void LVCssDeclaration::apply(const ldomNode* node, css_style_rec_t* style)
 {
     if (!_data) {
+#ifdef AXYDEBUG
+        CRLog::info("No CSS data for %s", LCSTR(GetNodeDesc(node)));
+#endif
         return;
     }
+#ifdef LOG_CSS_APPLY
+    CRLog::trace("CSS %s", LCSTR(GetNodeDesc(node)));
+#endif
     int* p = _data;
     for (;;) {
         switch (*p++) {
@@ -1342,37 +1362,52 @@ LVStyleSheet::LVStyleSheet(LVStyleSheet& sheet) : _doc(sheet._doc)
     set(sheet._selectors);
 }
 
-void LVStyleSheet::apply(const ldomNode* node, css_style_rec_t* style)
+void LVStyleSheet::applyCss(const ldomNode* node, css_style_rec_t* style)
 {
     if (!_selectors.length()) {
+#ifdef AXYDEBUG
+        CRLog::info("LVStyleSheet::applyCss no selectors");
+#endif
         return;
-    } // no rules!
-
+    }
+    bool applied = false;
     lUInt16 id = node->getNodeId();
-
     LVCssSelector* selector_0 = _selectors[0];
     LVCssSelector* selector_id = id > 0 && id < _selectors.length() ? _selectors[id] : NULL;
-
     for (;;) {
         if (selector_0 != NULL) {
-            if (selector_id == NULL ||
-                selector_0->getSpecificity() < selector_id->getSpecificity()) {
+            if (selector_id == NULL
+                || selector_0->getSpecificity() < selector_id->getSpecificity()) {
                 // step by sel_0
-                selector_0->apply(node, style);
+                if (selector_0->check(node)) {
+                    selector_0->applyCss(node, style);
+                    applied = true;
+                }
                 selector_0 = selector_0->getNext();
             } else {
                 // step by sel_id
-                selector_id->apply(node, style);
+                if (selector_id->check(node)) {
+                    selector_id->applyCss(node, style);
+                    applied = true;
+                }
                 selector_id = selector_id->getNext();
             }
         } else if (selector_id != NULL) {
             // step by sel_id
-            selector_id->apply(node, style);
+            if (selector_id->check(node)) {
+                selector_id->applyCss(node, style);
+                applied = true;
+            }
             selector_id = selector_id->getNext();
         } else {
             break; // end of chains
         }
     }
+#ifdef AXYDEBUG
+    if (!applied) {
+        CRLog::info("No CSS selectors for %s", LCSTR(GetNodeDesc(node)));
+    }
+#endif
 }
 
 bool LVStyleSheet::parse(const char* str)

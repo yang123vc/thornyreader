@@ -65,10 +65,10 @@ bool DetectEpubFormat(LVStreamRef stream) {
 void ReadEpubToc( CrDom * doc, ldomNode * mapRoot, LvTocItem * baseToc, LvDocFragmentWriter & appender ) {
     if ( !mapRoot || !baseToc)
         return;
-    lUInt16 navPoint_id = mapRoot->getDocument()->getElementNameIndex(L"navPoint");
-    lUInt16 navLabel_id = mapRoot->getDocument()->getElementNameIndex(L"navLabel");
-    lUInt16 content_id = mapRoot->getDocument()->getElementNameIndex(L"content");
-    lUInt16 text_id = mapRoot->getDocument()->getElementNameIndex(L"text");
+    lUInt16 navPoint_id = mapRoot->getCrDom()->getElementNameIndex(L"navPoint");
+    lUInt16 navLabel_id = mapRoot->getCrDom()->getElementNameIndex(L"navLabel");
+    lUInt16 content_id = mapRoot->getCrDom()->getElementNameIndex(L"content");
+    lUInt16 text_id = mapRoot->getCrDom()->getElementNameIndex(L"text");
     for ( int i=0; i<5000; i++ ) {
         ldomNode * navPoint = mapRoot->findChildElement(LXML_NS_ANY, navPoint_id, i);
         if ( !navPoint )

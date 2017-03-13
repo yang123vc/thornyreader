@@ -431,7 +431,6 @@ struct ldomNodeHandle {
 /// max number which could be stored in ldomNodeHandle._docIndex
 #define MAX_DOCUMENT_INSTANCE_COUNT 256
 
-
 class ldomTextNode;
 // no vtable, very small size (16 bytes)
 // optimized for 32 bit systems
@@ -441,8 +440,7 @@ class ldomNode
     friend class RenderRectAccessor;
     friend class NodeImageProxy;
 private:
-    static CrDom * _documentInstances[MAX_DOCUMENT_INSTANCE_COUNT];
-
+    static CrDom* _documentInstances[MAX_DOCUMENT_INSTANCE_COUNT];
     /// adds document to list, returns ID of allocated document, -1 if no space in instance array
     static int registerDocument( CrDom * doc );
     /// removes document from list
@@ -479,7 +477,7 @@ private:
 
     inline ldomNode* getTinyNode(lUInt32 index) const
     {
-        return ((tinyNodeCollection*) getDocument())->getTinyNode(index);
+        return ((tinyNodeCollection*) getCrDom())->getTinyNode(index);
     }
 
     void operator delete(void *)
@@ -524,7 +522,7 @@ public:
     /// returns data index of node's registration in document data storage
     inline lInt32 getDataIndex() const { return TNINDEX; }
     /// returns pointer to document
-    inline CrDom * getDocument() const { return _documentInstances[_handle._docIndex]; }
+    inline CrDom * getCrDom() const { return _documentInstances[_handle._docIndex]; }
     /// returns pointer to parent node, NULL if node has no parent
     ldomNode * getParentNode() const;
     /// returns node type, either LXML_TEXT_NODE or LXML_ELEMENT_NODE
@@ -853,19 +851,11 @@ public:
     void dumpUnknownEntities( const char * fname );
 
     /// garbage collector
-    virtual void gc()
-    {
-        fontMan->gc();
-    }
+    virtual void gc() { fontMan->gc(); }
 
     inline LVStyleSheet* getStylesheet() { return &stylesheet_; }
     /// Sets style sheet, clears old content of css if arg replace is true
     void setStylesheet(const char* css, bool replace);
-    /// Apply document's stylesheet to element node
-    inline void applyStyle(ldomNode* element, css_style_rec_t* pstyle)
-    {
-       stylesheet_.apply( element, pstyle );
-    }
 
     void onAttributeSet( lUInt16 attrId, lUInt16 valueId, ldomNode * node );
 
@@ -984,8 +974,8 @@ protected:
 		XPointerData() : _doc(NULL), _dataIndex(0), _offset(0), _refCount(1) { }
 		// create instance
         XPointerData( ldomNode * node, int offset )
-			: _doc(node?node->getDocument():NULL)
-			, _dataIndex(node?node->getDataIndex():0)
+			: _doc(node ? node->getCrDom() : NULL)
+			, _dataIndex(node ? node->getDataIndex() : 0)
 			, _offset( offset )
 			, _refCount( 1 )
 		{ }
@@ -1024,7 +1014,7 @@ protected:
         inline void setNode( ldomNode * node )
 		{
 			if ( node ) {
-				_doc = node->getDocument();
+				_doc = node->getCrDom();
 				_dataIndex = node->getDataIndex();
 			} else {
 				_doc = NULL;
@@ -1048,8 +1038,6 @@ public:
 	XPointerData * _data;
     /// clear pointer (make null)
     void clear() { *this = ldomXPointer(); }
-    /// return document
-	inline CrDom * getDocument() { return _data->getDocument(); }
     /// returns node pointer
     inline ldomNode * getNode() const { return _data->getNode(); }
     /// return parent final node, if found
@@ -1723,7 +1711,6 @@ class CrDom : public CrXmlDom
 {
     friend class LvDomWriter;
     friend class LvDomAutocloseWriter;
-
 private:
     LvTocItem m_toc;
     font_ref_t _def_font; // default font
@@ -1737,10 +1724,8 @@ private:
     LVContainerRef _container;
     LVHashTable<lUInt32, ListNumberingPropsRef> lists;
     LVEmbeddedFontList _fontList;
-
 protected:
     void applyDocStylesheet();
-
 public:
     void forceReinitStyles() {
         dropStyles();
@@ -1884,7 +1869,6 @@ class ldomElementWriter
 */
 class LvDomWriter : public LvXMLParserCallback
 {
-
 protected:
     CrDom* doc_;
     //ldomElement * _currNode;
@@ -1895,7 +1879,6 @@ protected:
     lUInt16 _stopTagId;
     lUInt32 _flags;
     virtual void ElementCloseHandler( ldomNode * node ) { node->persist(); }
-
 public:
     /// returns flags
     virtual lUInt32 getFlags() { return _flags; }

@@ -11,23 +11,15 @@
 
 *******************************************************/
 
-#include <stdlib.h>
-#include <string.h>
-#include "../include/lvtinydom.h"
-#include "../include/fb2def.h"
-#include "../include/lvrend.h"
-
+#include "lvtinydom.h"
+#include "fb2def.h"
+#include "lvrend.h"
 
 //#define DEBUG_TREE_DRAW 3
 // define to non-zero (1..5) to see block bounds
 #define DEBUG_TREE_DRAW 0
 
-//#ifdef _DEBUG
-//#define DEBUG_DUMP_ENABLED
-//#endif
-
 #ifdef DEBUG_DUMP_ENABLED
-
 class simpleLogFile
 {
 public:
@@ -51,11 +43,8 @@ public:
     }
     simpleLogFile & operator << ( const lString16 &str ) { return operator << (str.c_str()); }
 };
-
 simpleLogFile logfile("/tmp/logfile.log");
-
-#else
-
+#else //DEBUG_DUMP_ENABLED
 // stubs
 class simpleLogFile
 {
@@ -65,11 +54,8 @@ public:
     simpleLogFile & operator << ( const wchar_t * ) { return *this; }
     simpleLogFile & operator << ( const lString16 & ) { return *this; }
 };
-
 simpleLogFile logfile;
-
-#endif
-
+#endif //DEBUG_DUMP_ENABLED
 
 // prototypes
 int lengthToPx( css_length_t val, int base_px, int base_em );
@@ -380,8 +366,6 @@ public:
     }
 
     void PlaceCells() {
-
-
         int i, j;
         // search for max column number
         int maxcols = 0;
@@ -803,8 +787,6 @@ public:
     }
 };
 
-
-
 void freeFormatData( ldomNode * node )
 {
     node->clearRenderData();
@@ -1037,7 +1019,7 @@ void renderFinalBlock( ldomNode * enode, LFormattedText * txform, RenderRectAcce
             lString16 marker;
             int marker_width = 0;
 
-            ListNumberingPropsRef listProps =  enode->getDocument()->getNodeNumberingProps( enode->getParentNode()->getDataIndex() );
+            ListNumberingPropsRef listProps = enode->getCrDom()->getNodeNumberingProps( enode->getParentNode()->getDataIndex() );
             if ( listProps.isNull() ) {
                 int counterValue = 0;
                 ldomNode * parent = enode->getParentNode();
@@ -1052,7 +1034,7 @@ void renderFinalBlock( ldomNode * enode, LFormattedText * txform, RenderRectAcce
                     }
                 }
                 listProps = ListNumberingPropsRef( new ListNumberingProps(counterValue, maxWidth) );
-                enode->getDocument()->setNodeNumberingProps( enode->getParentNode()->getDataIndex(), listProps );
+                enode->getCrDom()->setNodeNumberingProps( enode->getParentNode()->getDataIndex(), listProps );
             }
             int counterValue = 0;
             if ( enode->getNodeListMarker( counterValue, marker, marker_width ) ) {
@@ -1404,7 +1386,7 @@ int renderBlockElement( LVRendPageContext & context, ldomNode * enode, int x, in
     if ( enode->isElement() )
     {
         bool isFootNoteBody = false;
-        if ( enode->getNodeId()==el_section && enode->getDocument()->getDocFlag(DOC_FLAG_ENABLE_FOOTNOTES) ) {
+        if ( enode->getNodeId()==el_section && enode->getCrDom()->getDocFlag(DOC_FLAG_ENABLE_FOOTNOTES) ) {
             ldomNode * body = enode->getParentNode();
             while ( body != NULL && body->getNodeId()!=el_body )
                 body = body->getParentNode();
@@ -1577,7 +1559,7 @@ int renderBlockElement( LVRendPageContext & context, ldomNode * enode, int x, in
                     context.AddLine(rect.top+line->y+padding_top, rect.top+line->y+line->height+padding_top, line_flags);
 
                     // footnote links analysis
-                    if ( !isFootNoteBody && enode->getDocument()->getDocFlag(DOC_FLAG_ENABLE_FOOTNOTES) ) { // disable footnotes for footnotes
+                    if ( !isFootNoteBody && enode->getCrDom()->getDocFlag(DOC_FLAG_ENABLE_FOOTNOTES) ) { // disable footnotes for footnotes
                         for ( int w=0; w<line->word_count; w++ ) {
                             // check link start flag for every word
                             if ( line->words[w].flags & LTEXT_WORD_IS_LINK_START ) {
@@ -1793,7 +1775,6 @@ inline void spreadParent( css_length_t & val, css_length_t & parent_val, bool in
 
 void setNodeStyle(ldomNode* enode, css_style_ref_t parent_style, LVFontRef parent_font)
 {
-    CR_UNUSED(parent_font);
     //lvdomElementFormatRec * fmt = node->getRenderData();
     css_style_ref_t style(new css_style_rec_t);
     css_style_rec_t* pstyle = style.get();
@@ -1808,14 +1789,11 @@ void setNodeStyle(ldomNode* enode, css_style_ref_t parent_style, LVFontRef paren
         pstyle->display = type_ptr->display;
         pstyle->white_space = type_ptr->white_space;
     }
-
-    int baseFontSize = enode->getDocument()->getDefaultFont()->getSize();
-
+    int baseFontSize = enode->getCrDom()->getDefaultFont()->getSize();
     // Apply style sheet
-    enode->getDocument()->applyStyle(enode, pstyle);
-
-    if (enode->getDocument()->getDocFlag(DOC_FLAG_EMBEDDED_STYLES)
-        && enode->hasAttribute(LXML_NS_ANY, attr_style)) {
+    enode->getCrDom()->getStylesheet()->applyCss(enode, pstyle);
+    if (enode->getCrDom()->getDocFlag(DOC_FLAG_EMBEDDED_STYLES)
+            && enode->hasAttribute(LXML_NS_ANY, attr_style)) {
         lString16 nodeStyle = enode->getAttributeValue(LXML_NS_ANY, attr_style);
         if (!nodeStyle.empty()) {
             nodeStyle = cs16("{") + nodeStyle + "}";
@@ -1823,48 +1801,47 @@ void setNodeStyle(ldomNode* enode, css_style_ref_t parent_style, LVFontRef paren
             lString8 s8 = UnicodeToUtf8(nodeStyle);
             const char* s = s8.c_str();
             if (decl.parse(s)) {
-                decl.apply(pstyle);
+                decl.apply(enode, pstyle);
             }
         }
     }
-
         // update inherited style attributes
 #define UPDATE_STYLE_FIELD(fld, inherit_value) \
-        if (pstyle->fld == inherit_value) \
-            pstyle->fld = parent_style->fld
+    if (pstyle->fld == inherit_value) \
+        pstyle->fld = parent_style->fld
 #define UPDATE_LEN_FIELD(fld) \
-        switch( pstyle->fld.type ) \
-        { \
-        case css_val_inherited: \
-            pstyle->fld = parent_style->fld; \
-            break; \
-        case css_val_percent: \
-            pstyle->fld.type = parent_style->fld.type; \
-            pstyle->fld.value = parent_style->fld.value * pstyle->fld.value / 100; \
-            break; \
-        case css_val_px: \
-            pstyle->fld.type = css_val_px; \
-            pstyle->fld.value = pstyle->fld.value * baseFontSize / (256 * 18); \
-            break; \
-        case css_val_pt: \
-            pstyle->fld.type = css_val_px; \
-            pstyle->fld.value = pstyle->fld.value * baseFontSize / (256 * 12); \
-            break; \
-        case css_val_em: \
-            pstyle->fld.type = css_val_px; \
-            pstyle->fld.value = parent_style->font_size.value * pstyle->fld.value / 256; \
-            break; \
-        default: \
-            pstyle->fld.type = css_val_px; \
-            pstyle->fld.value = 0; \
-            break; \
-        }
+    switch( pstyle->fld.type ) \
+    { \
+    case css_val_inherited: \
+        pstyle->fld = parent_style->fld; \
+        break; \
+    case css_val_percent: \
+        pstyle->fld.type = parent_style->fld.type; \
+        pstyle->fld.value = parent_style->fld.value * pstyle->fld.value / 100; \
+        break; \
+    case css_val_px: \
+        pstyle->fld.type = css_val_px; \
+        pstyle->fld.value = pstyle->fld.value * baseFontSize / (256 * 18); \
+        break; \
+    case css_val_pt: \
+        pstyle->fld.type = css_val_px; \
+        pstyle->fld.value = pstyle->fld.value * baseFontSize / (256 * 12); \
+        break; \
+    case css_val_em: \
+        pstyle->fld.type = css_val_px; \
+        pstyle->fld.value = parent_style->font_size.value * pstyle->fld.value / 256; \
+        break; \
+    default: \
+        pstyle->fld.type = css_val_px; \
+        pstyle->fld.value = 0; \
+        break; \
+    }
 #if 0
-        if ( (pstyle->display == css_d_inline) && (pstyle->text_align==css_ta_inherit))
-        {
-            if (parent_style->text_align==css_ta_inherit)
+    if ((pstyle->display == css_d_inline) && (pstyle->text_align == css_ta_inherit)) {
+        if (parent_style->text_align == css_ta_inherit) {
             parent_style->text_align = css_ta_center;
         }
+    }
 #endif
     UPDATE_STYLE_FIELD(display, css_d_inherit);
     UPDATE_STYLE_FIELD(white_space, css_ws_inherit);
@@ -1884,7 +1861,7 @@ void setNodeStyle(ldomNode* enode, css_style_ref_t parent_style, LVFontRef paren
     }
     UPDATE_STYLE_FIELD(font_family, css_ff_inherit);
     UPDATE_LEN_FIELD(font_size);
-    //UPDATE_LEN_FIELD( text_indent );
+    //UPDATE_LEN_FIELD(text_indent);
     spreadParent(pstyle->text_indent, parent_style->text_indent);
     switch (pstyle->font_weight) {
         case css_fw_inherit:
@@ -1951,24 +1928,20 @@ void setNodeStyle(ldomNode* enode, css_style_ref_t parent_style, LVFontRef paren
     spreadParent(pstyle->line_height, parent_style->line_height);
     spreadParent(pstyle->color, parent_style->color);
     spreadParent(pstyle->background_color, parent_style->background_color, false);
-
     // set calculated style
-    //enode->getDocument()->cacheStyle( style );
+    //enode->getCrDom()->cacheStyle( style );
     enode->setStyle(style);
     if (enode->getStyle().isNull()) {
         CRLog::error("NULL style set!!!");
         enode->setStyle(style);
     }
-
     // set font
     enode->initNodeFont();
 }
 
 int renderTable( LVRendPageContext & context, ldomNode * node, int x, int y, int width )
 {
-    CR_UNUSED2(x, y);
     CCRTable table( node, width, 10 );
     int h = table.renderCells( context );
-
     return h;
 }
