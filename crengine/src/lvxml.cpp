@@ -1428,141 +1428,107 @@ public:
     bool testProjectGutenbergHeader()
     {
         int i = 0;
-        for ( ; i<length() && get(i)->rpos==0; i++ )
-            ;
-        if ( i>=length() )
+        for (; i < length() && get(i)->rpos == 0; i++) {}
+        if (i >= length()) {
             return false;
+        }
         bookTitle.clear();
         bookAuthors.clear();
         lString16 firstLine = get(i)->text;
         lString16 pgPrefix("The Project Gutenberg Etext of ");
-        if ( firstLine.length() < pgPrefix.length() )
+        if (firstLine.length() < pgPrefix.length()) {
             return false;
-        if ( firstLine.substr(0, pgPrefix.length()) != pgPrefix )
+        }
+        if (firstLine.substr(0, pgPrefix.length()) != pgPrefix) {
             return false;
-        firstLine = firstLine.substr( pgPrefix.length(), firstLine.length() - pgPrefix.length());
+        }
+        firstLine = firstLine.substr(pgPrefix.length(), firstLine.length() - pgPrefix.length());
         int byPos = firstLine.pos(", by ");
-        if ( byPos<=0 )
+        if (byPos <= 0) {
             return false;
-        bookTitle = firstLine.substr( 0, byPos );
-        bookAuthors = firstLine.substr( byPos + 5, firstLine.length()-byPos-5 );
-        for ( ; i<length() && i<500 && get(i)->text.pos("*END*") != 0; i++ )
-            ;
-        if ( i<length() && i<500 ) {
-            for ( i++; i<length() && i<500 && get(i)->text.empty(); i++ )
-                ;
+        }
+        bookTitle = firstLine.substr(0, byPos);
+        bookAuthors = firstLine.substr(byPos + 5, firstLine.length() - byPos - 5);
+        for (; i < length() && i < 500 && get(i)->text.pos("*END*") != 0; i++) {}
+        if (i < length() && i < 500) {
+            for (i++; i < length() && i < 500 && get(i)->text.empty(); i++) {}
             linesToSkip = i;
         }
         return true;
     }
 
-    // Leo Tolstoy. War and Peace
-    bool testAuthorDotTitleFormat()
-    {
-        int i = 0;
-        for ( ; i<length() && get(i)->rpos==0; i++ )
-            ;
-        if ( i>=length() )
-            return false;
-        bookTitle.clear();
-        bookAuthors.clear();
-        lString16 firstLine = get(i)->text;
-        firstLine.trim();
-        int dotPos = firstLine.pos(". ");
-        if ( dotPos<=0 )
-            return false;
-        bookAuthors = firstLine.substr( 0, dotPos );
-        bookTitle = firstLine.substr( dotPos + 2, firstLine.length() - dotPos - 2);
-        if ( bookTitle.empty() || (lGetCharProps(bookTitle[bookTitle.length()]) & CH_PROP_PUNCT) )
-            return false;
-        return true;
-    }
-
     /// check beginning of file for book title, author and series
-    bool DetectBookDescription(LvXMLParserCallback * callback)
+    bool DetectBookDescription(LvXMLParserCallback* callback)
     {
-
-        if ( !testProjectGutenbergHeader() && !testAuthorDotTitleFormat() ) {
-            bookTitle = LVExtractFilenameWithoutExtension( file->getFileName() );
+        if (!testProjectGutenbergHeader()) {
+            bookTitle.clear();
             bookAuthors.clear();
-/*
-
-            int necount = 0;
-            lString16 s[3];
-            unsigned i;
-            for ( i=0; i<(unsigned)length() && necount<2; i++ ) {
-                LVTextFileLine * item = get(i);
-                if ( item->rpos>item->lpos ) {
-                    lString16 str = item->text;
-                    str.trimDoubleSpaces(false, false, true);
-                    if ( !str.empty() ) {
-                        s[necount] = str;
-                        necount++;
-                    }
-                }
-            }
-            //update book description
-            if ( i==0 ) {
-                bookTitle = "no name";
-            } else {
-                bookTitle = s[1];
-            }
-            bookAuthors = s[0];
-*/
         }
-
         lString16Collection author_list;
-        if ( !bookAuthors.empty() )
-            author_list.parse( bookAuthors, ',', true );
-
+        if (!bookAuthors.empty()) {
+            author_list.parse(bookAuthors, ',', true);
+        }
         int i;
-        for ( i=0; i<author_list.length(); i++ ) {
+        for (i = 0; i < author_list.length(); i++) {
             lString16Collection name_list;
-            name_list.parse( author_list[i], ' ', true );
-            if ( name_list.length()>0 ) {
+            name_list.parse(author_list[i], ' ', true);
+            if (name_list.length() > 0) {
                 lString16 firstName = name_list[0];
                 lString16 lastName;
                 lString16 middleName;
-                if ( name_list.length() == 2 ) {
+                if (name_list.length() == 2) {
                     lastName = name_list[1];
-                } else if ( name_list.length()>2 ) {
+                } else if (name_list.length() > 2) {
                     middleName = name_list[1];
                     lastName = name_list[2];
                 }
-                callback->OnTagOpenNoAttr( NULL, L"author" );
-                  callback->OnTagOpenNoAttr( NULL, L"first-name" );
-                    if ( !firstName.empty() )
-                        callback->OnText( firstName.c_str(), firstName.length(), TXTFLG_TRIM|TXTFLG_TRIM_REMOVE_EOL_HYPHENS );
-                  callback->OnTagClose( NULL, L"first-name" );
-                  callback->OnTagOpenNoAttr( NULL, L"middle-name" );
-                    if ( !middleName.empty() )
-                        callback->OnText( middleName.c_str(), middleName.length(), TXTFLG_TRIM|TXTFLG_TRIM_REMOVE_EOL_HYPHENS );
-                  callback->OnTagClose( NULL, L"middle-name" );
-                  callback->OnTagOpenNoAttr( NULL, L"last-name" );
-                    if ( !lastName.empty() )
-                        callback->OnText( lastName.c_str(), lastName.length(), TXTFLG_TRIM|TXTFLG_TRIM_REMOVE_EOL_HYPHENS );
-                  callback->OnTagClose( NULL, L"last-name" );
-                callback->OnTagClose( NULL, L"author" );
+                callback->OnTagOpenNoAttr(NULL, L"author");
+                callback->OnTagOpenNoAttr(NULL, L"first-name");
+                if (!firstName.empty()) {
+                    callback->OnText(firstName.c_str(),
+                            firstName.length(),
+                            TXTFLG_TRIM | TXTFLG_TRIM_REMOVE_EOL_HYPHENS);
+                }
+                callback->OnTagClose(NULL, L"first-name");
+                callback->OnTagOpenNoAttr(NULL, L"middle-name");
+                if (!middleName.empty()) {
+                    callback->OnText(middleName.c_str(),
+                            middleName.length(),
+                            TXTFLG_TRIM | TXTFLG_TRIM_REMOVE_EOL_HYPHENS);
+                }
+                callback->OnTagClose(NULL, L"middle-name");
+                callback->OnTagOpenNoAttr(NULL, L"last-name");
+                if (!lastName.empty()) {
+                    callback->OnText(lastName.c_str(),
+                            lastName.length(),
+                            TXTFLG_TRIM | TXTFLG_TRIM_REMOVE_EOL_HYPHENS);
+                }
+                callback->OnTagClose(NULL, L"last-name");
+                callback->OnTagClose(NULL, L"author");
             }
         }
-        callback->OnTagOpenNoAttr( NULL, L"book-title" );
-            if ( !bookTitle.empty() )
-                callback->OnText( bookTitle.c_str(), bookTitle.length(), 0 );
-        callback->OnTagClose( NULL, L"book-title" );
-        if ( !seriesName.empty() || !seriesNumber.empty() ) {
-            callback->OnTagOpenNoAttr( NULL, L"sequence" );
-            if ( !seriesName.empty() )
-                callback->OnAttribute( NULL, L"name", seriesName.c_str() );
-            if ( !seriesNumber.empty() )
-                callback->OnAttribute( NULL, L"number", seriesNumber.c_str() );
-            callback->OnTagClose( NULL, L"sequence" );
+        callback->OnTagOpenNoAttr(NULL, L"book-title");
+        if (!bookTitle.empty()) {
+            callback->OnText(bookTitle.c_str(), bookTitle.length(), 0);
         }
-
+        callback->OnTagClose(NULL, L"book-title");
+        if (!seriesName.empty() || !seriesNumber.empty()) {
+            callback->OnTagOpenNoAttr(NULL, L"sequence");
+            if (!seriesName.empty()) {
+                callback->OnAttribute(NULL, L"name", seriesName.c_str());
+            }
+            if (!seriesNumber.empty()) {
+                callback->OnAttribute(NULL, L"number", seriesNumber.c_str());
+            }
+            callback->OnTagClose(NULL, L"sequence");
+        }
         // remove description lines
-        if ( linesToSkip>0 )
-            RemoveLines( linesToSkip );
+        if (linesToSkip > 0) {
+            RemoveLines(linesToSkip);
+        }
         return true;
     }
+
     /// add one paragraph
     void AddEmptyLine( LvXMLParserCallback * callback )
     {
