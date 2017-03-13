@@ -132,9 +132,7 @@ void LVDocView::RenderIfDirty()
         int	dx = page_rects_[0].width() - margins_.left - margins_.right;
         int	dy = page_rects_[0].height() - margins_.top - margins_.bottom;
         CheckRenderProps(dx, dy);
-        if (!base_font_) {
-
-        } else {
+        if (!base_font_.isNull()) {
             cr_dom_->render(&pages_list_,
                     dx,
                     dy,
@@ -146,6 +144,8 @@ void LVDocView::RenderIfDirty()
             is_rendered_ = true;
             UpdateSelections();
             UpdateBookmarksRanges();
+        } else {
+            CRLog::error("RenderIfDirty base_font_.isNull()");
         }
     }
     is_rendered_ = true;
@@ -214,15 +214,258 @@ void LVDocView::UpdatePageMargins()
     }
 }
 
-static lString16 GetSectionHeader(ldomNode* section) {
-	lString16 header;
-	if (!section || section->getChildCount() == 0)
-		return header;
+static lString16 GetSectionHeader(ldomNode* section)
+{
+    lString16 header;
+    if (!section || section->getChildCount() == 0) {
+        return header;
+    }
     ldomNode* child = section->getChildElementNode(0, L"title");
-    if (!child)
-		return header;
-	header = child->getText(L' ', 1024);
-	return header;
+    if (!child) {
+        return header;
+    }
+    header = child->getText(L' ', 1024);
+    return header;
+}
+
+void LVDocView::Resize(int width, int height)
+{
+    if (width < 80 || width > 5000) {
+        width = 80;
+    }
+    if (height < 80 || height > 5000) {
+        height = 80;
+    }
+    if (width == width_ && height == height_) {
+        CRLog::trace("Size is not changed: %dx%d", width, height);
+        return;
+    }
+    width_ = width;
+    height_ = height;
+    if (cr_dom_) {
+        UpdateLayout();
+        REQUEST_RENDER("resize")
+        position_is_set_ = false;
+        //goToBookmark(_posBookmark);
+        //updateBookMarksRanges();
+    }
+}
+
+/*
+int LVDocFormatFromExtension(lString16 &pathName) {
+    if (pathName.endsWith(".fb2"))
+        return doc_format_fb2;
+    if (pathName.endsWith(".txt") || pathName.endsWith(".pml"))
+        return doc_format_txt;
+    if (pathName.endsWith(".rtf"))
+        return doc_format_rtf;
+    if (pathName.endsWith(".epub"))
+        return doc_format_epub;
+    if (pathName.endsWith(".htm")
+    		|| pathName.endsWith(".html")
+			|| pathName.endsWith(".shtml")
+			|| pathName.endsWith(".xhtml"))
+        return doc_format_html;
+    if (pathName.endsWith(".chm"))
+        return doc_format_chm;
+    if (pathName.endsWith(".doc"))
+        return doc_format_doc;
+    if (pathName.endsWith(".pdb")
+    		|| pathName.endsWith(".prc")
+			|| pathName.endsWith(".mobi")
+			|| pathName.endsWith(".azw"))
+        return doc_format_mobi;
+    return doc_format_none;
+}
+*/
+
+void LVDocView::SetDocFormat(doc_format_t format)
+{
+    doc_format_ = format;
+}
+
+bool LVDocView::LoadDoc(const char* cr_uri_chars)
+{
+    LVStreamRef stream;
+    lString16 cre_uri(cr_uri_chars);
+    lString16 to_archive_path;
+    lString16 in_archive_path;
+    if (LVSplitArcName(cre_uri, to_archive_path, in_archive_path)) {
+        // Doc is inside archive
+        stream = LVOpenFileStream(to_archive_path.c_str(), LVOM_READ);
+        if (stream.isNull()) {
+            CRLog::error("Cannot open archive file %s", LCSTR(to_archive_path));
+            return false;
+        }
+        container_ = LVOpenArchieve(stream);
+        if (container_.isNull()) {
+            CRLog::error("Cannot read archive contents from %s", LCSTR(to_archive_path));
+            return false;
+        }
+        stream = container_->OpenStream(in_archive_path.c_str(), LVOM_READ);
+        if (stream.isNull()) {
+            CRLog::error("Cannot open stream to file in archive %s", LCSTR(cre_uri));
+            return false;
+        }
+        doc_props_->setString(DOC_PROP_ARC_NAME, LVExtractFilename(to_archive_path));
+        doc_props_->setString(DOC_PROP_ARC_PATH, LVExtractPath(to_archive_path));
+        doc_props_->setString(DOC_PROP_FILE_NAME, in_archive_path);
+    } else {
+        lString16 doc_file_name = LVExtractFilename(cre_uri);
+        lString16 path_to_doc = LVExtractPath(cre_uri);
+        container_ = LVOpenDirectory(path_to_doc.c_str());
+        if (container_.isNull()) {
+            CRLog::error("Cannot open dir %s", LCSTR(path_to_doc));
+            return false;
+        }
+        stream = container_->OpenStream(doc_file_name.c_str(), LVOM_READ);
+        if (!stream) {
+            CRLog::error("Cannot open file %s", LCSTR(doc_file_name));
+            return false;
+        }
+        doc_props_->setString(DOC_PROP_FILE_PATH, path_to_doc);
+        doc_props_->setString(DOC_PROP_FILE_NAME, doc_file_name);
+    }
+    if (LoadDoc(stream)) {
+        stream_.Clear();
+        return true;
+    } else {
+        CreateEmptyDom();
+        CRLog::error("Doc stream parsing fail");
+        return false;
+    }
+}
+
+bool LVDocView::LoadDoc(LVStreamRef stream)
+{
+    stream_ = stream;
+    // To allow apply styles and rend method while loading
+    CheckRenderProps(0, 0);
+    doc_format_t pdb_format = doc_format_none;
+    // DetectPDBFormat установит pdb_format в корректное значение
+    if (DetectPDBFormat(stream_, pdb_format)) {
+        CRLog::trace("PDB format detected");
+        cr_dom_->setProps(doc_props_);
+        SetDocFormat(pdb_format);
+        CheckRenderProps(0, 0);
+        doc_format_t contentFormat = doc_format_none;
+        if (ImportPDBDocument(stream_, cr_dom_, contentFormat)) {
+            CheckRenderProps(0, 0);
+            REQUEST_RENDER("LoadDoc")
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if (DetectEpubFormat(stream_)) {
+        CRLog::trace("EPUB format detected");
+        cr_dom_->setProps(doc_props_);
+        SetDocFormat(doc_format_epub);
+        CheckRenderProps(0, 0);
+        if (ImportEpubDocument(stream_, cr_dom_)) {
+            container_ = cr_dom_->getDocParentContainer();
+            doc_props_ = cr_dom_->getProps();
+            CheckRenderProps(0, 0);
+            REQUEST_RENDER("LoadDoc")
+            archive_container_ = cr_dom_->getDocParentContainer();
+            return true;
+        } else {
+            return false;
+        }
+    }
+    if (DetectCHMFormat(stream_)) {
+        CRLog::trace("CHM format detected");
+        cr_dom_->setProps(doc_props_);
+        SetDocFormat(doc_format_chm);
+        CheckRenderProps(0, 0);
+        if (ImportCHMDocument(stream_, cr_dom_)) {
+            CheckRenderProps(0, 0);
+            REQUEST_RENDER("LoadDoc")
+            archive_container_ = cr_dom_->getDocParentContainer();
+            return true;
+        } else {
+            return false;
+        }
+    }
+#if ENABLE_ANTIWORD == 1
+    if (DetectWordFormat(stream_)) {
+        CRLog::trace("DOC format detected");
+        cr_dom_->setProps(doc_props_);
+        SetDocFormat(doc_format_doc);
+        CheckRenderProps(0, 0);
+        if (ImportWordDocument(stream_, cr_dom_)) {
+            CheckRenderProps(0, 0);
+            REQUEST_RENDER("LoadDoc")
+            archive_container_ = cr_dom_->getDocParentContainer();
+            return true;
+        } else {
+            return false;
+        }
+    }
+#endif //ENABLE_ANTIWORD == 1
+    LvDomWriter writer(cr_dom_);
+    if (stream_->GetSize() < 5) {
+        return false;
+    }
+    // FB2 format
+    LVFileFormatParser* parser = new LvXmlParser(stream_, &writer, false, true);
+    if (!parser->CheckFormat()) {
+        delete parser;
+        parser = NULL;
+    } else {
+        CRLog::trace("FB2 format detected");
+        SetDocFormat(doc_format_fb2);
+    }
+    if (parser == NULL) {
+        parser = new LVRtfParser(stream_, &writer);
+        if (!parser->CheckFormat()) {
+            delete parser;
+            parser = NULL;
+        } else {
+            SetDocFormat(doc_format_rtf);
+            CRLog::trace("RTF format detected");
+        }
+    }
+    LvDomAutocloseWriter autoclose_writer(cr_dom_, false, HTML_AUTOCLOSE_TABLE);
+    if (parser == NULL) {
+        parser = new LvHtmlParser(stream_, &autoclose_writer);
+        if (!parser->CheckFormat()) {
+            delete parser;
+            parser = NULL;
+        } else {
+            SetDocFormat(doc_format_html);
+            CRLog::trace("HTML format detected");
+        }
+    }
+    if (parser == NULL) {
+        parser = new LVTextParser(stream_, &writer, config_txt_smart_format_);
+        if (!parser->CheckFormat()) {
+            delete parser;
+            parser = NULL;
+        } else {
+            SetDocFormat(doc_format_txt);
+            CRLog::trace("TXT format detected");
+        }
+    }
+    if (!parser) {
+        return false;
+    }
+    CheckRenderProps(0, 0);
+    if (!parser->Parse()) {
+        delete parser;
+        return false;
+    }
+    delete parser;
+    offset_ = 0;
+    page_ = 0;
+    //lString16 docstyle = m_doc->createXPointer(L"/FictionBook/stylesheet").getText();
+    //if (!docstyle.empty() && cr_dom->getDocFlag(DOC_FLAG_ENABLE_INTERNAL_STYLES)) {
+    //      cr_dom->getStylesheet()->parse(UnicodeToUtf8(docstyle).c_str());
+    //      cr_dom->setStylesheet(UnicodeToUtf8(docstyle).c_str(), false);
+    //}
+    show_cover_ = !getCoverPageImage().isNull();
+    REQUEST_RENDER("LoadDoc")
+    return true;
 }
 
 /// returns cover page image source, if any
@@ -1299,246 +1542,6 @@ int LVDocView::GetHeight()
 int LVDocView::GetWidth()
 {
 	return width_;
-}
-
-void LVDocView::Resize(int width, int height)
-{
-    if (width < 80 || width > 5000) {
-    	width = 80;
-    }
-    if (height < 80 || height > 5000) {
-        height = 80;
-    }
-	if (width == width_ && height == height_) {
-		CRLog::trace("Size is not changed: %dx%d", width, height);
-		return;
-	}
-	width_ = width;
-    height_ = height;
-	if (cr_dom_) {
-        UpdateLayout();
-        REQUEST_RENDER("resize")
-        position_is_set_ = false;
-        //goToBookmark(_posBookmark);
-        //updateBookMarksRanges();
-	}
-}
-
-/*
-int LVDocFormatFromExtension(lString16 &pathName) {
-    if (pathName.endsWith(".fb2"))
-        return doc_format_fb2;
-    if (pathName.endsWith(".txt") || pathName.endsWith(".pml"))
-        return doc_format_txt;
-    if (pathName.endsWith(".rtf"))
-        return doc_format_rtf;
-    if (pathName.endsWith(".epub"))
-        return doc_format_epub;
-    if (pathName.endsWith(".htm")
-    		|| pathName.endsWith(".html")
-			|| pathName.endsWith(".shtml")
-			|| pathName.endsWith(".xhtml"))
-        return doc_format_html;
-    if (pathName.endsWith(".chm"))
-        return doc_format_chm;
-    if (pathName.endsWith(".doc"))
-        return doc_format_doc;
-    if (pathName.endsWith(".pdb")
-    		|| pathName.endsWith(".prc")
-			|| pathName.endsWith(".mobi")
-			|| pathName.endsWith(".azw"))
-        return doc_format_mobi;
-    return doc_format_none;
-}
-*/
-
-void LVDocView::SetDocFormat(doc_format_t format)
-{
-	doc_format_ = format;
-}
-
-bool LVDocView::LoadDoc(const char* cr_uri_chars)
-{
-	LVStreamRef stream;
-	lString16 cre_uri(cr_uri_chars);
-	lString16 to_archive_path;
-	lString16 in_archive_path;
-	if (LVSplitArcName(cre_uri, to_archive_path, in_archive_path)) {
-		// Doc is inside archive
-		stream = LVOpenFileStream(to_archive_path.c_str(), LVOM_READ);
-		if (stream.isNull()) {
-			CRLog::error("Cannot open archive file %s", LCSTR(to_archive_path));
-			return false;
-		}
-		container_ = LVOpenArchieve(stream);
-		if (container_.isNull()) {
-			CRLog::error("Cannot read archive contents from %s", LCSTR(to_archive_path));
-			return false;
-		}
-		stream = container_->OpenStream(in_archive_path.c_str(), LVOM_READ);
-		if (stream.isNull()) {
-			CRLog::error("Cannot open stream to file in archive %s", LCSTR(cre_uri));
-			return false;
-		}
-		doc_props_->setString(DOC_PROP_ARC_NAME, LVExtractFilename(to_archive_path));
-		doc_props_->setString(DOC_PROP_ARC_PATH, LVExtractPath(to_archive_path));
-		doc_props_->setString(DOC_PROP_FILE_NAME, in_archive_path);
-	} else {
-		lString16 doc_file_name = LVExtractFilename(cre_uri);
-		lString16 path_to_doc = LVExtractPath(cre_uri);
-		container_ = LVOpenDirectory(path_to_doc.c_str());
-		if (container_.isNull()) {
-			CRLog::error("Cannot open dir %s", LCSTR(path_to_doc));
-			return false;
-		}
-		stream = container_->OpenStream(doc_file_name.c_str(), LVOM_READ);
-		if (!stream) {
-			CRLog::error("Cannot open file %s", LCSTR(doc_file_name));
-			return false;
-		}
-		doc_props_->setString(DOC_PROP_FILE_PATH, path_to_doc);
-		doc_props_->setString(DOC_PROP_FILE_NAME, doc_file_name);
-	}
-	if (LoadDoc(stream)) {
-		stream_.Clear();
-        return true;
-	} else {
-		CreateEmptyDom();
-		CRLog::error("Doc stream parsing fail");
-		return false;
-	}
-}
-
-bool LVDocView::LoadDoc(LVStreamRef stream)
-{
-	stream_ = stream;
-	// To allow apply styles and rend method while loading
-	CheckRenderProps(0, 0);
-	doc_format_t pdb_format = doc_format_none;
-	// DetectPDBFormat установит pdb_format в корректное значение
-	if (DetectPDBFormat(stream_, pdb_format)) {
-		CRLog::trace("PDB format detected");
-		cr_dom_->setProps(doc_props_);
-		SetDocFormat(pdb_format);
-		CheckRenderProps(0, 0);
-		doc_format_t contentFormat = doc_format_none;
-		if (ImportPDBDocument(stream_, cr_dom_, contentFormat)) {
-			CheckRenderProps(0, 0);
-			REQUEST_RENDER("LoadDoc")
-			return true;
-		} else {
-			return false;
-		}
-	}
-	if (DetectEpubFormat(stream_)) {
-		CRLog::trace("EPUB format detected");
-		cr_dom_->setProps(doc_props_);
-		SetDocFormat(doc_format_epub);
-		CheckRenderProps(0, 0);
-		if (ImportEpubDocument(stream_, cr_dom_)) {
-			container_ = cr_dom_->getDocParentContainer();
-			doc_props_ = cr_dom_->getProps();
-			CheckRenderProps(0, 0);
-			REQUEST_RENDER("LoadDoc")
-			archive_container_ = cr_dom_->getDocParentContainer();
-			return true;
-		} else {
-			return false;
-		}
-	}
-	if (DetectCHMFormat(stream_)) {
-		CRLog::trace("CHM format detected");
-		cr_dom_->setProps(doc_props_);
-		SetDocFormat(doc_format_chm);
-		CheckRenderProps(0, 0);
-		if (ImportCHMDocument(stream_, cr_dom_)) {
-			CheckRenderProps(0, 0);
-			REQUEST_RENDER("LoadDoc")
-			archive_container_ = cr_dom_->getDocParentContainer();
-			return true;
-		} else {
-			return false;
-		}
-	}
-#if ENABLE_ANTIWORD == 1
-	if (DetectWordFormat(stream_)) {
-		CRLog::trace("DOC format detected");
-		cr_dom_->setProps(doc_props_);
-		SetDocFormat(doc_format_doc);
-		CheckRenderProps(0, 0);
-		if (ImportWordDocument(stream_, cr_dom_)) {
-			CheckRenderProps(0, 0);
-			REQUEST_RENDER("LoadDoc")
-			archive_container_ = cr_dom_->getDocParentContainer();
-			return true;
-		} else {
-			return false;
-		}
-	}
-#endif //ENABLE_ANTIWORD == 1
-	LvDomWriter writer(cr_dom_);
-	if (stream_->GetSize() < 5) {
-		return false;
-	}
-	// FB2 format
-	LVFileFormatParser* parser = new LvXmlParser(stream_, &writer, false, true);
-	if (!parser->CheckFormat()) {
-		delete parser;
-		parser = NULL;
-	} else {
-        CRLog::trace("FB2 format detected");
-		SetDocFormat(doc_format_fb2);
-	}
-	if (parser == NULL) {
-		parser = new LVRtfParser(stream_, &writer);
-		if (!parser->CheckFormat()) {
-			delete parser;
-			parser = NULL;
-		} else {
-			SetDocFormat(doc_format_rtf);
-            CRLog::trace("RTF format detected");
-		}
-	}
-	LvDomAutocloseWriter autoclose_writer(cr_dom_, false, HTML_AUTOCLOSE_TABLE);
-	if (parser == NULL) {
-		parser = new LvHtmlParser(stream_, &autoclose_writer);
-		if (!parser->CheckFormat()) {
-			delete parser;
-			parser = NULL;
-		} else {
-			SetDocFormat(doc_format_html);
-            CRLog::trace("HTML format detected");
-		}
-	}
-	if (parser == NULL) {
-		parser = new LVTextParser(stream_, &writer, config_txt_smart_format_);
-		if (!parser->CheckFormat()) {
-			delete parser;
-			parser = NULL;
-		} else {
-			SetDocFormat(doc_format_txt);
-            CRLog::trace("TXT format detected");
-		}
-	}
-	if (!parser) {
-		return false;
-	}
-	CheckRenderProps(0, 0);
-	if (!parser->Parse()) {
-		delete parser;
-		return false;
-	}
-	delete parser;
-	offset_ = 0;
-	page_ = 0;
-	//lString16 docstyle = m_doc->createXPointer(L"/FictionBook/stylesheet").getText();
-	//if (!docstyle.empty() && cr_dom->getDocFlag(DOC_FLAG_ENABLE_INTERNAL_STYLES)) {
-	//      cr_dom->getStylesheet()->parse(UnicodeToUtf8(docstyle).c_str());
-	//      cr_dom->setStylesheet(UnicodeToUtf8(docstyle).c_str(), false);
-	//}
-	show_cover_ = !getCoverPageImage().isNull();
-    REQUEST_RENDER("LoadDoc")
-	return true;
 }
 
 /// returns XPointer to middle paragraph of current page
