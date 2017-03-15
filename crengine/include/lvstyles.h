@@ -1,14 +1,10 @@
-/** \file lvstyles.h
-
-    \brief CSS Styles and node format
+/**
+    CSS Styles and node format
 
     (c) Vadim Lopatin, 2000-2006
 
     This source code is distributed under the terms of
-    GNU General Public License.
-
-    See LICENSE file for details.
-
+    GNU General Public License. See LICENSE file for details.
 */
 
 #if !defined(__LV_STYLES_H_INCLUDED__)
@@ -22,9 +18,9 @@
 
 /// Element style record. Contains set of style properties.
 typedef struct css_style_rec_tag {
-    // for reference counting
+    /// for reference counting
     int                  refCount;
-    // cache calculated hash value here
+    /// cache calculated hash value here
     lUInt32              hash;
     css_display_t        display;
     css_white_space_t    white_space;
@@ -41,9 +37,9 @@ typedef struct css_style_rec_tag {
     css_length_t         line_height;
     css_length_t         width;
     css_length_t         height;
-    // -left, -right, -top, -bottom
+    /// -left, -right, -top, -bottom
     css_length_t         margin[4];
-    // -left, -right, -top, -bottom
+    /// -left, -right, -top, -bottom
     css_length_t         padding[4];
     css_length_t         color;
     css_length_t         background_color;
@@ -88,7 +84,7 @@ typedef struct css_style_rec_tag {
 } css_style_rec_t;
 
 /// style record reference type
-typedef LVFastRef< css_style_rec_t > css_style_ref_t;
+typedef LVFastRef<css_style_rec_t> css_style_ref_t;
 /// font reference type
 typedef LVFontRef font_ref_t;
 
@@ -108,22 +104,38 @@ public:
 /// element rendering methods
 enum lvdom_element_render_method
 {
-    erm_invisible = 0, ///< invisible: don't render
-    erm_block,         ///< render as block element (render as containing other elements)
-    erm_final,         ///< final element: render the whole it's content as single render block
-    erm_inline,        ///< inline element
-    erm_mixed,         ///< block and inline elements are mixed: autobox inline portions of nodes; TODO
-    erm_list_item,     ///< render as block element as list item
-    erm_table,         ///< table element: render as table
-    erm_table_row_group, ///< table row group
-    erm_table_header_group, ///< table header group
-    erm_table_footer_group, ///< table footer group
-    erm_table_row,  ///< table row
-    erm_table_column_group, ///< table column group
-    erm_table_column, ///< table column
-    erm_table_cell, ///< table cell
-    erm_table_caption, ///< table caption
-    erm_runin          ///< run-in
+    /// invisible: don't render
+    erm_invisible = 0,
+    /// render as block element (render as containing other elements)
+    erm_block,
+    /// final element: render the whole it's content as single render block
+    erm_final,
+    /// inline element
+    erm_inline,
+    /// TODO: block and inline elements are mixed: autobox inline portions of nodes
+    erm_mixed,
+    /// render as block element as list item
+    erm_list_item,
+    /// table element: render as table
+    erm_table,
+    /// table row group
+    erm_table_row_group,
+    /// table header group
+    erm_table_header_group,
+    /// table footer group
+    erm_table_footer_group,
+    /// table row
+    erm_table_row,
+    /// table column group
+    erm_table_column_group,
+    /// table column
+    erm_table_column,
+    /// table cell
+    erm_table_cell,
+    /// table caption
+    erm_table_caption,
+    /// run-in
+    erm_runin
 };
 
 /// node format record
@@ -134,13 +146,8 @@ protected:
     int  _y;
     int  _height;
 public:
-    lvdomElementFormatRec()
-    : _x(0), _width(0), _y(0), _height(0)//, _formatter(NULL)
-    {
-    }
-    ~lvdomElementFormatRec()
-    {
-    }
+    lvdomElementFormatRec() : _x(0), _width(0), _y(0), _height(0) { }
+    ~lvdomElementFormatRec() { }
     void clear()
     {
         _x = _width = _y = _height = 0;
@@ -153,7 +160,6 @@ public:
     {
         return (_height!=v._height || _y!=v._y || _width!=v._width || _x!=v._x );
     }
-    // Get/Set
     int getX() const { return _x; }
     int getY() const { return _y; }
     int getWidth() const { return _width; }
@@ -178,11 +184,11 @@ lUInt32 calcHash(font_ref_t & rec);
 /// calculate cache record hash
 inline lUInt32 calcHash(css_style_ref_t & rec) { return rec.isNull() ? 0 : calcHash( *rec.get() ); }
 
-/// splits string like "Arial", Times New Roman, Courier;  into list
+/// splits string like "Arial", Times New Roman, Courier; into list
 /// returns number of characters processed
-int splitPropertyValueList( const char * fontNames, lString8Collection & list );
+int splitPropertyValueList(const char* fontNames, lString8Collection& list);
 
 /// joins list into string of comma separated quoted values
-lString8 joinPropertyValueList( const lString8Collection & list );
+lString8 joinPropertyValueList(const lString8Collection& list);
 
 #endif // __LV_STYLES_H_INCLUDED__
