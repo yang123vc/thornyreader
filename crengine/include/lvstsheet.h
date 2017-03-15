@@ -72,7 +72,7 @@ enum LVCssSelectorRuleType
 
 class LVCssSelectorRule
 {
-    //
+private:
     LVCssSelectorRuleType _type;
     lUInt16 _id;
     lUInt16 _attrid;
@@ -89,12 +89,13 @@ public:
     void setNext(LVCssSelectorRule * next) { _next = next; }
     ~LVCssSelectorRule() { if (_next) delete _next; }
     /// check condition for node
-    bool check( const ldomNode * & node );
+    bool check(const ldomNode * & node);
+    lString16 ToString(CrDomXml* dom) const;
     lUInt32 getHash();
 };
 
 /**
-    Simple CSS selector. Currently supports only element name and universal selector.
+    Simple CSS selector, currently supports only element name and universal selector.
 
     - * { } - universal selector
     - element-name { } - selector by element name
@@ -105,26 +106,36 @@ private:
     lUInt16 _id;
     LVCssDeclRef _decl;
     int _specificity;
-    LVCssSelector * _next;
-    LVCssSelectorRule * _rules;
-    void insertRuleStart( LVCssSelectorRule * rule );
-    void insertRuleAfterStart( LVCssSelectorRule * rule );
+    LVCssSelector* _next;
+    LVCssSelectorRule* _rules;
+    lString8 debug_desc_;
+    void insertRuleStart(LVCssSelectorRule* rule);
+    void insertRuleAfterStart(LVCssSelectorRule* rule);
 public:
-    LVCssSelector( LVCssSelector & v );
     LVCssSelector() : _id(0), _specificity(0), _next(NULL), _rules(NULL) { }
-    ~LVCssSelector() { if (_next) delete _next; if (_rules) delete _rules; }
-    bool parse( const char * &str, CrDomXml * doc );
+    LVCssSelector(LVCssSelector& v);
+    ~LVCssSelector()
+    {
+        if (_next) {
+            delete _next;
+        }
+        if (_rules) {
+            delete _rules;
+        }
+    }
+    bool parse(const char* &str, CrDomXml* doc);
     lUInt16 getElementNameId() { return _id; }
-    bool check( const ldomNode * node ) const;
+    bool check(const ldomNode* node ) const;
     void applyCss(const ldomNode* node, css_style_rec_t* style) const
     {
         _decl->apply(node, style);
     }
-    void setDeclaration( LVCssDeclRef decl ) { _decl = decl; }
+    void setDeclaration(LVCssDeclRef decl) { _decl = decl; }
     int getSpecificity() { return _specificity; }
-    LVCssSelector * getNext() { return _next; }
-    void setNext(LVCssSelector * next) { _next = next; }
+    LVCssSelector* getNext() { return _next; }
+    void setNext(LVCssSelector* next) { _next = next; }
     lUInt32 getHash();
+    lString16 ToString(CrDomXml* dom) const;
 };
 
 /**
