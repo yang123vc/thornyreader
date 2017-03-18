@@ -1793,7 +1793,7 @@ bool CrDom::checkRenderContext()
     bool res = true;
     ldomNode * node = getRootNode();
     if (node != NULL && node->getFont().isNull()) {
-        CRLog::trace("checkRenderContext: style is not set for root node");
+        CRLog::trace("checkRenderContext: Style is not set for root node");
         res = false;
     }
     lUInt32 styleHash = calcStyleHash();
@@ -1832,7 +1832,7 @@ int CrDom::render(LVRendPageList* pages,
 		font_ref_t def_font,
 		int interline_space)
 {
-    CRLog::trace("Render is called for width %d, pageHeight=%d, fontFace=%s, docFlags=%d",
+    CRLog::trace("CrDom::render w=%d, h=%d, fontFace=%s, docFlags=%d",
     		width, dy, def_font->getTypeFace().c_str(), getDocFlags());
     setRenderProps(width, dy, def_font, interline_space);
     // update styles
@@ -1846,9 +1846,9 @@ int CrDom::render(LVRendPageList* pages,
     //    CRLog::trace("reusing existing format data...");
     //}
     if (!checkRenderContext()) {
-        CRLog::trace("rendering context is changed - full render required...");
+        CRLog::trace("CrDom::checkRenderContext full render required");
         dropStyles();
-        //ldomNode * root = getRootNode();
+        //ldomNode* root = getRootNode();
         //css_style_ref_t roots = root->getStyle();
         CRLog::trace("Save stylesheet");
         stylesheet_.push();
@@ -1857,9 +1857,9 @@ int CrDom::render(LVRendPageList* pages,
         getRootNode()->initNodeStyleRecursive();
         CRLog::trace("Restoring stylesheet");
         stylesheet_.pop();
-        CRLog::trace("init render method");
+        CRLog::trace("Init render method");
         getRootNode()->initNodeRendMethodRecursive();
-        // getRootNode()->setFont(_def_font);
+        //getRootNode()->setFont(_def_font);
         //getRootNode()->setStyle(_def_style);
         updateRenderContext();
         //lUInt32 styleHash = calcStyleHash();
