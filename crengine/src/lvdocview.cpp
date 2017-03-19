@@ -1987,8 +1987,9 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
 {
     response.cmd = CMD_RES_CRE_METADATA;
     CmdDataIterator iter(request.first);
+    uint32_t doc_format = 0;
     uint8_t* cre_uri_chars;
-    iter.getByteArray(&cre_uri_chars);
+    iter.getInt(&doc_format).getByteArray(&cre_uri_chars);
     if (!iter.isValid()) {
         CRLog::error("processMetadata: iterator invalid data");
         response.result = RES_BAD_REQ_DATA;
@@ -2019,9 +2020,9 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
             return;
         }
     }
-
+#ifdef AXYDEBUG
     CRLog::trace("Parsing metadata for: %s", LCSTR(cre_uri));
-
+#endif
     LVStreamRef thumb_stream;
     lString16 	doc_title;
     lString16 	doc_author;

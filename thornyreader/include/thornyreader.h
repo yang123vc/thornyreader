@@ -24,6 +24,19 @@ const char* ThornyReader_NDEBUG();
 const char* ThornyReader_AXYDEBUG();
 void StartThornyReader(const char* name);
 
+#define DOC_FORMAT_EPUB 1
+#define DOC_FORMAT_FB2 2
+#define DOC_FORMAT_PDF 3
+#define DOC_FORMAT_MOBI 4
+#define DOC_FORMAT_DJVU 5
+#define DOC_FORMAT_DJV 6
+#define DOC_FORMAT_DOC 7
+#define DOC_FORMAT_RTF 8
+#define DOC_FORMAT_TXT 9
+#define DOC_FORMAT_XPS 10
+#define DOC_FORMAT_OXPS 11
+#define DOC_FORMAT_CHM 12
+
 #define CONFIG_CRENGINE_FOOTNOTES               	100
 /**
  * 0 - no antialias, 1 - antialias big fonts, 2 antialias all
@@ -57,10 +70,6 @@ void StartThornyReader(const char* name);
 #define CONFIG_CRENGINE_VIEWPORT_WIDTH        		117
 #define CONFIG_CRENGINE_VIEWPORT_HEIGHT     		118
 
-/**
- * FORMAT_PDF 1, FORMAT_XPS 2
- */
-#define CONFIG_MUPDF_FORMAT     		            201
 #define CONFIG_MUPDF_INVERT_IMAGES 		            202
 
 #define HARDCONFIG_DJVU_RENDERING_MODE              0

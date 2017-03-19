@@ -272,9 +272,10 @@ void CreBridge::processOpen(CmdRequest& request, CmdResponse& response)
     response.cmd = CMD_RES_OPEN;
     CmdDataIterator iter(request.first);
 
+    uint32_t doc_format = 0;
     uint8_t* socket_name = NULL;
     uint8_t* file_name = NULL;
-    iter.getByteArray(&socket_name).getByteArray(&file_name);
+    iter.getInt(&doc_format).getByteArray(&socket_name).getByteArray(&file_name);
     if (!iter.isValid() || !socket_name || !file_name) {
         response.result = RES_BAD_REQ_DATA;
         return;

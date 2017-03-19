@@ -148,9 +148,11 @@ void DjvuBridge::processOpen(CmdRequest& request, CmdResponse& response)
         return;
     }
 
+    uint32_t doc_format = 0;
     uint8_t* socketName = NULL;
 
     CmdDataIterator iter(request.first);
+    iter.getInt(&doc_format);
     iter.getByteArray(&socketName);
 
     if ((!iter.isValid()) || (!socketName))
@@ -597,8 +599,14 @@ void DjvuBridge::processSmartCrop(CmdRequest& request, CmdResponse& response)
     char* pixels = (char*) malloc(size);
 
     //TODO DDJVU_RENDER_BLACK?
-    int result = ddjvu_page_render(pages[page_index], DDJVU_RENDER_COLOR, &pageRect, &targetRect,
-                                   pixelFormat, SMART_CROP_W * 4, pixels);
+    int result = ddjvu_page_render(
+            pages[page_index],
+            DDJVU_RENDER_COLOR,
+            &pageRect,
+            &targetRect,
+            pixelFormat,
+            SMART_CROP_W * 4,
+            pixels);
 
     ddjvu_format_release(pixelFormat);
 

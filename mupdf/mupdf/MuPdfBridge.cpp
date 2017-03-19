@@ -187,13 +187,16 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-  
+
+    uint32_t doc_format = 0;
     uint8_t* socketName = NULL;
     uint8_t* file_name = NULL;
     uint8_t* password = NULL;
 
     CmdDataIterator iter(request.first);
-    iter.getByteArray(&socketName).getByteArray(&file_name)
+    iter.getInt(&doc_format)
+            .getByteArray(&socketName)
+            .getByteArray(&file_name)
             .optionalByteArray(&password, NULL);
 
     if (!iter.isValid())
@@ -201,6 +204,16 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
         ERROR_L(LCTX, "Bad request data: %u %u %u %p %p",
                 request.cmd, request.dataCount, iter.getCount(),
                 socketName, password);
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+
+    if (doc_format == DOC_FORMAT_PDF) {
+        config_format = FORMAT_PDF;
+    } else if (doc_format == DOC_FORMAT_OXPS || doc_format == DOC_FORMAT_XPS) {
+        config_format = FORMAT_XPS;
+    } else {
+        ERROR_L(LCTX, "Bad file type: %u", config_format);
         response.result = RES_BAD_REQ_DATA;
         return;
     }
@@ -228,13 +241,6 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
         free(this->password);
     }
     this->password = password != NULL ? strdup((const char*) password) : NULL;
-
-    if (config_format < FORMAT_PDF || config_format > FORMAT_XPS)
-    {
-        ERROR_L(LCTX, "Bad file type: %u", config_format);
-        response.result = RES_BAD_REQ_DATA;
-        return;
-    }
     this->format = config_format;
 
     if (ctx == NULL)
@@ -257,18 +263,13 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
         INFO_L(LCTX, "Opening document: %d %d", format, fd);
 
         INFO_L(LCTX, ctx->ebookdroid_hasPassword ? "Password present" : "No password");
-        fz_try(ctx)
-                {
-                    if (format == FORMAT_XPS)
-                    {
-                        document = (fz_document*) xps_open_document_with_stream(ctx, fz_open_fd(ctx, dup(fd)));
-                    }
-                    else
-                    {
-                        document = (fz_document*) pdf_open_document_with_stream(ctx, fz_open_fd(ctx, dup(fd)));
-                    }
-                }fz_catch(ctx)
-        {
+        fz_try(ctx) {
+            if (format == FORMAT_XPS) {
+                document = (fz_document*) xps_open_document_with_stream(ctx, fz_open_fd(ctx, dup(fd)));
+            } else {
+                document = (fz_document*) pdf_open_document_with_stream(ctx, fz_open_fd(ctx, dup(fd)));
+            }
+        } fz_catch(ctx) {
             const char* msg = fz_caught_message(ctx);
             ERROR_L(LCTX, "Opening document failed: %s", msg);
             response.result = RES_MUPDF_FAIL;
@@ -870,10 +871,7 @@ void MuPdfBridge::processConfig(CmdRequest& request, CmdResponse& response)
         }
         const char* val = reinterpret_cast<const char*>(temp_val);
 
-        if (key == CONFIG_MUPDF_FORMAT) {
-            int int_val = atoi(val);
-            config_format = int_val;
-        } else if (key == CONFIG_MUPDF_INVERT_IMAGES) {
+        if (key == CONFIG_MUPDF_INVERT_IMAGES) {
             int int_val = atoi(val);
             config_invert_images = int_val;
         } else {
