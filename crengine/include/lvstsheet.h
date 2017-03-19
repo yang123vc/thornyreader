@@ -44,14 +44,17 @@ class ldomNode;
 */
 class LVCssDeclaration {
 private:
-    int * _data;
+    int* _data;
 public:
     void apply(const ldomNode* node, css_style_rec_t* style);
     bool empty() { return _data==NULL; }
-    bool parse( const char * & decl );
+    bool parse(const char*& decl);
     lUInt32 getHash();
     LVCssDeclaration() : _data(NULL) { }
-    ~LVCssDeclaration() { if (_data) delete[] _data; }
+    ~LVCssDeclaration()
+    {
+        if (_data) { delete[] _data; }
+    }
 };
 
 typedef LVRef<LVCssDeclaration> LVCssDeclRef;
@@ -90,7 +93,7 @@ public:
     ~LVCssSelectorRule() { if (_next) delete _next; }
     /// check condition for node
     bool check(const ldomNode * & node);
-    lString16 ToString(CrDomXml* dom) const;
+    lString16 ToString() const;
     lUInt32 getHash();
 };
 
@@ -108,11 +111,10 @@ private:
     int _specificity;
     LVCssSelector* _next;
     LVCssSelectorRule* _rules;
-    lString8 debug_desc_;
     void insertRuleStart(LVCssSelectorRule* rule);
     void insertRuleAfterStart(LVCssSelectorRule* rule);
 public:
-    LVCssSelector() : _id(0), _specificity(0), _next(NULL), _rules(NULL) { }
+    LVCssSelector(int specifity) : _id(0), _specificity(specifity), _next(NULL), _rules(NULL) { }
     LVCssSelector(LVCssSelector& v);
     ~LVCssSelector()
     {
@@ -135,58 +137,64 @@ public:
     LVCssSelector* getNext() { return _next; }
     void setNext(LVCssSelector* next) { _next = next; }
     lUInt32 getHash();
+    lString8 debug_desc_;
     lString16 ToString(CrDomXml* dom) const;
 };
 
 /**
-    Can parse stylesheet and apply compiled rules.
-
-    Currently supports only subset of CSS features.
-
-    \sa LVCssSelector
-    \sa LVCssDeclaration
+   Can parse stylesheet and apply compiled rules. Supports only subset of CSS features.
 */
 class LVStyleSheet {
-    CrDomXml * _doc;
+private:
+    CrDomXml* _doc;
     LVPtrVector <LVCssSelector> _selectors;
     LVPtrVector <LVPtrVector <LVCssSelector> > _stack;
-    LVPtrVector <LVCssSelector> * dup()
+
+    LVPtrVector<LVCssSelector>* dup()
     {
-        LVPtrVector <LVCssSelector> * res = new LVPtrVector <LVCssSelector>();
-        for ( int i=0; i<_selectors.length(); i++ ) {
-            LVCssSelector * selector = _selectors[i];
-            if ( selector )
-                res->add( new LVCssSelector(*selector) );
-            else
+        LVPtrVector<LVCssSelector>* res = new LVPtrVector<LVCssSelector>();
+        for (int i = 0; i < _selectors.length(); i++) {
+            LVCssSelector* selector = _selectors[i];
+            if (selector) {
+                res->add(new LVCssSelector(*selector));
+            } else {
                 res->add(NULL);
+            }
         }
         return res;
     }
-    void set(LVPtrVector<LVCssSelector> & v );
+
+    void set(LVPtrVector<LVCssSelector>& v);
 public:
-    // save current state of stylesheet
+    /// save current state of stylesheet
     void push() { _stack.add(dup()); }
-    // restore previously saved state
-    bool pop() {
-        LVPtrVector <LVCssSelector> * v = _stack.pop();
-        if ( !v )
+    /// restore previously saved state
+    bool pop()
+    {
+        LVPtrVector<LVCssSelector>* v = _stack.pop();
+        if (!v) {
             return false;
-        set( *v );
+        }
+        set(*v);
         delete v;
         return true;
     }
     /// remove all rules from stylesheet
-    void clear() { _selectors.clear(); _stack.clear(); }
+    void clear()
+    {
+        _selectors.clear();
+        _stack.clear();
+    }
     /// set document to retrieve ID values from
-    void setDocument( CrDomXml * doc ) { _doc = doc; }
+    void setDocument(CrDomXml* doc) { _doc = doc; }
     /// constructor
-    LVStyleSheet( CrDomXml * doc = NULL ) : _doc(doc) { }
+    LVStyleSheet(CrDomXml* doc = NULL ) : _doc(doc) { }
     /// copy constructor
-    LVStyleSheet( LVStyleSheet & sheet );
+    LVStyleSheet(LVStyleSheet& sheet);
     /// parse stylesheet, compile and add found rules to sheet
-    bool parse( const char * str );
+    bool parse(const char* str );
     /// apply stylesheet to node style
-    void applyCss( const ldomNode * node, css_style_rec_t * style );
+    void applyCss(const ldomNode* node, css_style_rec_t* style );
     /// calculate hash
     lUInt32 getHash();
 };

@@ -2,17 +2,49 @@
 #define CRENGINE_CRCSS_H
 
 const char* CRCSS = R"delimiter(
-
 .empty-line, empty-line {
   display: block;
   height: 1em;
 }
+
 hr {
   display: block;
   height: 2px;
   background-color: #808080;
   margin-top: 0.5em;
   margin-bottom: 0.5em;
+}
+
+body, p, .justindent {
+  display: block;
+  text-align: justify;
+  text-indent: 1.2em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
+}
+
+DocFragment {
+  page-break-before: always;
+}
+
+/* TEST AREA */
+
+
+
+/* TODO */
+
+
+img, image, .section_image, .coverpage, coverpage {
+  display: block;
+  text-align: center;
+  text-indent: 0px;
+  padding: 1em;
+}
+
+p image, li image {
+  display: inline;
 }
 
 a, b, strong, q, u, del, s, strike, small, big, sub, sup, acronym, span, font {
@@ -63,7 +95,7 @@ h3, .title3 {
 h4, .title4, h5, .title5, h6, .title6 {
   font-size: 110%;
 }
-h1, h2, h3, title, h1 > p, h2 > p, h3 > p, title > p, .title, .title0, .title1, .title2, .title3 {
+h1, h2, h3, title, h1 > p, h2 > p, h3 > p, title > p, .title, .title > p, .title0, .title1, .title2, .title3 {
   display: block;
   hyphenate: none;
   adobe-hyphenate: none;
@@ -227,7 +259,6 @@ body[name="notes"], body[name="comments"] {
   font-size: 70%;
 }
 
-/*
 body[name="notes"] section title {
   display: run-in;
   text-align: left;
@@ -249,7 +280,6 @@ body[name="comments"] section title {
 body[name="comments"] section title p {
   display: inline;
 }
-*/
 
 a[type="note"] {
   vertical-align: super;
@@ -293,19 +323,6 @@ head, style, form, script {
   display: none;
 }
 
-body, p, .justindent {
-  display: block;
-  text-align: justify;
-  text-indent: 1.2em;
-  margin-top: 0em;
-  margin-bottom: 0em;
-  margin-left: 0em;
-  margin-right: 0em;
-}
-
-DocFragment {
-  page-break-before: always;
-}
 )delimiter";
 
 #endif //CRENGINE_CRCSS_H

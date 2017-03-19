@@ -463,12 +463,6 @@ void LVCssDeclaration::apply(const ldomNode* node, css_style_rec_t* style)
 
 bool LVCssSelectorRule::check(const ldomNode*& node)
 {
-    if (node->isNull() || node->isRoot()) {
-#ifdef AXYDEBUG
-        CRLog::info("LVCssSelectorRule::check: node->isNull() || node->isRoot()");
-#endif
-        return false;
-    }
     switch (_type) {
     case cssrt_parent: {
         // E > F
@@ -497,7 +491,7 @@ bool LVCssSelectorRule::check(const ldomNode*& node)
         int index = node->getNodeIndex();
         // while
         if (index > 0) {
-            ldomNode* elem = node->getParentNode()->getChildElementNode(index - 1, _id);
+            ldomNode* elem = node->getParentNode()->getChildElementNode((lUInt32) (index - 1), _id);
             if (elem) {
                 node = elem;
                 //CRLog::trace("+ selector: found pred element");
@@ -578,76 +572,94 @@ bool LVCssSelectorRule::check(const ldomNode*& node)
 
 bool LVCssSelector::check(const ldomNode* node) const
 {
-    // check main Id
+    // Check main Id
     if (_id != 0 && node->getNodeId() != _id) {
+#ifdef DEBUG_CSS
+        CRLog::trace("    selector miss [%s] (reason: id)", debug_desc_.c_str());
+#endif
         return false;
     }
     if (!_rules) {
 #ifdef DEBUG_CSS
-        CRLog::trace("CSS: [%s] match [%s]", LCSTR(GetNodeDesc(node)), debug_desc_.c_str());
+        CRLog::debug("    selector match [%s] (reason: no rules)", debug_desc_.c_str());
 #endif
         return true;
+    }
+    if (node->isNull()) {
+#ifdef AXYDEBUG
+        CRLog::info("    selector miss [%s] (reason: null node)", debug_desc_.c_str());
+#endif
+        return false;
+    }
+    if (node->isRoot()) {
+#ifdef AXYDEBUG
+        //CRLog::trace("    selector miss [%s] (reason: root node)", debug_desc_.c_str());
+#endif
+        return false;
     }
     // Check additional rules
     const ldomNode* n = node;
     LVCssSelectorRule* rule = _rules;
     do {
         if (!rule->check(n)) {
+#ifdef DEBUG_CSS
+            //CRLog::trace("    selector miss [%s] rule", debug_desc_.c_str());
+#endif
             return false;
         }
         rule = rule->getNext();
     } while (rule != NULL);
 #ifdef DEBUG_CSS
-    CRLog::trace("CSS: [%s] match [%s]", LCSTR(GetNodeDesc(node)), debug_desc_.c_str());
+    CRLog::debug("    selector match [%s]", debug_desc_.c_str());
 #endif
     return true;
 }
 
 void LVStyleSheet::applyCss(const ldomNode* node, css_style_rec_t* style)
 {
+#ifdef AXYDEBUG
+    CRLog::trace("LVStyleSheet::applyCss %s", LCSTR(GetNodeDesc(node)));
+#endif
     if (!_selectors.length()) {
 #ifdef AXYDEBUG
-        CRLog::info("LVStyleSheet::applyCss no selectors");
+        CRLog::info("    selectors null");
 #endif
         return;
     }
     bool applied = false;
     lUInt16 id = node->getNodeId();
-    LVCssSelector* selector_0 = _selectors[0];
+    LVCssSelector* selector = _selectors[0];
     LVCssSelector* selector_id = id > 0 && id < _selectors.length() ? _selectors[id] : NULL;
+#ifdef DEBUG_CSS
+    if (id != 0 && !selector_id) {
+        CRLog::info("    selector wtf id %d %s", id, LCSTR(node->getNodeName()));
+    }
+#endif
     for (;;) {
-        if (selector_0 != NULL) {
-            if (selector_id == NULL
-                || selector_0->getSpecificity() < selector_id->getSpecificity()) {
-                // step by sel_0
-                if (selector_0->check(node)) {
-                    selector_0->applyCss(node, style);
-                    applied = true;
-                }
-                selector_0 = selector_0->getNext();
+        LVCssSelector* sel = NULL;
+        if (selector != NULL) {
+            if (selector_id == NULL || selector->getSpecificity() < selector_id->getSpecificity()) {
+                sel = selector;
+                selector = selector->getNext();
             } else {
-                // step by sel_id
-                if (selector_id->check(node)) {
-                    selector_id->applyCss(node, style);
-                    applied = true;
-                }
+                sel = selector_id;
                 selector_id = selector_id->getNext();
             }
         } else if (selector_id != NULL) {
-            // step by sel_id
-            if (selector_id->check(node)) {
-                selector_id->applyCss(node, style);
-                applied = true;
-            }
+            sel = selector_id;
             selector_id = selector_id->getNext();
-        } else {
-            // end of chains
+        }
+        if (!sel) {
             break;
+        }
+        if (sel->check(node)) {
+            sel->applyCss(node, style);
+            applied = true;
         }
     }
 #ifdef AXYDEBUG
     if (!applied) {
-        CRLog::info("CSS: no selectors for %s", LCSTR(GetNodeDesc(node)));
+        CRLog::info("    selectors no match");
     }
 #endif
 }
@@ -1292,8 +1304,8 @@ bool LVCssSelector::parse(const char*& str, CrDomXml* dom)
         if (*str == '*') {
             // universal selector
             str++;
-            skip_spaces_and_comments(str);
             _id = 0;
+            skip_spaces_and_comments(str);
         } else if (*str == '.') {
             // classname follows
             _id = 0;
@@ -1378,6 +1390,7 @@ bool LVStyleSheet::parse(const char* str)
 {
     LVCssSelector* selector = NULL;
     LVCssSelector* prev_selector;
+    int specifity = 1;
     int err_count = 0;
     int rule_count = 0;
     for (; *str;) {
@@ -1387,7 +1400,7 @@ bool LVStyleSheet::parse(const char* str)
             // In single iteration parses single selector or single rule
             // declaration block. Breaks after parsed list of selectors
             // related to single declaration block and that declaration block.
-            selector = new LVCssSelector;
+            selector = new LVCssSelector(specifity++);
             selector->setNext(prev_selector);
             if (!selector->parse(str, _doc)) {
                 err = true;
@@ -1443,14 +1456,18 @@ bool LVStyleSheet::parse(const char* str)
             continue;
         }
         // Ok: place rules to sheet
-        for (LVCssSelector* p = selector; p;) {
-            LVCssSelector* item = p;
-            p = p->getNext();
+        for (LVCssSelector* nextItem = selector; nextItem;) {
+            LVCssSelector* item = nextItem;
+#if 1
+            CRLog::debug("Selector: %d %s",
+                    item->getElementNameId(),
+                    item->debug_desc_.c_str());
+#endif
+            nextItem = item->getNext();
             lUInt16 id = item->getElementNameId();
             if (_selectors.length() <= id) {
                 _selectors.set(id, NULL);
             }
-            // insert with specificity sorting
             if (_selectors[id] == NULL
                 || _selectors[id]->getSpecificity() > item->getSpecificity()) {
                 // insert as first item
@@ -1460,7 +1477,7 @@ bool LVStyleSheet::parse(const char* str)
                 // insert as internal item
                 for (LVCssSelector* p = _selectors[id]; p; p = p->getNext()) {
                     if (p->getNext() == NULL
-                        || p->getNext()->getSpecificity() > item->getSpecificity()) {
+                            || p->getNext()->getSpecificity() > item->getSpecificity()) {
                         item->setNext(p->getNext());
                         p->setNext(item);
                         break;
@@ -1469,6 +1486,15 @@ bool LVStyleSheet::parse(const char* str)
             }
         }
     }
+#if 0
+    for (int i = 0; i < _selectors.length(); i++) {
+        if (_selectors[i]) {
+            CRLog::debug("Selector: %d %s",
+                    _selectors[i]->getElementNameId(),
+                    _selectors[i]->debug_desc_.c_str());
+        }
+    }
+#endif
     return _selectors.length() > 0;
 }
 
@@ -1606,10 +1632,9 @@ LVStyleSheet::LVStyleSheet(LVStyleSheet& sheet) : _doc(sheet._doc)
     set(sheet._selectors);
 }
 
-lString16 LVCssSelectorRule::ToString(CrDomXml* dom) const
+lString16 LVCssSelectorRule::ToString() const
 {
     lString16 desc;
-
     return desc;
 }
 
@@ -1622,7 +1647,7 @@ lString16 LVCssSelector::ToString(CrDomXml* dom) const
     if (_rules) {
         LVCssSelectorRule* rule = _rules;
         do {
-            desc << " " << rule->ToString(dom);
+            desc << " " << rule->ToString();
             rule = rule->getNext();
         } while (rule != NULL);
     }
@@ -1645,8 +1670,10 @@ lUInt32 LVCssDeclaration::getHash()
 lUInt32 LVCssSelectorRule::getHash()
 {
     lUInt32 hash = 0;
-    hash = ((((lUInt32) _type * 31 + (lUInt32) _id) * 31) + (lUInt32) _attrid * 31) +
-           ::getHash(_value);
+    hash = ((((lUInt32) _type * 31
+              + (lUInt32) _id) * 31)
+            + (lUInt32) _attrid * 31)
+           + ::getHash(_value);
     return hash;
 }
 
