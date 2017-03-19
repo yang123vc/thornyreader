@@ -11,6 +11,7 @@
 
  *******************************************************/
 
+#include "thornyreader.h"
 #include "lvdocview.h"
 #include "CreBridge.h"
 #include "rtfimp.h"
@@ -26,6 +27,7 @@
 #include "fb2def.h"
 #define XS_IMPLEMENT_SCHEME 1
 #include "fb2def.h"
+#include "../../jpeg-turbo/jpeg-turbo/include/jmorecfg.h"
 //#undef XS_IMPLEMENT_SCHEME
 
 #if 0
@@ -1998,26 +2000,22 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
     lString16 cre_uri(reinterpret_cast<const char*>(cre_uri_chars));
     lString16 to_archive_path;
     lString16 in_archive_path;
-#ifdef AXYDEBUG
-    CRLog::trace("processMetadata for: %s", LCSTR(cre_uri));
-#endif
-    bool is_archived = LVSplitArcName(cre_uri, to_archive_path, in_archive_path);
-    LVStreamRef doc_stream = LVOpenFileStream(
-            (is_archived ? to_archive_path : cre_uri).c_str(), LVOM_READ);
-    if (!doc_stream) {
+    bool in_zip = LVSplitArcName(cre_uri, to_archive_path, in_archive_path);
+    LVStreamRef stream = LVOpenFileStream((in_zip ? to_archive_path : cre_uri).c_str(), LVOM_READ);
+    if (!stream) {
         CRLog::error("processMetadata: cannot open file");
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-    if (is_archived) {
-        LVContainerRef container = LVOpenArchieve(doc_stream);
+    if (in_zip) {
+        LVContainerRef container = LVOpenArchieve(stream);
         if (container.isNull()) {
             CRLog::error("processMetadata: cannot open archive container");
             response.result = RES_BAD_REQ_DATA;
             return;
         }
-        doc_stream = container->OpenStream(in_archive_path.c_str(), LVOM_READ);
-        if (doc_stream.isNull()) {
+        stream = container->OpenStream(in_archive_path.c_str(), LVOM_READ);
+        if (stream.isNull()) {
             CRLog::error("processMetadata: cannot open file from archive container");
             response.result = RES_BAD_REQ_DATA;
             return;
@@ -2028,11 +2026,11 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
     lString16 title;
     lString16 authors;
     lString16 series;
-    int doc_series_number = 0;
-    lString16 doc_lang;
+    int series_number = 0;
+    lString16 lang;
 
-    if (DetectEpubFormat(doc_stream)) {
-        LVContainerRef container = LVOpenArchieve(doc_stream);
+    if (doc_format == DOC_FORMAT_EPUB) {
+        LVContainerRef container = LVOpenArchieve(stream);
         // Check is this a ZIP archive
         if (container.isNull()) {
             CRLog::error("processMetadata: EPUB container.isNull()");
@@ -2050,10 +2048,9 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
         if (decryptor->open()) {
             CRLog::debug("processMetadata: EPUB encrypted items detected");
         }
-        LVContainerRef doc_stream_encrypted = LVContainerRef(decryptor);
+        container = LVContainerRef(decryptor);
         lString16 code_base = LVExtractPath(root_file_path, false);
-        LVStreamRef content_stream = doc_stream_encrypted->
-                OpenStream(root_file_path.c_str(), LVOM_READ);
+        LVStreamRef content_stream = container->OpenStream(root_file_path.c_str(), LVOM_READ);
         if (content_stream.isNull()) {
             CRLog::error("processMetadata: malformed EPUB");
             response.result = RES_BAD_REQ_DATA;
@@ -2067,8 +2064,8 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
         }
         lString16 thumb_id;
         for (int i = 1; i < 20; i++) {
-            ldomNode* item = dom->nodeFromXPath(
-                    lString16("package/metadata/meta[") << fmt::decimal(i) << "]");
+            lString16 xpath = lString16("package/metadata/meta[") << fmt::decimal(i) << "]";
+            ldomNode* item = dom->nodeFromXPath(xpath);
             if (!item) {
                 break;
             }
@@ -2079,8 +2076,8 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
             }
         }
         for (int i = 1; i < 50000; i++) {
-            ldomNode* item = dom->nodeFromXPath(
-                    lString16("package/manifest/item[") << fmt::decimal(i) << "]");
+            lString16 xpath = lString16("package/manifest/item[") << fmt::decimal(i) << "]";
+            ldomNode* item = dom->nodeFromXPath(xpath);
             if (!item) {
                 break;
             }
@@ -2089,17 +2086,16 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
             if (!href.empty() && !id.empty()) {
                 if (id == thumb_id) {
                     lString16 thumbnail_file_name = code_base + href;
-                    thumb_stream = doc_stream_encrypted->
-                            OpenStream(thumbnail_file_name.c_str(), LVOM_READ);
+                    thumb_stream = container->OpenStream(thumbnail_file_name.c_str(), LVOM_READ);
                 }
             }
         }
         authors = dom->textFromXPath(lString16("package/metadata/creator")).trim();
         title = dom->textFromXPath(lString16("package/metadata/title")).trim();
-        doc_lang = dom->textFromXPath(lString16("package/metadata/language")).trim();
+        lang = dom->textFromXPath(lString16("package/metadata/language")).trim();
         for (int i = 1; i < 20; i++) {
-            ldomNode* item = dom->nodeFromXPath(
-                    lString16("package/metadata/meta[") << fmt::decimal(i) << "]");
+            lString16 xpath = lString16("package/metadata/meta[") << fmt::decimal(i) << "]";
+            ldomNode* item = dom->nodeFromXPath(xpath);
             if (!item) {
                 break;
             }
@@ -2108,30 +2104,27 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
             if (name == "calibre:series") {
                 series = content.trim();
             } else if (name == "calibre:series_index") {
-                doc_series_number = content.trim().atoi();
+                series_number = content.trim().atoi();
             }
         }
         delete dom;
-    } else {
-        // FB2 or MOBI
-        thumb_stream = GetFB2Coverpage(doc_stream);
-        if (thumb_stream.isNull()) {
-            doc_format_t fmt;
-            if (DetectPDBFormat(doc_stream, fmt)) {
-                thumb_stream = GetPDBCoverpage(doc_stream);
-            }
+    } else if (doc_format == DOC_FORMAT_FB2 || doc_format == DOC_FORMAT_MOBI) {
+        if (doc_format == DOC_FORMAT_FB2) {
+            thumb_stream = GetFB2Coverpage(stream);
+        } else {
+            thumb_stream = GetPDBCoverpage(stream);
         }
         CrDom dom;
         LvDomWriter writer(&dom, true);
         dom.setNodeTypes(fb2_elem_table);
         dom.setAttributeTypes(fb2_attr_table);
         dom.setNameSpaceTypes(fb2_ns_table);
-        LvXmlParser parser(doc_stream, &writer);
+        LvXmlParser parser(stream, &writer);
         if (parser.CheckFormat() && parser.Parse()) {
             authors = ExtractDocAuthors(&dom, lString16("|"));
             title = ExtractDocTitle(&dom);
-            doc_lang = ExtractDocLanguage(&dom);
-            series = ExtractDocSeries(&dom, &doc_series_number);
+            lang = ExtractDocLanguage(&dom);
+            series = ExtractDocSeries(&dom, &series_number);
         }
     }
 
@@ -2158,13 +2151,6 @@ void CreBridge::processMetadata(CmdRequest& request, CmdResponse& response)
     responseAddString(response, title);
     responseAddString(response, authors);
     responseAddString(response, series);
-    response.addInt((uint32_t) doc_series_number);
-    responseAddString(response, doc_lang);
-#ifdef AXYDEBUG
-    if (!thumb_stream.isNull() || !title.empty() || !authors.empty() || !series.empty()) {
-        CRLog::trace("processMetadata success for: %s", LCSTR(cre_uri));
-    } else {
-        CRLog::trace("processMetadata fail for: %s", LCSTR(cre_uri));
-    }
-#endif
+    response.addInt((uint32_t) series_number);
+    responseAddString(response, lang);
 }
