@@ -5970,9 +5970,9 @@ ldomNode* LvDomAutocloseWriter::OnTagOpen(const lChar16* nsname, const lChar16* 
     }
     _tagBodyCalled = false;
     //logfile << "lxmlDocumentWriter::OnTagOpen() [" << nsname << ":" << tagname << "]";
-//    if ( nsname && nsname[0] )
-//        lStr_lowercase( const_cast<lChar16 *>(nsname), lStr_len(nsname) );
-//    lStr_lowercase( const_cast<lChar16 *>(tagname), lStr_len(tagname) );
+    //if ( nsname && nsname[0] )
+    //    lStr_lowercase( const_cast<lChar16 *>(nsname), lStr_len(nsname) );
+    //lStr_lowercase( const_cast<lChar16 *>(tagname), lStr_len(tagname) );
 
     // Patch for bad LIB.RU books - BR delimited paragraphs in "Fine HTML" format
     if ((tagname[0] == 'b' && tagname[1] == 'r' && tagname[2] == 0)
@@ -6019,9 +6019,9 @@ void LvDomAutocloseWriter::OnTagClose(const lChar16* /*nsname*/, const lChar16* 
         crFatalError();
     }
     //logfile << "LvDomWriter::OnTagClose() [" << nsname << ":" << tagname << "]";
-//    if ( nsname && nsname[0] )
-//        lStr_lowercase( const_cast<lChar16 *>(nsname), lStr_len(nsname) );
-//    lStr_lowercase( const_cast<lChar16 *>(tagname), lStr_len(tagname) );
+    //if ( nsname && nsname[0] )
+    //    lStr_lowercase( const_cast<lChar16 *>(nsname), lStr_len(nsname) );
+    //lStr_lowercase( const_cast<lChar16 *>(tagname), lStr_len(tagname) );
     if (!_currNode)
     {
         _errFlag = true;
@@ -6076,54 +6076,55 @@ void LvDomAutocloseWriter::OnTagClose(const lChar16* /*nsname*/, const lChar16* 
     //logfile << " !c!\n";
 }
 
-void LvDomAutocloseWriter::ElementCloseHandler(ldomNode * node)
+void LvDomAutocloseWriter::ElementCloseHandler(ldomNode* node)
 {
-    ldomNode * parent = node->getParentNode();
+    ldomNode* parent = node->getParentNode();
     lUInt16 id = node->getNodeId();
-    if ( parent ) {
-        if ( parent->getLastChild() != node )
+    if (parent) {
+        if (parent->getLastChild() != node) {
             return;
-        if ( id==el_table ) {
+        }
+        if (id == el_table) {
             if (isRightAligned(node) && node->getAttributeValue(attr_width) == "30%") {
                 // LIB.RU TOC detected: remove it
                 //parent = parent->modify();
-
                 //parent->removeLastChild();
             }
-        } else if ( id==el_pre && _libRuDocumentDetected ) {
-            // for LIB.ru - replace PRE element with DIV (section?)
-            if ( node->getChildCount()==0 ) {
+        } else if (id == el_pre && _libRuDocumentDetected) {
+            // For LIB.ru - replace PRE element with DIV (section?)
+            if (node->getChildCount() == 0) {
                 //parent = parent->modify();
-
-                //parent->removeLastChild(); // remove empty PRE element
+                // Remove empty PRE element
+                //parent->removeLastChild();
+            //} else if (node->getLastChild()->getNodeId() == el_div
+            //&& node->getLastChild()->getChildCount()
+            //&& ((ldomElement*) node->getLastChild())->getLastChild()->getNodeId() == el_form) {
+                // Remove lib.ru final section
+                //parent->removeLastChild();
+            } else {
+                node->setNodeId(el_div);
             }
-            //else if ( node->getLastChild()->getNodeId()==el_div
-                // && node->getLastChild()->getChildCount()
-                // && ((ldomElement*)node->getLastChild())->getLastChild()->getNodeId()==el_form )
-            //    parent->removeLastChild(); // remove lib.ru final section
-            else
-                node->setNodeId( el_div );
-        } else if ( id==el_div ) {
-//            CRLog::trace("DIV attr align = %s", LCSTR(node->getAttributeValue(attr_align)));
-//            CRLog::trace("DIV attr count = %d", node->getAttrCount());
-//            int alignId = node->getCrDom()->getAttrNameIndex("align");
-//            CRLog::trace("align= %d %d", alignId, attr_align);
-//            for (int i = 0; i < node->getAttrCount(); i++)
-//                CRLog::trace("DIV attr %s", LCSTR(node->getAttributeName(i)));
+        } else if (id == el_div) {
+            //CRLog::trace("DIV attr align = %s", LCSTR(node->getAttributeValue(attr_align)));
+            //CRLog::trace("DIV attr count = %d", node->getAttrCount());
+            //int alignId = node->getCrDom()->getAttrNameIndex("align");
+            //CRLog::trace("align= %d %d", alignId, attr_align);
+            //for (int i = 0; i < node->getAttrCount(); i++)
+            //    CRLog::trace("DIV attr %s", LCSTR(node->getAttributeName(i)));
             if (isRightAligned(node)) {
-                ldomNode * child = node->getLastChild();
-                if ( child && child->getNodeId()==el_form )  {
+                ldomNode* child = node->getLastChild();
+                if (child && child->getNodeId() == el_form) {
                     // LIB.RU form detected: remove it
                     //parent = parent->modify();
-
                     parent->removeLastChild();
                     _libRuDocumentDetected = true;
                 }
             }
         }
     }
-    if (!_libRuDocumentDetected)
+    if (!_libRuDocumentDetected) {
         node->persist();
+    }
 }
 
 void LvDomAutocloseWriter::OnAttribute(const lChar16* nsname,
@@ -6462,6 +6463,7 @@ bool CrDomBase::updateLoadedStyles(bool enabled)
     return res;
 }
 
+/// SHOULD BE CALLED ONLY AFTER setNodeTypes
 void CrDomXml::setStylesheet(const char* css, bool replace)
 {
     lUInt32 oldHash = stylesheet_.getHash();
@@ -6486,18 +6488,23 @@ class tinyElement
 {
     friend class ldomNode;
 private:
-    CrDom * _document;
-    ldomNode * _parentNode;
+    CrDom* _document;
+    ldomNode* _parentNode;
     lUInt16 _id;
     lUInt16 _nsid;
-    LVArray < lInt32 > _children;
+    LVArray<lInt32> _children;
     ldomAttributeCollection _attrs;
     lvdom_element_render_method _rendMethod;
 public:
-    tinyElement( CrDom * document, ldomNode * parentNode, lUInt16 nsid, lUInt16 id )
-    : _document(document), _parentNode(parentNode), _id(id), _nsid(nsid), _rendMethod(erm_invisible)
-    { _document->_tinyElementCount++; }
-    /// destructor
+    tinyElement(CrDom* document, ldomNode* parentNode, lUInt16 nsid, lUInt16 id)
+            : _document(document),
+              _parentNode(parentNode),
+              _id(id),
+              _nsid(nsid),
+              _rendMethod(erm_invisible)
+    {
+        _document->_tinyElementCount++;
+    }
     ~tinyElement() { _document->_tinyElementCount--; }
 };
 
