@@ -12,11 +12,6 @@
  *******************************************************/
 
 #include "lvdocview.h"
-// Yep, twice include single header with different define
-#include "fb2def.h"
-#define XS_IMPLEMENT_SCHEME 1
-#include "fb2def.h"
-//#undef XS_IMPLEMENT_SCHEME
 #include "CreBridge.h"
 #include "rtfimp.h"
 #include "lvrend.h"
@@ -25,6 +20,13 @@
 #include "wordfmt.h"
 #include "pdbfmt.h"
 #include "crcss.h"
+
+// Yep, twice include single header with different define. Probably, this should be last
+// in include list, to do not mess up with other includes.
+#include "fb2def.h"
+#define XS_IMPLEMENT_SCHEME 1
+#include "fb2def.h"
+//#undef XS_IMPLEMENT_SCHEME
 
 #if 0
 #define REQUEST_RENDER(caller) { CRLog::trace("RequestRender " caller); RequestRender(); }
@@ -108,7 +110,6 @@ void LVDocView::CreateEmptyDom()
 {
 	Clear();
 	cr_dom_ = new CrDom();
-    cr_dom_->setStylesheet(CRCSS, true);
 	SetDocFormat(doc_format_none);
 	cr_dom_->setProps(doc_props_);
 	cr_dom_->setDocFlags(0);
@@ -121,6 +122,8 @@ void LVDocView::CreateEmptyDom()
 	cr_dom_->setNameSpaceTypes(fb2_ns_table);
 	marked_ranges_.clear();
     bookmark_ranges_.clear();
+    // SHOULD BE CALLED ONLY AFTER setNodeTypes
+    cr_dom_->setStylesheet(CRCSS, true);
 }
 
 void LVDocView::RenderIfDirty()
