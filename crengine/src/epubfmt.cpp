@@ -1,18 +1,16 @@
-#include "../include/epubfmt.h"
+#include "include/epubfmt.h"
 
-
-class EpubItem {
+class EpubItem
+{
 public:
     lString16 href;
     lString16 mediaType;
     lString16 id;
     lString16 title;
-    EpubItem()
-    { }
-    EpubItem( const EpubItem & v )
-        : href(v.href), mediaType(v.mediaType), id(v.id)
-    { }
-    EpubItem & operator = ( const EpubItem & v )
+
+    EpubItem() {}
+    EpubItem(const EpubItem& v) : href(v.href), mediaType(v.mediaType), id(v.id) {}
+    EpubItem& operator=(const EpubItem& v)
     {
         href = v.href;
         mediaType = v.mediaType;
@@ -21,40 +19,46 @@ public:
     }
 };
 
-class EpubItems : public LVPtrVector<EpubItem> {
+class EpubItems : public LVPtrVector<EpubItem>
+{
 public:
-    EpubItem * findById( const lString16 & id )
+    EpubItem* findById(const lString16& id)
     {
-        if ( id.empty() )
+        if (id.empty()) {
             return NULL;
-        for ( int i=0; i<length(); i++ )
-            if ( get(i)->id == id )
+        }
+        for (int i = 0; i < length(); i++) {
+            if (get(i)->id == id) {
                 return get(i);
+            }
+        }
         return NULL;
     }
 };
 
-bool DetectEpubFormat(LVStreamRef stream) {
+bool DetectEpubFormat(LVStreamRef stream)
+{
     LVContainerRef m_arc = LVOpenArchieve(stream);
     if (m_arc.isNull()) {
-    	//Not a ZIP archive
+        // Not a ZIP archive
         return false;
     }
-    //Read "mimetype" file contents from root of archive
+    // Read "mimetype" file contents from root of archive
     lString16 mimeType;
-    {
-        LVStreamRef mtStream = m_arc->OpenStream(L"mimetype", LVOM_READ );
-        if ( !mtStream.isNull() ) {
-            int size = mtStream->GetSize();
-            if ( size>4 && size<100 ) {
-                LVArray<char> buf( size+1, '\0' );
-                if ( mtStream->Read( buf.get(), size, NULL )==LVERR_OK ) {
-                    for ( int i=0; i<size; i++ )
-                        if ( buf[i]<32 || ((unsigned char)buf[i])>127 )
-                            buf[i] = 0;
-                    buf[size] = 0;
-                    if (buf[0])
-                        mimeType = Utf8ToUnicode( lString8( buf.get() ) );
+    LVStreamRef mtStream = m_arc->OpenStream(L"mimetype", LVOM_READ);
+    if (!mtStream.isNull()) {
+        int size = mtStream->GetSize();
+        if (size > 4 && size < 100) {
+            LVArray<char> buf(size + 1, '\0');
+            if (mtStream->Read(buf.get(), size, NULL) == LVERR_OK) {
+                for (int i = 0; i < size; i++) {
+                    if (buf[i] < 32 || ((unsigned char) buf[i]) > 127) {
+                        buf[i] = 0;
+                    }
+                }
+                buf[size] = 0;
+                if (buf[0]) {
+                    mimeType = Utf8ToUnicode(lString8(buf.get()));
                 }
             }
         }
