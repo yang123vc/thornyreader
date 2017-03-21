@@ -1652,18 +1652,18 @@ bool CrDom::setRenderProps(int width, int height, font_ref_t def_font, int inter
         _page_width = width;
         changed = true;
     }
-//    {
-//        lUInt32 styleHash = calcStyleHash();
-//        styleHash = styleHash * 31 + calcGlobalSettingsHash();
-//        CRLog::trace("Style hash before set root style: %x", styleHash);
-//    }
-//    getRootNode()->setFont( _def_font );
-//    getRootNode()->setStyle( _def_style );
-//    {
-//        lUInt32 styleHash = calcStyleHash();
-//        styleHash = styleHash * 31 + calcGlobalSettingsHash();
-//        CRLog::trace("Style hash after set root style: %x", styleHash);
-//    }
+    //{
+    //    lUInt32 styleHash = calcStyleHash();
+    //    styleHash = styleHash * 31 + calcGlobalSettingsHash();
+    //    CRLog::trace("Style hash before set root style: %x", styleHash);
+    //}
+    //getRootNode()->setFont( _def_font );
+    //getRootNode()->setStyle( _def_style );
+    //{
+    //    lUInt32 styleHash = calcStyleHash();
+    //    styleHash = styleHash * 31 + calcGlobalSettingsHash();
+    //    CRLog::trace("Style hash after set root style: %x", styleHash);
+    //}
     return changed;
 }
 

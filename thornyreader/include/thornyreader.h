@@ -36,6 +36,7 @@ void StartThornyReader(const char* name);
 #define DOC_FORMAT_XPS 10
 #define DOC_FORMAT_OXPS 11
 #define DOC_FORMAT_CHM 12
+#define DOC_FORMAT_HTML 13
 
 #define CONFIG_CRENGINE_FOOTNOTES               	100
 /**

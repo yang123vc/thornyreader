@@ -136,8 +136,8 @@ lString16 EpubGetRootFilePath(LVContainerRef m_arc)
 class FontDemanglingStream : public StreamProxy {
     LVArray<lUInt8> & _key;
 public:
-    FontDemanglingStream(LVStreamRef baseStream, LVArray<lUInt8> & key) : StreamProxy(baseStream), _key(key) {
-    }
+    FontDemanglingStream(LVStreamRef baseStream, LVArray<lUInt8> & key)
+            : StreamProxy(baseStream), _key(key) { }
 
     virtual lverror_t Read( void * buf, lvsize_t count, lvsize_t * nBytesRead ) {
         lvpos_t pos = _base->GetPos();
@@ -201,13 +201,18 @@ public:
             insideCipherReference = false;
     }
     /// called on element attribute
-    virtual void OnAttribute( const lChar16 * nsname, const lChar16 * attrname, const lChar16 * attrvalue ) {
+    virtual void OnAttribute(const lChar16* nsname,
+            const lChar16* attrname,
+            const lChar16* attrvalue)
+    {
         CR_UNUSED2(nsname, attrvalue);
-        if (!lStr_cmp(attrname, "URI") && insideCipherReference)
+        if (!lStr_cmp(attrname, "URI") && insideCipherReference) {
             insideEncryption = false;
-        else if (!lStr_cmp(attrname, "Algorithm") && insideEncryptionMethod)
+        } else if (!lStr_cmp(attrname, "Algorithm") && insideEncryptionMethod) {
             insideEncryptedData = false;
+        }
     }
+
     /// called on text
     virtual void OnText( const lChar16 * text, int len, lUInt32 flags ) {
         CR_UNUSED3(text,len,flags);
@@ -236,7 +241,8 @@ public:
     virtual ~EncCallback() {}
 };
 
-EncryptedDataContainer::EncryptedDataContainer(LVContainerRef baseContainer) : _container(baseContainer) {}
+EncryptedDataContainer::EncryptedDataContainer(LVContainerRef baseContainer)
+        : _container(baseContainer) {}
 
 LVContainer* EncryptedDataContainer::GetParentContainer()
 {
@@ -393,7 +399,9 @@ class EmbeddedFontStyleParser {
     lString8 islocal;
 public:
     EmbeddedFontStyleParser(LVEmbeddedFontList & fontList) : _fontList(fontList) { }
-    void onToken(char token) {
+
+    void onToken(char token)
+    {
         // 4,5:  font-family:
         // 6,7:  font-weight:
         // 8,9:  font-style:
@@ -425,27 +433,30 @@ public:
                 _italic = false;
                 _bold = false;
                 _url.clear();
-            } else
-                _state = 3; // inside other {
+            } else {
+                _state = 3;
+            } // inside other {
             break;
         case '}':
             if (_state == 2) {
                 if (!_url.empty()) {
-//                    CRLog::trace("@font { face: %s; bold: %s; italic: %s; url: %s", _face.c_str(), _bold ? "yes" : "no",
-//                                 _italic ? "yes" : "no", LCSTR(_url));
+                    //CRLog::trace("@font { face: %s; bold: %s; italic: %s; url: %s",
+                    //    _face.c_str(), _bold ? "yes" : "no", _italic ? "yes" : "no", LCSTR(_url));
                     if (islocal.length() == 5) {
-                        _url = (_url.substr((_basePath.length()+1),(_url.length()-_basePath.length())));
+                        _url = (_url.substr((_basePath.length() + 1),
+                                (_url.length() - _basePath.length())));
                     }
                     _fontList.add(_url, _face, _bold, _italic);
                 }
             }
             _state = 0;
             break;
-		case ',':
+        case ',':
             if (_state == 2) {
-                if (!_url.empty())
-                {
-                    if (islocal.length()==5) _url=(_url.substr((_basePath.length()+1),(_url.length()-_basePath.length())));
+                if (!_url.empty()) {
+                    if (islocal.length() == 5)
+                        _url = (_url.substr((_basePath.length() + 1),
+                                (_url.length() - _basePath.length())));
                     _fontList.add(_url, _face, _bold, _italic);
                 }
                 _state = 11;
@@ -461,6 +472,7 @@ public:
             break;
         }
     }
+
     void onToken(lString8 & token) {
         if (token.empty())
             return;
@@ -509,15 +521,19 @@ public:
                 _state = 2;
         }
     }
-    void onQuotedText(lString8 & token) {
+
+    void onQuotedText(lString8& token)
+    {
         //CRLog::trace("state==%d: \"%s\"", _state, token.c_str());
         if (_state == 11 || _state == 13) {
             if (!token.empty()) {
                 lString16 ltoken = Utf8ToUnicode(token);
-                if (ltoken.startsWithNoCase(lString16("res://")) || ltoken.startsWithNoCase(lString16("file://")) )
-                    _url = ltoken;
-                else
-                    _url = LVCombinePaths(_basePath, ltoken);
+                if (ltoken.startsWithNoCase(lString16("res://"))
+                    || ltoken.startsWithNoCase(lString16("file://"))) {
+                        _url = ltoken;
+                } else {
+                        _url = LVCombinePaths(_basePath, ltoken);
+                }
             }
             _state = 2;
         } else if (_state == 5) {
@@ -529,32 +545,37 @@ public:
         token.clear();
     }
 
-    void parse(lString16 basePath, const lString8 & css) {
+    void parse(lString16 basePath, const lString8& css)
+    {
         _state = 0;
         _basePath = basePath;
         lString8 token;
         char insideQuotes = 0;
-        for (int i=0; i<css.length(); i++) {
+        for (int i = 0; i < css.length(); i++) {
             char ch = css[i];
             if (insideQuotes || _state == 13) {
                 if (ch == insideQuotes || (_state == 13 && ch == ')')) {
                     onQuotedText(token);
-                    insideQuotes =  0;
-                    if (_state == 13)
+                    insideQuotes = 0;
+                    if (_state == 13) {
                         onToken(ch);
+                    }
                 } else {
-                    if (_state == 13 && token.empty() && (ch == '\'' || ch=='\"')) {
+                    if (_state == 13 && token.empty() && (ch == '\'' || ch == '\"')) {
                         insideQuotes = ch;
-                    } else if (ch != ' ' || _state != 13)
+                    } else if (ch != ' ' || _state != 13) {
                         token << ch;
+                    }
                 }
                 continue;
             }
             if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n') {
                 onToken(token);
-            } else if (ch == '@' || ch=='-' || ch=='_' || ch=='.' || (ch>='a' && ch <='z') || (ch>='A' && ch <='Z') || (ch>='0' && ch <='9')) {
+            } else if (ch == '@' || ch == '-' || ch == '_' || ch == '.' || (ch >= 'a' && ch <= 'z')
+                       || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
                 token << ch;
-            } else if (ch == ':' || ch=='{' || ch == '}' || ch=='(' || ch == ')' || ch == ';' || ch == ',') {
+            } else if (ch == ':' || ch == '{' || ch == '}' || ch == '(' || ch == ')' || ch == ';'
+                       || ch == ',') {
                 onToken(token);
                 onToken(ch);
             } else if (ch == '\'' || ch == '\"') {
@@ -677,7 +698,8 @@ bool ImportEpubDocument(LVStreamRef stream, CrDom* m_doc)
                     if ( !stream.isNull() ) {
                         LVImageSourceRef img = LVCreateStreamImageSource(stream);
                         if ( !img.isNull() ) {
-                            CRLog::trace("EPUB coverpage image is correct: %d x %d", img->GetWidth(), img->GetHeight() );
+                            CRLog::trace("EPUB coverpage image is correct: %d x %d",
+                                    img->GetWidth(), img->GetHeight() );
                             m_doc_props->setString(DOC_PROP_COVER_FILE, coverFileName);
                         }
                     }

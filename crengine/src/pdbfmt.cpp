@@ -650,82 +650,100 @@ public:
         return m_doc_props;
     }
 
-    bool open(LVStreamRef stream, LVPDBContainer * container, bool validateContent, doc_format_t & contentFormat) {
+    bool open(LVStreamRef stream,
+            LVPDBContainer* container,
+            bool validateContent,
+            doc_format_t& contentFormat)
+    {
         contentFormat = doc_format_none;
         _format = UNKNOWN;
         stream->SetPos(0);
         lUInt32 fsize = stream->GetSize();
         PDBHdr hdr;
         PDBRecordEntry entry;
-        if ( !hdr.read(stream) )
+        if (!hdr.read(stream)) {
             return false;
-        if ( hdr.recordCount==0 )
+        }
+        if (hdr.recordCount == 0) {
             return 0;
-
-        if ( hdr.checkType("TEXt") && hdr.checkCreator("REAd") )
+        }
+        if (hdr.checkType("TEXt") && hdr.checkCreator("REAd")) {
             _format = PALMDOC;
-        if ( hdr.checkType("PNRd") && hdr.checkCreator("PPrs") )
+        }
+        if (hdr.checkType("PNRd") && hdr.checkCreator("PPrs")) {
             _format = EREADER;
-        if ( hdr.checkType("BOOK") && hdr.checkCreator("MOBI") )
+        }
+        if (hdr.checkType("BOOK") && hdr.checkCreator("MOBI")) {
             _format = MOBI;
-        if ( hdr.checkType("Data") && hdr.checkCreator("Plkr") )
+        }
+        if (hdr.checkType("Data") && hdr.checkCreator("Plkr")) {
             _format = PLUCKER;
-        if ( _format==UNKNOWN )
-            return false; // UNKNOWN FORMAT
-
+        }
+        if (_format == UNKNOWN) {
+            return false;
+        }
         stream->SetPos(0x4E);
         lUInt32 lastEntryStart = 0;
         _records.addSpace(hdr.recordCount);
-        for ( int i=0; i<hdr.recordCount; i++ ) {
-            if ( !entry.read(stream) )
+        for (int i = 0; i < hdr.recordCount; i++) {
+            if (!entry.read(stream)) {
                 return false;
+            }
             lUInt32 pos = entry.localChunkId;
-            if ( pos<lastEntryStart || pos>=fsize )
+            if (pos < lastEntryStart || pos >= fsize) {
                 return false;
+            }
             _records[i].offset = pos;
-            if ( i>0 )
-                _records[i-1].size = pos - _records[i-1].offset;
+            if (i > 0) {
+                _records[i - 1].size = pos - _records[i - 1].offset;
+            }
             lastEntryStart = pos;
         }
-        _records[_records.length()-1].size = fsize - _records[_records.length()-1].offset;
+        _records[_records.length() - 1].size = fsize - _records[_records.length() - 1].offset;
         _stream = stream;
 
-        if ( _format==EREADER ) {
-            if ( _records[0].size<sizeof(EReaderHeader) )
+        if (_format == EREADER) {
+            if (_records[0].size < sizeof(EReaderHeader))
                 return false;
             EReaderHeader preamble;
             stream->SetPos(_records[0].offset);
-            if ( !preamble.read(stream) )
+            if (!preamble.read(stream))
                 return false; // invalid preamble
             _recordCount = preamble.nonTextRecordStart - 1;
-            if ( _recordCount>=_records.length() )
+            if (_recordCount >= _records.length())
                 return false;
             _compression = preamble.compression;
-            if ( _compression==1 )
+            if (_compression == 1)
                 _compression = 0;
-            _textSize = (lUInt32)-1;
-            if ( preamble.imageCount && container ) {
-                for ( int index=preamble.imageDataRecordStart; index<preamble.imageDataRecordStart+preamble.imageCount; index++ ) {
+            _textSize = (lUInt32) -1;
+            if (preamble.imageCount && container) {
+                for (int index = preamble.imageDataRecordStart;
+                     index < preamble.imageDataRecordStart + preamble.imageCount; index++) {
                     lUInt32 start = _records[index].offset + 62;
                     lUInt32 size = _records[index].size - 62;
-                    if ( start<fsize && start+size<=fsize ) {
+                    if (start < fsize && start + size <= fsize) {
                         stream->SetPos(_records[index].offset);
-                        if ( stream->ReadByte()=='P' && stream->ReadByte()=='N' && stream->ReadByte()=='G' && stream->ReadByte()==' ' ) {
+                        if (stream->ReadByte() == 'P' && stream->ReadByte() == 'N'
+                            && stream->ReadByte() == 'G' && stream->ReadByte() == ' ') {
                             // header ok, adding item
                             char name[33];
                             memset(name, 0, 33);
                             lvsize_t bytesRead = 0;
                             stream->Read(name, 32, &bytesRead);
-                            if ( name[0] ) {
+                            if (name[0]) {
                                 lString16 fname = lString16(name);
-                                container->addItem( new LVPDBRegionContainerItem( stream, this, fname, start, size ) );
+                                container->addItem(new LVPDBRegionContainerItem(stream,
+                                        this,
+                                        fname,
+                                        start,
+                                        size));
                             }
                         }
                     }
                 }
             }
-        } else if (_format==MOBI ) {
-            if (_records[0].size<sizeof(MobiPreamble))
+        } else if (_format == MOBI) {
+            if (_records[0].size < sizeof(MobiPreamble))
                 return false;
             if (!validateContent) {
                 contentFormat = doc_format_mobi;
@@ -734,39 +752,40 @@ public:
             stream->SetPos(_records[0].offset);
             if (!preamble.read(stream, _mobiExtraDataFlags))
                 return false; // invalid preamble
-            if (preamble.recordCount>=_records.length())
+            if (preamble.recordCount >= _records.length())
                 return false;
             _compression = preamble.compression;
-            if (_compression==1){
+            if (_compression == 1) {
                 _compression = 0;
             }
             _textSize = preamble.textLength;
             _recordCount = preamble.firstNonBookIndex - 1;
-            lUInt32 coverOffset = (lUInt32)-1;
+            lUInt32 coverOffset = (lUInt32) -1;
             lUInt32 thumbOffset = 0;
             if (preamble.mobiFlags & 0x40) {
                 // EXTH present
                 stream->SetPos(_records[0].offset + 16 + preamble.hederLength);
                 char exth_tag[4] = {0, 0, 0, 0};
                 stream->Read(&exth_tag, 4, NULL);
-                if (exth_tag[0] == 'E' && exth_tag[1] == 'X' && exth_tag[2] == 'T' && exth_tag[3] == 'H') {
-                	CRLog::trace("EXTH record found");
+                if (exth_tag[0] == 'E' && exth_tag[1] == 'X' && exth_tag[2] == 'T'
+                    && exth_tag[3] == 'H') {
+                    CRLog::trace("EXTH record found");
                     lUInt32 hdrLen = 0;
                     lUInt32 recCount = 0;
                     lvByteOrderConv cnv;
                     stream->Read(&hdrLen);
                     stream->Read(&recCount);
-                    if ( cnv.lsf() ) {
+                    if (cnv.lsf()) {
                         cnv.rev(&hdrLen);
                         cnv.rev(&recCount);
                     }
                     LVArray<lUInt8> buf2;
-                    for (lUInt32 i=0; i<recCount; i++) {
+                    for (lUInt32 i = 0; i < recCount; i++) {
                         lUInt32 recType = 0;
                         lUInt32 recLen = 0;
                         stream->Read(&recType);
                         stream->Read(&recLen);
-                        if ( cnv.lsf() ) {
+                        if (cnv.lsf()) {
                             cnv.rev(&recType);
                             cnv.rev(&recLen);
                         }
@@ -785,10 +804,10 @@ public:
                                 if (stream->Read(buf2.get(), recLen - 8, NULL) != LVERR_OK)
                                     break;
                                 if (recType == 100) {
-                                    lString8 author((const char *)buf2.get(), recLen - 8);
+                                    lString8 author((const char*) buf2.get(), recLen - 8);
                                     CRLog::trace("MOBI author: %s", author.c_str());
                                 } else if (recType == 105) {
-                                    lString8 s((const char *)buf2.get(), recLen - 8);
+                                    lString8 s((const char*) buf2.get(), recLen - 8);
                                     CRLog::trace("MOBI subject: %s", s.c_str());
                                 }
                             }
@@ -799,44 +818,49 @@ public:
                 }
             }
             if (container) {
-                for ( int index=preamble.firstImageIndex; index<_records.length(); index++ ) {
+                for (int index = preamble.firstImageIndex; index < _records.length(); index++) {
                     stream->SetPos(_records[index].offset);
                     lUInt8 buf[256];
                     stream->Read(buf, 16, NULL);
                     //CRLog::debug("Image record %d [%02x %02x %02x %02x %02x]", index, buf[0], buf[1], buf[2], buf[3], buf[4]);
-                    const char * fmt = NULL;
-                    if (buf[0]==0xff && buf[1]==0xd8 && buf[2]==0xFF && buf[3]==0xe0)
+                    const char* fmt = NULL;
+                    if (buf[0] == 0xff && buf[1] == 0xd8 && buf[2] == 0xFF && buf[3] == 0xe0)
                         fmt = "jpeg";
-                    if (buf[0]==0x89 && buf[1]=='P' && buf[2]=='N' && buf[3]=='G')
+                    if (buf[0] == 0x89 && buf[1] == 'P' && buf[2] == 'N' && buf[3] == 'G')
                         fmt = "png";
-                    if (buf[0]=='G' && buf[1]=='I' && buf[2]=='F')
+                    if (buf[0] == 'G' && buf[1] == 'I' && buf[2] == 'F')
                         fmt = "gif";
                     if (fmt) {
-                        lString16 name = lString16(MOBI_IMAGE_NAME_PREFIX) + fmt::decimal((int)(index-preamble.firstImageIndex));
+                        lString16 name = lString16(MOBI_IMAGE_NAME_PREFIX)
+                                         + fmt::decimal((int) (index - preamble.firstImageIndex));
                         //CRLog::debug("Adding image %s [%d] %s", LCSTR(name), _records[index].size, fmt);
-                        container->addItem( new LVPDBRegionContainerItem( stream, this, name, _records[index].offset, _records[index].size ) );
-                        if ((unsigned)index == preamble.firstImageIndex + coverOffset) {
+                        container->addItem(new LVPDBRegionContainerItem(stream,
+                                this,
+                                name,
+                                _records[index].offset,
+                                _records[index].size));
+                        if ((unsigned) index == preamble.firstImageIndex + coverOffset) {
                             m_doc_props->setString(DOC_PROP_COVER_FILE, name);
                             CRLog::trace("MOBI COVER: %s", LCSTR(name));
                         }
                     }
                 }
             }
-        } else if (_format==PALMDOC ) {
-            if ( _records[0].size<sizeof(PalmDocPreamble) )
+        } else if (_format == PALMDOC) {
+            if (_records[0].size < sizeof(PalmDocPreamble))
                 return false;
             PalmDocPreamble preamble;
             stream->SetPos(_records[0].offset);
-            if ( !preamble.read(stream) )
+            if (!preamble.read(stream))
                 return false; // invalid preamble
-            if ( preamble.recordCount>=_records.length() )
+            if (preamble.recordCount >= _records.length())
                 return false;
             _compression = preamble.compression;
-            if ( _compression==1 )
+            if (_compression == 1)
                 _compression = 0;
             _textSize = preamble.textLength;
             _recordCount = preamble.recordCount;
-        } else if (_format==PLUCKER ) {
+        } else if (_format == PLUCKER) {
             // TODO
             return false;
         }
@@ -847,30 +871,31 @@ public:
 //                _records[k+1].size -= 6;
 //        }
 
-        if ( !validateContent )
+        if (!validateContent)
             return true; // for simple format check
 
         LVArray<lUInt8> buf;
         lUInt32 unpoffset = 0;
         _crc = 0;
-        for ( int k=0; k<_recordCount; k++ ) {
+        for (int k = 0; k < _recordCount; k++) {
 
-            readRecord(k+1, &buf);
-            _records[k+1].unpoffset = unpoffset;
-            _records[k+1].unpsize = buf.length();
+            readRecord(k + 1, &buf);
+            _records[k + 1].unpoffset = unpoffset;
+            _records[k + 1].unpsize = buf.length();
             unpoffset += buf.length();
-            _crc = lStr_crc32( _crc, buf.get(), buf.length() );
+            _crc = lStr_crc32(_crc, buf.get(), buf.length());
         }
         _mobiExtraDataFlags = 0;
 
         detectFormat(contentFormat);
 
-        if (_textSize == (lUInt32)-1)
+        if (_textSize == (lUInt32) -1)
             _textSize = unpoffset;
         else if (unpoffset < _textSize) {
             CRLog::warn("PDB: Unpacked text size is %d but expected %d", unpoffset, _textSize);
             _textSize = unpoffset;
-            //return false; // text size does not match
+            // Text size does not match
+            //return false;
         }
         _bufIndex = -1;
         _bufSize = 0;
@@ -1015,41 +1040,24 @@ public:
 
 };
 
-// Creates PDB decoder stream for stream
-//LVStreamRef LVOpenPDBStream( LVStreamRef srcstream, int &format )
-//{
-//    PDBFile * stream = PDBFile::create( srcstream, format );
-//    srcstream->SetPos(0);
-//    if ( stream!=NULL )
-//    {
-//        return LVStreamRef( stream );
-//    }
-//    return LVStreamRef();
-//}
-
-bool DetectPDBFormat(LVStreamRef stream, doc_format_t& contentFormat)
+bool isCorrectUtf8Text(LVStreamRef& stream)
 {
-    PDBFile pdb;
-    if (!pdb.open(stream, NULL, false, contentFormat))
-        return false;
-    return true;
-}
-
-bool isCorrectUtf8Text(LVStreamRef & stream) {
     char enc_name[32];
     char lang_name[32];
     lvpos_t oldpos = stream->GetPos();
     unsigned sz = 16384;
-    stream->SetPos( 0 );
-    if ( sz>stream->GetSize() )
+    stream->SetPos(0);
+    if (sz > stream->GetSize()) {
         sz = stream->GetSize();
-    if (sz < 8)
+    }
+    if (sz < 8) {
         return false;
-    unsigned char * buf = new unsigned char[ sz ];
+    }
+    unsigned char* buf = new unsigned char[sz];
     lvsize_t bytesRead = 0;
-    if ( stream->Read( buf, sz, &bytesRead )!=LVERR_OK ) {
+    if (stream->Read(buf, sz, &bytesRead) != LVERR_OK) {
         delete[] buf;
-        stream->SetPos( oldpos );
+        stream->SetPos(oldpos);
         return false;
     }
 
@@ -1062,8 +1070,8 @@ bool isCorrectUtf8Text(LVStreamRef & stream) {
 LVStreamRef GetPDBCoverpage(LVStreamRef stream)
 {
     doc_format_t contentFormat = doc_format_none;
-    PDBFile * pdb = new PDBFile();
-    LVPDBContainer * container = new LVPDBContainer();
+    PDBFile* pdb = new PDBFile();
+    LVPDBContainer* container = new LVPDBContainer();
     if (!pdb->open(stream, container, false, contentFormat)) {
         delete container;
         delete pdb;
@@ -1084,7 +1092,7 @@ LVStreamRef GetPDBCoverpage(LVStreamRef stream)
     return LVStreamRef();
 }
 
-bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t & doc_format)
+bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t& doc_format)
 {
     PDBFile* pdb = new PDBFile();
     LVPDBContainer* container = new LVPDBContainer();
@@ -1099,34 +1107,57 @@ bool ImportPDBDocument(LVStreamRef& stream, CrDom* doc, doc_format_t & doc_forma
     doc->setDocParentContainer(LVContainerRef(container));
     doc->getProps()->set(pdb->getDocProps());
     switch (doc_format) {
-    case doc_format_html: // HTML
-        {
-            LvDomAutocloseWriter writerFilter(doc, false, HTML_AUTOCLOSE_TABLE);
-            LvHtmlParser parser(stream, &writerFilter);
-            if ( !parser.CheckFormat() ) {
+    case doc_format_html:
+    {
+        // HTML
+        LvDomAutocloseWriter writerFilter(doc, false, HTML_AUTOCLOSE_TABLE);
+        LvHtmlParser parser(stream, &writerFilter);
+        if (!parser.CheckFormat()) {
+            return false;
+        } else {
+            if (pdb->getFormat() == PDBFile::MOBI && isCorrectUtf8Text(stream)) {
+                parser.SetCharset(L"utf-8");
+            }
+            if (!parser.Parse()) {
                 return false;
-            } else {
-                if (pdb->getFormat()==PDBFile::MOBI && isCorrectUtf8Text(stream))
-                    parser.SetCharset(L"utf-8");
-                if (!parser.Parse()) {
-                    return false;
-                }
             }
         }
+    }
         break;
-    default: // TXT
-        {
-            LvDomWriter writer(doc);
-            LVTextParser parser(stream, &writer, false);
-            if (!parser.CheckFormat()) {
+    default:
+    {
+        // TXT
+        LvDomWriter writer(doc);
+        LVTextParser parser(stream, &writer, false);
+        if (!parser.CheckFormat()) {
+            return false;
+        } else {
+            if (!parser.Parse()) {
                 return false;
-            } else {
-                if (!parser.Parse()) {
-                    return false;
-                }
             }
         }
+    }
         break;
     }
+    return true;
+}
+
+// Creates PDB decoder stream for stream
+//LVStreamRef LVOpenPDBStream( LVStreamRef srcstream, int &format )
+//{
+//    PDBFile * stream = PDBFile::create( srcstream, format );
+//    srcstream->SetPos(0);
+//    if ( stream!=NULL )
+//    {
+//        return LVStreamRef( stream );
+//    }
+//    return LVStreamRef();
+//}
+
+bool DetectPDBFormat(LVStreamRef stream, doc_format_t& contentFormat)
+{
+    PDBFile pdb;
+    if (!pdb.open(stream, NULL, false, contentFormat))
+        return false;
     return true;
 }

@@ -292,8 +292,7 @@ void CreBridge::processOpen(CmdRequest& request, CmdResponse& response)
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-
-    if (doc_view_->LoadDoc(reinterpret_cast<const char*>(file_name))) {
+    if (doc_view_->LoadDoc(doc_format, reinterpret_cast<const char*>(file_name))) {
         doc_view_->RenderIfDirty();
         response.addInt(ExportPagesCount(doc_view_->GetColumns(), doc_view_->GetPagesCount()));
     }
