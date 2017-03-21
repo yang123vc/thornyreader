@@ -136,8 +136,6 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
     CmdDataIterator iter(request.first);
     if (!doc_view_) {
         doc_view_ = new LVDocView();
-        // SHOULD BE CALLED ONLY AFTER setNodeTypes
-        doc_view_->GetCrDom()->setStylesheet(CR_CSS, true);
     }
     while (iter.hasNext()) {
         uint32_t key;

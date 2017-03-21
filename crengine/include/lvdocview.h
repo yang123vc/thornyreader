@@ -97,8 +97,6 @@ private:
     bool background_tiled_;
 	inline bool IsPagesMode() { return viewport_mode_ == MODE_PAGES; }
 	inline bool IsScrollMode() { return viewport_mode_ == MODE_SCROLL; }
-    /// sets current document format
-    void SetDocFormat(doc_format_t fmt);
     void UpdateScroll();
     /// load document from stream
     bool LoadDoc(int doc_format, LVStreamRef stream);
@@ -118,7 +116,7 @@ protected:
     bool getCursorRect( ldomXPointer ptr, lvRect & rc, bool scrollToCursor = false);
 public:
     bool position_is_set_;
-    doc_format_t doc_format_;
+    int doc_format_;
     lString8 config_font_face_;
     int width_;
     int height_;

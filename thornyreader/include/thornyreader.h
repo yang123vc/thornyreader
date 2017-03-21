@@ -24,6 +24,7 @@ const char* ThornyReader_NDEBUG();
 const char* ThornyReader_AXYDEBUG();
 void StartThornyReader(const char* name);
 
+#define DOC_FORMAT_NULL 0
 #define DOC_FORMAT_EPUB 1
 #define DOC_FORMAT_FB2 2
 #define DOC_FORMAT_PDF 3
