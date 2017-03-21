@@ -20,6 +20,7 @@
 #include "chmfmt.h"
 #include "wordfmt.h"
 #include "pdbfmt.h"
+#include "include/crcss.h"
 
 // Yep, twice include single header with different define. Probably, this should be last
 // in include list, to do not mess up with other includes.

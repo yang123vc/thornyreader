@@ -27,7 +27,6 @@ LOCAL_SRC_FILES := \
 	src/CreBridge.cpp \
 	src/CreMain.cpp \
 	src/trlog.cpp \
-	src/crcss.cpp \
 	src/bookmark.cpp \
 	src/lvtoc.cpp \
 	src/chmfmt.cpp \
@@ -38,6 +37,7 @@ LOCAL_SRC_FILES := \
     src/lstridmap.cpp \
     src/lvbmpbuf.cpp \
     src/lvdocview.cpp \
+    src/crcss.cpp \
     src/lvdrawbuf.cpp \
     src/lvfnt.cpp \
     src/lvfntman.cpp \

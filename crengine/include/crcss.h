@@ -1,0 +1,6 @@
+#ifndef THORNYREADER_CRCSS_H
+#define THORNYREADER_CRCSS_H
+
+extern const char* CR_CSS;
+
+#endif //THORNYREADER_CRCSS_H

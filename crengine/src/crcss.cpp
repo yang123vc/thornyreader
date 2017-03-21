@@ -1,3 +1,5 @@
+#include "include/crcss.h"
+
 const char* CR_CSS = R"delimiter(
 .empty-line, empty-line {
   display: block;
