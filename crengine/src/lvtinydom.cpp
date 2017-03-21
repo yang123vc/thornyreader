@@ -48,10 +48,10 @@
 
 #include <stdlib.h>
 #include <zlib.h>
-#include "lvstring.h"
-#include "lvtinydom.h"
-#include "fb2def.h"
-#include "lvrend.h"
+#include "include/lvstring.h"
+#include "include/lvtinydom.h"
+#include "include/fb2def.h"
+#include "include/lvrend.h"
 
 // Define to store new text nodes as persistent text, instead of mutable
 #define USE_PERSISTENT_TEXT 1

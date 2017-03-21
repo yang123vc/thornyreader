@@ -1,6 +1,7 @@
-#include "trlog.h"
+#include "include/trlog.h"
+#include "include/thornyreader.h"
 #include <android/log.h>
-#include "thornyreader.h"
+
 
 static CRLog::LogLevel log_level_ = CRLog::TRACE;
 

@@ -11,8 +11,8 @@
 
 *******************************************************/
 
-#include "lstridmap.h"
-#include "dtddef.h"
+#include "include/lstridmap.h"
+#include "include/dtddef.h"
 
 CrStrIntPair::CrStrIntPair(lUInt16 _id, const lString16& _value,
 		const css_elem_def_props_t* _data)

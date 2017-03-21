@@ -1,11 +1,11 @@
-#include "lvstring.h"
-#include "lvstream.h"
-#include "lvtinydom.h"
+#include "include/lvstring.h"
+#include "include/lvstream.h"
+#include "include/lvtinydom.h"
 
 #if ENABLE_ANTIWORD==1
 
 //#define ANTIWORD_DEBUG
-#include "wordfmt.h"
+#include "include/wordfmt.h"
 
 #ifdef _WIN32
 extern "C" {
@@ -43,7 +43,7 @@ static int	    usAfterIndent = 0;	/* Vertical indent after paragraph in twips */
 
 // Antiword Output handling
 extern "C" {
-#include "antiword.h"
+#include "antiword/antiword.h"
 }
 
 static conversion_type	eConversionType = conversion_unknown;

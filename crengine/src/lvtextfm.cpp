@@ -13,11 +13,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "lvfnt.h"
-#include "lvtextfm.h"
+#include "include/lvfnt.h"
+#include "include/lvtextfm.h"
 
 #ifdef __cplusplus
-#include "lvtinydom.h"
+#include "include/lvtinydom.h"
 #endif
 
 // disable CJK support since it breaks usual text formatting with floating punctuation and space trunctaion turned on

@@ -1,6 +1,6 @@
-#include "lvstream.h"
-#include "chmfmt.h"
-#include "chm_lib.h"
+#include "include/lvstream.h"
+#include "include/chmfmt.h"
+#include "chmlib/src/chm_lib.h"
 
 struct crChmExternalFileStream : public chmExternalFileStream {
     /** returns file size, in bytes, if opened successfully */

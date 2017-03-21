@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "thornyreader.h"
-#include "CreBridge.h"
+#include "include/thornyreader.h"
+#include "include/CreBridge.h"
 
 int main(int argc, char *argv[])
 {

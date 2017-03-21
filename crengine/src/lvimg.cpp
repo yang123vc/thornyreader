@@ -20,18 +20,18 @@
 #define USE_GIF                              1
 #define XMD_H
 
-#include "lvimg.h"
-#include "lvtinydom.h"
+#include "include/lvimg.h"
+#include "include/lvtinydom.h"
 
 #if (USE_LIBPNG==1)
-#include <png.h>
+#include "libpng/png.h"
 #endif
 
 #if (USE_LIBJPEG==1)
 extern "C" {
-#include <jpeglib.h>
+#include "libjpeg/jpeglib.h"
 }
-#include <jerror.h>
+#include "libjpeg/jerror.h"
 
 
 typedef boolean wxjpeg_boolean;

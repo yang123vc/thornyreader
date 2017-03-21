@@ -11,7 +11,7 @@
 
 *******************************************************/
 
-#include "lvstyles.h"
+#include "include/lvstyles.h"
 
 /// calculate font instance record hash
 lUInt32 calcHash(font_ref_t & f)

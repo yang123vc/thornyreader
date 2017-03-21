@@ -11,9 +11,9 @@
 
 *******************************************************/
 
-#include "lvtinydom.h"
-#include "fb2def.h"
-#include "lvrend.h"
+#include "include/lvtinydom.h"
+#include "include/fb2def.h"
+#include "include/lvrend.h"
 
 //#define DEBUG_TREE_DRAW 3
 // define to non-zero (1..5) to see block bounds

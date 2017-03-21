@@ -23,9 +23,9 @@
 #endif
 
 #include <stdlib.h>
-#include "lvxml.h"
-#include "hyphman.h"
-#include "lvfnt.h"
+#include "include/lvxml.h"
+#include "include/hyphman.h"
+#include "include/lvfnt.h"
 
 #define _16(x) lString16(x)
 

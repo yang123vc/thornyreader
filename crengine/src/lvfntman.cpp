@@ -13,11 +13,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "lvfntman.h"
-#include "lvstyles.h"
+#include "include/lvfntman.h"
+#include "include/lvstyles.h"
 #define GAMMA_TABLES_IMPL
-#include "gammatbl.h"
-#include "config/ftheader.h"
+#include "include/gammatbl.h"
+#include "freetype/include/config/ftheader.h"
 #include "freetype.h"
 
 #define ALLOW_KERNING 1

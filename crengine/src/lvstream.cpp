@@ -24,8 +24,8 @@
 
 *******************************************************/
 
-#include "lvstream.h"
-#include "crtxtenc.h"
+#include "include/lvstream.h"
+#include "include/crtxtenc.h"
 
 //#define USE_UNRAR 1
 #include <zlib.h>

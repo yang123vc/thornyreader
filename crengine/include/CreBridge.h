@@ -1,8 +1,8 @@
 #ifndef READERA_CREBRIDGE_H
 #define READERA_CREBRIDGE_H
 
-#include "StBridge.h"
-#include "lvdocview.h"
+#include "include/StBridge.h"
+#include "include/lvdocview.h"
 
 class CreBridge : public StBridge
 {

@@ -11,7 +11,7 @@
 
 *******************************************************/
 
-#include "lvstring.h"
+#include "include/lvstring.h"
 #include <assert.h>
 #include <stdio.h>
 

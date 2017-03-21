@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "lvdrawbuf.h"
+#include "include/lvdrawbuf.h"
 
 #define GRAY_INVERSE 0
 #define GUARD_BYTE 0xa5

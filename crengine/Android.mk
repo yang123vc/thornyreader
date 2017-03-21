@@ -15,13 +15,9 @@ LOCAL_CFLAGS            += -DCR3_ANTIWORD_PATCH=1
 LOCAL_CFLAGS            += -DENABLE_ANTIWORD=1
 
 LOCAL_C_INCLUDES := \
-    $(LOCAL_PATH)/../thornyreader/include \
-    $(LOCAL_PATH)/include \
+    $(LOCAL_PATH)/../thornyreader \
     $(LOCAL_PATH)/libpng \
-    $(LOCAL_PATH)/freetype/include \
-    $(LOCAL_PATH)/libjpeg \
-    $(LOCAL_PATH)/antiword \
-    $(LOCAL_PATH)/chmlib/src
+    $(LOCAL_PATH)/freetype/include
 
 LOCAL_SRC_FILES := \
 	src/CreBridge.cpp \

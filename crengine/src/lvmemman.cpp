@@ -11,9 +11,9 @@
 
 *******************************************************/
 
-#include "lvmemman.h"
-#include "lvref.h"
-#include "lvtinydom.h"
+#include "include/lvmemman.h"
+#include "include/lvref.h"
+#include "include/lvtinydom.h"
 
 void crFatalError(int code, const char* errorText)
 {

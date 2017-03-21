@@ -1,4 +1,4 @@
-#include "lvtinydom.h"
+#include "include/lvtinydom.h"
 
 /// returns position pointer
 ldomXPointer LvTocItem::getXPointer()

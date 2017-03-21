@@ -11,22 +11,22 @@
 
  *******************************************************/
 
-#include "thornyreader.h"
-#include "lvdocview.h"
-#include "CreBridge.h"
-#include "rtfimp.h"
-#include "lvrend.h"
-#include "epubfmt.h"
-#include "chmfmt.h"
-#include "wordfmt.h"
-#include "pdbfmt.h"
+#include "include/thornyreader.h"
+#include "include/lvdocview.h"
+#include "include/CreBridge.h"
+#include "include/rtfimp.h"
+#include "include/lvrend.h"
+#include "include/epubfmt.h"
+#include "include/chmfmt.h"
+#include "include/wordfmt.h"
+#include "include/pdbfmt.h"
 #include "include/crcss.h"
 
 // Yep, twice include single header with different define. Probably, this should be last
 // in include list, to do not mess up with other includes.
-#include "fb2def.h"
+#include "include/fb2def.h"
 #define XS_IMPLEMENT_SCHEME 1
-#include "fb2def.h"
+#include "include/fb2def.h"
 //#undef XS_IMPLEMENT_SCHEME
 
 #if 0

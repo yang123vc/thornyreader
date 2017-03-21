@@ -13,9 +13,9 @@
 
 *******************************************************/
 
-#include "lvstsheet.h"
-#include "lvtinydom.h"
-#include "fb2def.h"
+#include "include/lvstsheet.h"
+#include "include/lvtinydom.h"
+#include "include/fb2def.h"
 
 #define DEBUG_CSS
 
