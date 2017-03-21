@@ -20,7 +20,6 @@
 #include "chmfmt.h"
 #include "wordfmt.h"
 #include "pdbfmt.h"
-#include "crcss.h"
 
 // Yep, twice include single header with different define. Probably, this should be last
 // in include list, to do not mess up with other includes.
@@ -123,8 +122,6 @@ void LVDocView::CreateEmptyDom()
 	cr_dom_->setNameSpaceTypes(fb2_ns_table);
 	marked_ranges_.clear();
     bookmark_ranges_.clear();
-    // SHOULD BE CALLED ONLY AFTER setNodeTypes
-    cr_dom_->setStylesheet(CRCSS, true);
 }
 
 void LVDocView::RenderIfDirty()
@@ -293,6 +290,8 @@ bool LVDocView::LoadDoc(int doc_format, const char* cr_uri_chars)
         return true;
     } else {
         CreateEmptyDom();
+        // SHOULD BE CALLED ONLY AFTER setNodeTypes
+        cr_dom_->setStylesheet(CR_CSS, true);
         CRLog::error("Doc stream parsing fail");
         return false;
     }

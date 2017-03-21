@@ -19,6 +19,8 @@
 #include "lvptrvec.h"
 #include "bookmark.h"
 
+extern const char* CR_CSS;
+
 /// document view mode: pages/scroll
 enum LVDocViewMode
 {

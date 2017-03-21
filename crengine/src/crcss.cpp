@@ -1,7 +1,4 @@
-#ifndef CRENGINE_CRCSS_H
-#define CRENGINE_CRCSS_H
-
-const char* CRCSS = R"delimiter(
+const char* CR_CSS = R"delimiter(
 .empty-line, empty-line {
   display: block;
   height: 1em;
@@ -324,5 +321,3 @@ head, style, form, script {
 }
 
 )delimiter";
-
-#endif //CRENGINE_CRCSS_H
