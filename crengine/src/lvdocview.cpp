@@ -27,7 +27,6 @@
 #include "fb2def.h"
 #define XS_IMPLEMENT_SCHEME 1
 #include "fb2def.h"
-#include "../../jpeg-turbo/jpeg-turbo/include/jmorecfg.h"
 //#undef XS_IMPLEMENT_SCHEME
 
 #if 0
@@ -242,40 +241,12 @@ void LVDocView::Resize(int width, int height)
     }
 }
 
-/*
-int LVDocFormatFromExtension(lString16 &pathName) {
-    if (pathName.endsWith(".fb2"))
-        return doc_format_fb2;
-    if (pathName.endsWith(".txt") || pathName.endsWith(".pml"))
-        return doc_format_txt;
-    if (pathName.endsWith(".rtf"))
-        return doc_format_rtf;
-    if (pathName.endsWith(".epub"))
-        return doc_format_epub;
-    if (pathName.endsWith(".htm")
-    		|| pathName.endsWith(".html")
-			|| pathName.endsWith(".shtml")
-			|| pathName.endsWith(".xhtml"))
-        return doc_format_html;
-    if (pathName.endsWith(".chm"))
-        return doc_format_chm;
-    if (pathName.endsWith(".doc"))
-        return doc_format_doc;
-    if (pathName.endsWith(".pdb")
-    		|| pathName.endsWith(".prc")
-			|| pathName.endsWith(".mobi")
-			|| pathName.endsWith(".azw"))
-        return doc_format_mobi;
-    return doc_format_none;
-}
-*/
-
 void LVDocView::SetDocFormat(doc_format_t format)
 {
     doc_format_ = format;
 }
 
-bool LVDocView::LoadDoc(const char* cr_uri_chars)
+bool LVDocView::LoadDoc(int doc_format, const char* cr_uri_chars)
 {
     LVStreamRef stream;
     lString16 cre_uri(cr_uri_chars);
@@ -317,7 +288,7 @@ bool LVDocView::LoadDoc(const char* cr_uri_chars)
         doc_props_->setString(DOC_PROP_FILE_PATH, path_to_doc);
         doc_props_->setString(DOC_PROP_FILE_NAME, doc_file_name);
     }
-    if (LoadDoc(stream)) {
+    if (LoadDoc(doc_format, stream)) {
         stream_.Clear();
         return true;
     } else {
@@ -327,134 +298,131 @@ bool LVDocView::LoadDoc(const char* cr_uri_chars)
     }
 }
 
-bool LVDocView::LoadDoc(LVStreamRef stream)
+bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
 {
     stream_ = stream;
     // To allow apply styles and rend method while loading
     CheckRenderProps(0, 0);
-    doc_format_t pdb_format = doc_format_none;
-    // DetectPDBFormat установит pdb_format в корректное значение
-    if (DetectPDBFormat(stream_, pdb_format)) {
-        CRLog::trace("PDB format detected");
-        cr_dom_->setProps(doc_props_);
-        SetDocFormat(pdb_format);
-        CheckRenderProps(0, 0);
-        doc_format_t contentFormat = doc_format_none;
-        if (ImportPDBDocument(stream_, cr_dom_, contentFormat)) {
-            CheckRenderProps(0, 0);
-            REQUEST_RENDER("LoadDoc")
-            return true;
-        } else {
+    if (doc_format == DOC_FORMAT_FB2) {
+        LvDomWriter writer(cr_dom_);
+        LVFileFormatParser* parser = new LvXmlParser(stream_, &writer, false, true);
+        if (!parser->CheckFormat()) {
+            delete parser;
             return false;
         }
-    }
-    if (DetectEpubFormat(stream_)) {
-        CRLog::trace("EPUB format detected");
+        SetDocFormat(doc_format_fb2);
+        CheckRenderProps(0, 0);
+        if (!parser->Parse()) {
+            delete parser;
+            return false;
+        }
+        delete parser;
+    } else if (doc_format == DOC_FORMAT_EPUB) {
+        if (!DetectEpubFormat(stream_)) {
+            return false;
+        }
         cr_dom_->setProps(doc_props_);
         SetDocFormat(doc_format_epub);
         CheckRenderProps(0, 0);
-        if (ImportEpubDocument(stream_, cr_dom_)) {
-            container_ = cr_dom_->getDocParentContainer();
-            doc_props_ = cr_dom_->getProps();
-            CheckRenderProps(0, 0);
-            REQUEST_RENDER("LoadDoc")
-            archive_container_ = cr_dom_->getDocParentContainer();
-            return true;
-        } else {
+        if (!ImportEpubDocument(stream_, cr_dom_)) {
             return false;
         }
-    }
-    if (DetectCHMFormat(stream_)) {
-        CRLog::trace("CHM format detected");
-        cr_dom_->setProps(doc_props_);
-        SetDocFormat(doc_format_chm);
+        container_ = cr_dom_->getDocParentContainer();
+        doc_props_ = cr_dom_->getProps();
+        archive_container_ = cr_dom_->getDocParentContainer();
         CheckRenderProps(0, 0);
-        if (ImportCHMDocument(stream_, cr_dom_)) {
-            CheckRenderProps(0, 0);
-            REQUEST_RENDER("LoadDoc")
-            archive_container_ = cr_dom_->getDocParentContainer();
-            return true;
-        } else {
+    } else if (doc_format == DOC_FORMAT_MOBI) {
+        doc_format_t pdb_format = doc_format_none;
+        // DetectPDBFormat установит pdb_format в корректное значение
+        if (!DetectPDBFormat(stream_, pdb_format)) {
             return false;
         }
-    }
+        cr_dom_->setProps(doc_props_);
+        SetDocFormat(pdb_format);
+        CheckRenderProps(0, 0);
+        if (!ImportPDBDocument(stream_, cr_dom_, pdb_format)) {
+            return false;
+        }
+        CheckRenderProps(0, 0);
+    } else if (doc_format == DOC_FORMAT_DOC) {
 #if ENABLE_ANTIWORD == 1
-    if (DetectWordFormat(stream_)) {
-        CRLog::trace("DOC format detected");
+        if (!DetectWordFormat(stream_)) {
+            return false;
+        }
         cr_dom_->setProps(doc_props_);
         SetDocFormat(doc_format_doc);
         CheckRenderProps(0, 0);
-        if (ImportWordDocument(stream_, cr_dom_)) {
-            CheckRenderProps(0, 0);
-            REQUEST_RENDER("LoadDoc")
-            archive_container_ = cr_dom_->getDocParentContainer();
-            return true;
-        } else {
+        if (!ImportWordDocument(stream_, cr_dom_)) {
             return false;
         }
-    }
+        CheckRenderProps(0, 0);
+        archive_container_ = cr_dom_->getDocParentContainer();
 #endif //ENABLE_ANTIWORD == 1
-    LvDomWriter writer(cr_dom_);
-    if (stream_->GetSize() < 5) {
-        return false;
-    }
-    // FB2 format
-    LVFileFormatParser* parser = new LvXmlParser(stream_, &writer, false, true);
-    if (!parser->CheckFormat()) {
+    } else if (doc_format == DOC_FORMAT_RTF) {
+        LvDomWriter writer(cr_dom_);
+        LVFileFormatParser* parser = new LVRtfParser(stream_, &writer);
+        if (!parser->CheckFormat()) {
+            delete parser;
+            return false;
+        }
+        SetDocFormat(doc_format_rtf);
+        CheckRenderProps(0, 0);
+        if (!parser->Parse()) {
+            delete parser;
+            return false;
+        }
         delete parser;
-        parser = NULL;
-    } else {
-        CRLog::trace("FB2 format detected");
-        SetDocFormat(doc_format_fb2);
-    }
-    if (parser == NULL) {
-        parser = new LVRtfParser(stream_, &writer);
+    } else if (doc_format == DOC_FORMAT_CHM) {
+        if (!DetectCHMFormat(stream_)) {
+            return false;
+        }
+        cr_dom_->setProps(doc_props_);
+        SetDocFormat(doc_format_chm);
+        CheckRenderProps(0, 0);
+        if (!ImportCHMDocument(stream_, cr_dom_)) {
+            return false;
+        }
+        CheckRenderProps(0, 0);
+        archive_container_ = cr_dom_->getDocParentContainer();
+    } else if (doc_format == DOC_FORMAT_TXT) {
+        LvDomWriter writer(cr_dom_);
+        LVFileFormatParser* parser = new LVTextParser(stream_, &writer, config_txt_smart_format_);
         if (!parser->CheckFormat()) {
             delete parser;
-            parser = NULL;
-        } else {
-            SetDocFormat(doc_format_rtf);
-            CRLog::trace("RTF format detected");
+            return false;
         }
-    }
-    LvDomAutocloseWriter autoclose_writer(cr_dom_, false, HTML_AUTOCLOSE_TABLE);
-    if (parser == NULL) {
-        parser = new LvHtmlParser(stream_, &autoclose_writer);
-        if (!parser->CheckFormat()) {
+        SetDocFormat(doc_format_txt);
+        CheckRenderProps(0, 0);
+        if (!parser->Parse()) {
             delete parser;
-            parser = NULL;
-        } else {
-            SetDocFormat(doc_format_html);
-            CRLog::trace("HTML format detected");
+            return false;
         }
-    }
-    if (parser == NULL) {
-        parser = new LVTextParser(stream_, &writer, config_txt_smart_format_);
-        if (!parser->CheckFormat()) {
-            delete parser;
-            parser = NULL;
-        } else {
-            SetDocFormat(doc_format_txt);
-            CRLog::trace("TXT format detected");
-        }
-    }
-    if (!parser) {
-        return false;
-    }
-    CheckRenderProps(0, 0);
-    if (!parser->Parse()) {
         delete parser;
-        return false;
+    } else if (doc_format == DOC_FORMAT_HTML) {
+        LvDomAutocloseWriter writer(cr_dom_, false, HTML_AUTOCLOSE_TABLE);
+        LVFileFormatParser* parser = new LvHtmlParser(stream_, &writer);
+        if (!parser->CheckFormat()) {
+            delete parser;
+            return false;
+        }
+        SetDocFormat(doc_format_html);
+        CheckRenderProps(0, 0);
+        if (!parser->Parse()) {
+            delete parser;
+            return false;
+        }
+        delete parser;
     }
-    delete parser;
     offset_ = 0;
     page_ = 0;
-    //lString16 docstyle = m_doc->createXPointer(L"/FictionBook/stylesheet").getText();
-    //if (!docstyle.empty() && cr_dom->getDocFlag(DOC_FLAG_ENABLE_INTERNAL_STYLES)) {
-    //      cr_dom->getStylesheet()->parse(UnicodeToUtf8(docstyle).c_str());
-    //      cr_dom->setStylesheet(UnicodeToUtf8(docstyle).c_str(), false);
-    //}
     show_cover_ = !getCoverPageImage().isNull();
+#if 0
+    lString16 stylesheet = cr_dom_->createXPointer(L"/FictionBook/stylesheet").getText();
+    if (!stylesheet.empty() && config_embeded_styles_) {
+        cr_dom_->getStylesheet()->parse(UnicodeToUtf8(stylesheet).c_str());
+        cr_dom_->setStylesheet(UnicodeToUtf8(stylesheet).c_str(), false);
+    }
+#endif
     REQUEST_RENDER("LoadDoc")
     return true;
 }
@@ -462,152 +430,173 @@ bool LVDocView::LoadDoc(LVStreamRef stream)
 /// returns cover page image source, if any
 LVImageSourceRef LVDocView::getCoverPageImage()
 {
-	lUInt16 path[] = {
-	        el_FictionBook,
-	        el_description,
-	        el_title_info,
-	        el_coverpage,
-	        //el_image,
-	        0 };
-	ldomNode * cover_el = cr_dom_->getRootNode()->findChildElement(path);
-	//ldomNode * cover_img_el = m_doc->getRootNode()->findChildElement( path );
-	if (cover_el) {
-		ldomNode * cover_img_el = cover_el->findChildElement(LXML_NS_ANY, el_image, 0);
-		if (cover_img_el) {
-			LVImageSourceRef imgsrc = cover_img_el->getObjectImageSource();
-			return imgsrc;
-		}
-	}
-	return LVImageSourceRef(); // not found: return NULL ref
+    lUInt16 path[] = {
+            el_FictionBook,
+            el_description,
+            el_title_info,
+            el_coverpage,
+            //el_image,
+            0};
+    ldomNode* cover_el = cr_dom_->getRootNode()->findChildElement(path);
+    if (cover_el) {
+        ldomNode* cover_img_el = cover_el->findChildElement(LXML_NS_ANY, el_image, 0);
+        if (cover_img_el) {
+            LVImageSourceRef imgsrc = cover_img_el->getObjectImageSource();
+            return imgsrc;
+        }
+    }
+    // Not found: return NULL ref
+    return LVImageSourceRef();
 }
 
 /// Draws coverpage to image buffer
 void LVDocView::DrawCoverTo(LVDrawBuf* drawBuf, lvRect& rc)
 {
-	if (rc.width() < 130 || rc.height() < 130) {
-		return;
-	}
-	lvRect imgrc = rc;
-	LVImageSourceRef imgsrc = getCoverPageImage();
-	if (!imgsrc.isNull() && imgrc.height() > 30) {
-		int src_dx = imgsrc->GetWidth();
-		int src_dy = imgsrc->GetHeight();
-		int scale_x = imgrc.width() * 0x10000 / src_dx;
-		int scale_y = imgrc.height() * 0x10000 / src_dy;
-		if (scale_x < scale_y) {
-			scale_y = scale_x;
-		} else {
-			scale_x = scale_y;
-		}
-		int dst_dx = (src_dx * scale_x) >> 16;
-		int dst_dy = (src_dy * scale_y) >> 16;
+    if (rc.width() < 130 || rc.height() < 130) {
+        return;
+    }
+    lvRect imgrc = rc;
+    LVImageSourceRef imgsrc = getCoverPageImage();
+    if (!imgsrc.isNull() && imgrc.height() > 30) {
+        int src_dx = imgsrc->GetWidth();
+        int src_dy = imgsrc->GetHeight();
+        int scale_x = imgrc.width() * 0x10000 / src_dx;
+        int scale_y = imgrc.height() * 0x10000 / src_dy;
+        if (scale_x < scale_y) {
+            scale_y = scale_x;
+        } else {
+            scale_x = scale_y;
+        }
+        int dst_dx = (src_dx * scale_x) >> 16;
+        int dst_dy = (src_dy * scale_y) >> 16;
         if (dst_dx > rc.width() * 6 / 8) {
-			dst_dx = imgrc.width();
+            dst_dx = imgrc.width();
         }
         if (dst_dy > rc.height() * 6 / 8) {
-			dst_dy = imgrc.height();
+            dst_dy = imgrc.height();
         }
         LVColorDrawBuf buf2(src_dx, src_dy, 32);
         buf2.Draw(imgsrc, 0, 0, src_dx, src_dy, true);
-        drawBuf->DrawRescaled(&buf2, imgrc.left + (imgrc.width() - dst_dx) / 2,
-                imgrc.top + (imgrc.height() - dst_dy) / 2, dst_dx, dst_dy, 0);
-	} else {
-		imgrc.bottom = imgrc.top;
-	}
-	rc.top = imgrc.bottom;
+        drawBuf->DrawRescaled(
+                &buf2,
+                imgrc.left + (imgrc.width() - dst_dx) / 2,
+                imgrc.top + (imgrc.height() - dst_dy) / 2,
+                dst_dx,
+                dst_dy,
+                0);
+    } else {
+        imgrc.bottom = imgrc.top;
+    }
+    rc.top = imgrc.bottom;
 }
 
 int LVDocView::GetFullHeight()
 {
     CHECK_RENDER("getFullHeight()");
-	RenderRectAccessor rd(cr_dom_->getRootNode());
-	return (rd.getHeight() + rd.getY());
+    RenderRectAccessor rd(cr_dom_->getRootNode());
+    return (rd.getHeight() + rd.getY());
 }
 
+#define FOOTNOTE_MARGIN 8
 void LVDocView::DrawPageTo(LVDrawBuf* drawbuf, LVRendPageInfo& page, lvRect* pageRect)
 {
-	int start = page.start;
-	int height = page.height;
-	lvRect fullRect(0, 0, drawbuf->GetWidth(), drawbuf->GetHeight());
-	if (!pageRect) {
-		pageRect = &fullRect;
-	}
+    int start = page.start;
+    int height = page.height;
+    lvRect fullRect(0, 0, drawbuf->GetWidth(), drawbuf->GetHeight());
+    if (!pageRect) {
+        pageRect = &fullRect;
+    }
     drawbuf->setHidePartialGlyphs(IsPagesMode());
-	//int offset = (pageRect->height() - m_pageMargins.top - m_pageMargins.bottom - height) / 3;
-	//if (offset>16)
-	//    offset = 16;
-	//if (offset<0)
-	//    offset = 0;
-	int offset = 0;
-	lvRect clip;
-	clip.left = pageRect->left + margins_.left;
-	clip.top = pageRect->top + margins_.top + offset;
-	clip.bottom = pageRect->top + margins_.top + height + offset;
-	clip.right = pageRect->left + pageRect->width() - margins_.right;
-	if (page.type == PAGE_TYPE_COVER) {
-		clip.top = pageRect->top + margins_.top;
-	}
-	drawbuf->SetClipRect(&clip);
-	if (cr_dom_) {
-		if (page.type == PAGE_TYPE_COVER) {
-			lvRect rc = *pageRect;
-			drawbuf->SetClipRect(&rc);
-			/*
-			 if ( m_pageMargins.bottom > m_pageMargins.top )
-			    rc.bottom -= m_pageMargins.bottom - m_pageMargins.top;
-			 rc.left += m_pageMargins.left / 2;
-			 rc.top += m_pageMargins.bottom / 2;
-			 rc.right -= m_pageMargins.right / 2;
-			 rc.bottom -= m_pageMargins.bottom / 2;
-			 */
-			DrawCoverTo(drawbuf, rc);
-		} else {
-			// draw main page text
-            if (marked_ranges_.length())
-                CRLog::trace("Entering DrawDocument(): %d ranges", marked_ranges_.length());
-			if (page.height)
-				DrawDocument(*drawbuf,
-				        cr_dom_->getRootNode(),
-				        pageRect->left + margins_.left,
-				        clip.top,
-				        pageRect->width() - margins_.left - margins_.right,
-				        height,
-				        0,
-                        -start + offset,
-                        height_,
-                        &marked_ranges_,
-                        &bookmark_ranges_);
-			// draw footnotes
-#define FOOTNOTE_MARGIN 8
-			int fny = clip.top + (page.height ? page.height + FOOTNOTE_MARGIN : FOOTNOTE_MARGIN);
-			int fy = fny;
-			bool footnoteDrawed = false;
-			for (int fn = 0; fn < page.footnotes.length(); fn++) {
-				int fstart = page.footnotes[fn].start;
-				int fheight = page.footnotes[fn].height;
-				clip.top = fy + offset;
-				clip.left = pageRect->left + margins_.left;
-				clip.right = pageRect->right - margins_.right;
-				clip.bottom = fy + offset + fheight;
-				drawbuf->SetClipRect(&clip);
-				DrawDocument(*drawbuf, cr_dom_->getRootNode(), pageRect->left
-						+ margins_.left, fy + offset, pageRect->width()
-						- margins_.left - margins_.right, fheight, 0,
-						-fstart + offset, height_, &marked_ranges_);
-				footnoteDrawed = true;
-				fy += fheight;
-			}
-			if (footnoteDrawed) { // && page.height
-				fny -= FOOTNOTE_MARGIN / 2;
-				drawbuf->SetClipRect(NULL);
-                lUInt32 cl = drawbuf->GetTextColor();
-                cl = (cl & 0xFFFFFF) | (0x55000000);
-				drawbuf->FillRect(pageRect->left + margins_.left, fny,
-						pageRect->right - margins_.right, fny + 1, cl);
-			}
-		}
-	}
-	drawbuf->SetClipRect(NULL);
+    //int offset = (pageRect->height() - m_pageMargins.top - m_pageMargins.bottom - height) / 3;
+    //if (offset>16)
+    //    offset = 16;
+    //if (offset<0)
+    //    offset = 0;
+    int offset = 0;
+    lvRect clip;
+    clip.left = pageRect->left + margins_.left;
+    clip.top = pageRect->top + margins_.top + offset;
+    clip.bottom = pageRect->top + margins_.top + height + offset;
+    clip.right = pageRect->left + pageRect->width() - margins_.right;
+    if (page.type == PAGE_TYPE_COVER) {
+        clip.top = pageRect->top + margins_.top;
+    }
+    drawbuf->SetClipRect(&clip);
+    if (!cr_dom_) {
+        drawbuf->SetClipRect(NULL);
+        return;
+    }
+    if (page.type == PAGE_TYPE_COVER) {
+        lvRect rc = *pageRect;
+        drawbuf->SetClipRect(&rc);
+        /*
+         if ( m_pageMargins.bottom > m_pageMargins.top )
+            rc.bottom -= m_pageMargins.bottom - m_pageMargins.top;
+         rc.left += m_pageMargins.left / 2;
+         rc.top += m_pageMargins.bottom / 2;
+         rc.right -= m_pageMargins.right / 2;
+         rc.bottom -= m_pageMargins.bottom / 2;
+         */
+        DrawCoverTo(drawbuf, rc);
+        drawbuf->SetClipRect(NULL);
+        return;
+    }
+    // draw main page text
+    if (marked_ranges_.length()) {
+        CRLog::trace("Entering DrawDocument(): %d ranges", marked_ranges_.length());
+    }
+    if (page.height) {
+        DrawDocument(*drawbuf,
+                cr_dom_->getRootNode(),
+                pageRect->left + margins_.left,
+                clip.top,
+                pageRect->width() - margins_.left - margins_.right,
+                height,
+                0,
+                -start + offset,
+                height_,
+                &marked_ranges_,
+                &bookmark_ranges_);
+    }
+    // draw footnotes
+    int fny = clip.top + (page.height ? page.height + FOOTNOTE_MARGIN : FOOTNOTE_MARGIN);
+    int fy = fny;
+    bool footnoteDrawed = false;
+    for (int fn = 0; fn < page.footnotes.length(); fn++) {
+        int fstart = page.footnotes[fn].start;
+        int fheight = page.footnotes[fn].height;
+        clip.top = fy + offset;
+        clip.left = pageRect->left + margins_.left;
+        clip.right = pageRect->right - margins_.right;
+        clip.bottom = fy + offset + fheight;
+        drawbuf->SetClipRect(&clip);
+        DrawDocument(
+                *drawbuf,
+                cr_dom_->getRootNode(),
+                pageRect->left + margins_.left,
+                fy + offset,
+                pageRect->width() - margins_.left - margins_.right,
+                fheight,
+                0,
+                -fstart + offset,
+                height_,
+                &marked_ranges_);
+        footnoteDrawed = true;
+        fy += fheight;
+    }
+    if (footnoteDrawed) { // && page.height
+        fny -= FOOTNOTE_MARGIN / 2;
+        drawbuf->SetClipRect(NULL);
+        lUInt32 cl = drawbuf->GetTextColor();
+        cl = (cl & 0xFFFFFF) | (0x55000000);
+        drawbuf->FillRect(
+                pageRect->left + margins_.left,
+                fny,
+                pageRect->right - margins_.right,
+                fny + 1,
+                cl);
+    }
+    drawbuf->SetClipRect(NULL);
 }
 
 /// returns page count
@@ -1049,6 +1038,7 @@ void LVDocView::UpdateLayout() {
 	page_rects_[1] = rc;
 	if (GetColumns() == 2) {
 		int middle = (rc.left + rc.right) >> 1;
+
         page_rects_[0].right = middle; // - m_pageMargins.right;
         page_rects_[1].left = middle; // + m_pageMargins.left;
 	}
@@ -1335,98 +1325,106 @@ bool LVDocView::getCursorRect(ldomXPointer ptr, lvRect & rc, bool scrollToCursor
 }
 
 /// follow link, returns true if navigation was successful
-bool LVDocView::goLink(lString16 link) {
-	CRLog::debug("goLink(%s)", LCSTR(link));
-	if (link.empty()) {
-		ldomXRange* node = LVDocView::getCurrentPageSelectedLink();
-		if (node) {
-			link = node->getHRef();
-			ldomNode * p = node->getStart().getNode();
-			if (p->isText())
-				p = p->getParentNode();
-		}
-		if (link.empty())
-			return false;
-	}
-	if (link[0] != '#' || link.length() <= 1) {
-		lString16 filename = link;
-		lString16 id;
+bool LVDocView::goLink(lString16 link)
+{
+    CRLog::debug("goLink(%s)", LCSTR(link));
+    if (link.empty()) {
+        ldomXRange* node = LVDocView::getCurrentPageSelectedLink();
+        if (node) {
+            link = node->getHRef();
+            ldomNode* p = node->getStart().getNode();
+            if (p->isText()) {
+                p = p->getParentNode();
+            }
+        }
+        if (link.empty()) {
+            return false;
+        }
+    }
+    if (link[0] != '#' || link.length() <= 1) {
+        lString16 filename = link;
+        lString16 id;
         int p = filename.pos("#");
-		if (p >= 0) {
-			// split filename and anchor
-			// part1.html#chapter3 =>   part1.html & chapter3
-			id = filename.substr(p + 1);
-			filename = filename.substr(0, p);
-		}
+        if (p >= 0) {
+            // split filename and anchor
+            // part1.html#chapter3 =>   part1.html & chapter3
+            id = filename.substr(p + 1);
+            filename = filename.substr(0, p);
+        }
         if (filename.pos(":") >= 0) {
-			// URL with protocol like http://
-        	return true; //TODO return false?
-		} else {
-			// otherwise assume link to another file
-			CRLog::debug("Link to another file (%s) anchor (%s)", UnicodeToUtf8(
-					filename).c_str(), UnicodeToUtf8(id).c_str());
-			lString16 baseDir = doc_props_->getStringDef(DOC_PROP_FILE_PATH, ".");
-			LVAppendPathDelimiter(baseDir);
-			lString16 fn = doc_props_->getStringDef(DOC_PROP_FILE_NAME, "");
-			CRLog::debug("Current path: %s   filename:%s", UnicodeToUtf8(
-					baseDir).c_str(), UnicodeToUtf8(fn).c_str());
-			baseDir = LVExtractPath(baseDir + fn);
-			//lString16 newPathName = LVMakeRelativeFilename( baseDir, filename );
-			lString16 newPathName = LVCombinePaths(baseDir, filename);
-			lString16 dir = LVExtractPath(newPathName);
-			lString16 filename = LVExtractFilename(newPathName);
-			LVContainerRef container = container_;
-			lString16 arcname =	doc_props_->getStringDef(DOC_PROP_ARC_NAME, "");
-			if (arcname.empty()) {
-				container = LVOpenDirectory(dir.c_str());
-				if (container.isNull())
-					return false;
-			} else {
-				filename = newPathName;
-				dir.clear();
-			}
-			CRLog::trace("Base dir: %s newPathName=%s", LCSTR(baseDir), LCSTR(newPathName));
-			LVStreamRef stream = container->OpenStream(filename.c_str(), LVOM_READ);
-			if (stream.isNull()) {
-				CRLog::error("Go to link: cannot find file %s", LCSTR(filename));
-				return false;
-			}
-			CRLog::trace("Go to link: file %s is found", LCSTR(filename));
-			// Close old document
-			ClearSelection();
-			bookmark_ = ldomXPointer();
-			is_rendered_ = false;
-			offset_ = 0;
-			page_ = 0;
-			doc_props_->setString(DOC_PROP_FILE_PATH, dir);
-			doc_props_->setString(DOC_PROP_FILE_NAME, filename);
-			doc_props_->setString(DOC_PROP_CODE_BASE, LVExtractPath(filename));
-			// TODO: load document from stream properly
-			if (!LoadDoc(stream)) {
-                CreateEmptyDom();
-				return false;
-			}
-			//crengine_uri_ = newPathName;
-			stream_ = stream;
-			container_ = container;
-			// TODO: setup properties
-			// go to anchor
-			if (!id.empty())
+            // URL with protocol like http://
+            //TODO return false?
+            return true;
+        } else {
+            // otherwise assume link to another file
+            CRLog::debug("Link to another file (%s) anchor (%s)", UnicodeToUtf8(
+                    filename).c_str(), UnicodeToUtf8(id).c_str());
+            lString16 baseDir = doc_props_->getStringDef(DOC_PROP_FILE_PATH, ".");
+            LVAppendPathDelimiter(baseDir);
+            lString16 fn = doc_props_->getStringDef(DOC_PROP_FILE_NAME, "");
+            CRLog::debug("Current path: %s   filename:%s", UnicodeToUtf8(
+                    baseDir).c_str(), UnicodeToUtf8(fn).c_str());
+            baseDir = LVExtractPath(baseDir + fn);
+            //lString16 newPathName = LVMakeRelativeFilename( baseDir, filename );
+            lString16 newPathName = LVCombinePaths(baseDir, filename);
+            lString16 dir = LVExtractPath(newPathName);
+            lString16 filename = LVExtractFilename(newPathName);
+            LVContainerRef container = container_;
+            lString16 arcname = doc_props_->getStringDef(DOC_PROP_ARC_NAME, "");
+            if (arcname.empty()) {
+                container = LVOpenDirectory(dir.c_str());
+                if (container.isNull()) {
+                    return false;
+                }
+            } else {
+                filename = newPathName;
+                dir.clear();
+            }
+            CRLog::trace("Base dir: %s newPathName=%s", LCSTR(baseDir), LCSTR(newPathName));
+            LVStreamRef stream = container->OpenStream(filename.c_str(), LVOM_READ);
+            if (stream.isNull()) {
+                CRLog::error("Go to link: cannot find file %s", LCSTR(filename));
+                return false;
+            }
+            CRLog::trace("Go to link: file %s is found", LCSTR(filename));
+            // Close old document
+            ClearSelection();
+            bookmark_ = ldomXPointer();
+            is_rendered_ = false;
+            offset_ = 0;
+            page_ = 0;
+            doc_props_->setString(DOC_PROP_FILE_PATH, dir);
+            doc_props_->setString(DOC_PROP_FILE_NAME, filename);
+            doc_props_->setString(DOC_PROP_CODE_BASE, LVExtractPath(filename));
+            // TODO: DR: load document from stream properly
+            //if (!LoadDoc(stream)) {
+            //    CreateEmptyDom();
+            //    return false;
+            //}
+            //crengine_uri_ = newPathName;
+            stream_ = stream;
+            container_ = container;
+            // TODO: setup properties
+            // go to anchor
+            if (!id.empty()) {
                 goLink(cs16("#") + id);
-			REQUEST_RENDER("goLink")
-			return true;
-		}
-		return false; // only internal links supported (started with #)
-	}
-	link = link.substr(1, link.length() - 1);
-	lUInt16 id = cr_dom_->getAttrValueIndex(link.c_str());
-	ldomNode * dest = cr_dom_->getNodeById(id);
-	if (!dest)
-		return false;
-	ldomXPointer newPos(dest, 0);
-	GoToBookmark(newPos);
-        UpdateBookmarksRanges();
-	return true;
+            }
+            REQUEST_RENDER("goLink")
+            return true;
+        }
+        // only internal links supported (started with #)
+        return false;
+    }
+    link = link.substr(1, link.length() - 1);
+    lUInt16 id = cr_dom_->getAttrValueIndex(link.c_str());
+    ldomNode* dest = cr_dom_->getNodeById(id);
+    if (!dest) {
+        return false;
+    }
+    ldomXPointer newPos(dest, 0);
+    GoToBookmark(newPos);
+    UpdateBookmarksRanges();
+    return true;
 }
 
 /// follow selected link, returns true if navigation was successful

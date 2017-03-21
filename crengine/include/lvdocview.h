@@ -93,21 +93,19 @@ private:
     lvRect margins_;
     bool show_cover_;
     bool background_tiled_;
-
-	inline bool IsPagesMode() { return viewport_mode_==MODE_PAGES; }
-	inline bool IsScrollMode() { return viewport_mode_==MODE_SCROLL; }
+	inline bool IsPagesMode() { return viewport_mode_ == MODE_PAGES; }
+	inline bool IsScrollMode() { return viewport_mode_ == MODE_SCROLL; }
     /// sets current document format
     void SetDocFormat(doc_format_t fmt);
     void UpdateScroll();
     /// load document from stream
-    bool LoadDoc(LVStreamRef stream);
+    bool LoadDoc(int doc_format, LVStreamRef stream);
     /// create empty document with specified message (to show errors)
     void CreateEmptyDom();
     /// ensure current position is set to current bookmark value
     void CheckPos();
     /// set properties before rendering
     void CheckRenderProps(int dx, int dy);
-
 protected:
     /// selects link on page, if any (delta==0 - current, 1-next, -1-previous).
     // Returns selected link range, null if no links.
@@ -116,7 +114,6 @@ protected:
     bool getCursorDocRect( ldomXPointer ptr, lvRect & rc);
     /// get screen rectangle for specified cursor position, returns false if not visible
     bool getCursorRect( ldomXPointer ptr, lvRect & rc, bool scrollToCursor = false);
-
 public:
     bool position_is_set_;
     doc_format_t doc_format_;
@@ -157,7 +154,7 @@ public:
     /// sets new list of bookmarks, removes old values
     void SetBookmarks(LVPtrVector<CRBookmark> & bookmarks);
     /// find bookmark by window point, return NULL if point doesn't belong to any bookmark
-    CRBookmark * FindBookmarkByPoint(lvPoint pt);
+    CRBookmark* FindBookmarkByPoint(lvPoint pt);
     /// sets coverpage display flag
     void setShowCover(bool show) { show_cover_ = show; }
     /// get background image
@@ -266,7 +263,7 @@ public:
     /// clear view
     void Clear();
     /// load document from file
-    bool LoadDoc(const char* crengine_uri);
+    bool LoadDoc(int doc_format, const char* crengine_uri);
     LVDocView();
     virtual ~LVDocView();
 };
