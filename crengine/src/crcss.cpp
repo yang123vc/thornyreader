@@ -83,43 +83,49 @@ nobr {
 }
 
 h1, title, .title, .title0, .title1 {
-  font-size: 150%;
+  font-size: 140%;
 }
 h2, .title2 {
-  font-size: 140%;
+  font-size: 130%;
 }
 h3, .title3 {
   font-size: 130%;
 }
-h4, .title4, h5, .title5, h6, .title6 {
-  font-size: 110%;
-}
-h1, h2, h3, title, h1 > p, h2 > p, h3 > p, title > p, .title, .title > p, .title0, .title1, .title2, .title3 {
+
+h1, h2, h3, title,
+h1 > p, h2 > p, h3 > p, title > p,
+.title, .title0, .title1, .title2, .title3,
+.title > p, .title0 > p, .title1 > p, .title2 > p, .title3 > p {
   display: block;
-  hyphenate: none;
-  adobe-hyphenate: none;
   page-break-before: always;
   page-break-inside: avoid;
   page-break-after: avoid;
+  hyphenate: none;
+  adobe-hyphenate: none;
+  text-align: center;
+  text-indent: 0em;
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+  margin-left: 0em;
+  margin-right: 0em;
+  font-weight: bold;
+}
+h4, h5, h6, subtitle,
+h4 > p, h5 > p, h6 > p, subtitle > p,
+.subtitle, .title4, .title5, .title6 {
+  display: block;
+  font-weight: bold;
+  page-break-inside: avoid;
+  page-break-after: avoid;
+  hyphenate: none;
+  adobe-hyphenate: none;
+  font-size: 110%;
   text-align: center;
   text-indent: 0em;
   margin-top: 0.3em;
   margin-bottom: 0.3em;
   margin-left: 0em;
   margin-right: 0em;
-  font-weight: bold;
-}
-h4, h5, h6, subtitle, h4 > p, h5 > p, h6 > p, subtitle > p, .subtitle, .title4, .title5, .title6 {
-  display: block;
-  hyphenate: none;
-  adobe-hyphenate: none;
-  font-weight: bold;
-  page-break-inside: avoid;
-  page-break-after: avoid;
-  text-align: center;
-  text-indent: 0em;
-  margin-top: 0.2em;
-  margin-bottom: 0.2em;
   font-style: italic;
 }
 
