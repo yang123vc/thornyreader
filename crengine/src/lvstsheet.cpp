@@ -467,10 +467,24 @@ bool LVCssSelectorRule::check(const ldomNode*& node)
     case cssrt_parent: {
         // E > F
         node = node->getParentNode();
+        //CRLog::trace("        cssrt_parent: %d %d", node->getNodeId(), _id);
         if (node->isNull()) {
+            CRLog::trace("        cssrt_parent_class node->isNull()");
             return false;
         }
         return node->getNodeId() == _id;
+    }
+        break;
+    case cssrt_parent_class: {
+        node = node->getParentNode();
+        if (node->isNull()) {
+            CRLog::trace("        cssrt_parent_class node->isNull()");
+            return false;
+        }
+        lString16 val = node->getAttributeValue(attr_class);
+        val.lowercase();
+        //CRLog::trace("        cssrt_parent_class: [%s]==[%s]", LCSTR(val), LCSTR(_value));
+        return val == _value;
     }
         break;
     case cssrt_ancessor: {
@@ -489,15 +503,14 @@ bool LVCssSelectorRule::check(const ldomNode*& node)
     case cssrt_predecessor: {
         // E + F
         int index = node->getNodeIndex();
-        // while
-        if (index > 0) {
-            ldomNode* elem = node->getParentNode()->getChildElementNode((lUInt32) (index - 1), _id);
-            if (elem) {
-                node = elem;
-                //CRLog::trace("+ selector: found pred element");
-                return true;
-            }
-            //index--;
+        if (index <= 0) {
+            return false;
+        }
+        ldomNode* elem = node->getParentNode()->getChildElementNode((lUInt32) (index - 1), _id);
+        if (elem) {
+            node = elem;
+            //CRLog::trace("+ selector: found pred element");
+            return true;
         }
         return false;
     }
@@ -527,8 +540,10 @@ bool LVCssSelectorRule::check(const ldomNode*& node)
         if (p < 0) {
             return false;
         }
-        if ((p > 0 && val[p - 1] != ' ')
-            || (p + _value.length() < val.length() && val[p + _value.length()] != ' ')) {
+        if (p > 0 && val[p - 1] != ' ') {
+            return false;
+        }
+        if (p + _value.length() < val.length() && val[p + _value.length()] != ' ') {
             return false;
         }
         return true;
@@ -557,9 +572,7 @@ bool LVCssSelectorRule::check(const ldomNode*& node)
         // TODO E.class
         lString16 val = node->getAttributeValue(attr_class);
         val.lowercase();
-        //if ( val.length() != _value.length() )
-        //    return false;
-        //CRLog::trace("attr_class: %s %s", LCSTR(val), LCSTR(_value) );
+        //CRLog::trace("        cssrt_class: %s %s", LCSTR(val), LCSTR(_value));
         return val == _value;
     }
         break;
@@ -1329,7 +1342,7 @@ bool LVCssSelector::parse(const char*& str, CrDomXml* dom)
         if (*str == ',' || *str == '{') {
             return true;
         }
-        // one or more attribute rules
+        // One or more attribute rules
         bool attr_rule = false;
         while (*str == '[' || *str == '.' || *str == '#') {
             LVCssSelectorRule* rule = parse_attr(str, dom);
@@ -1356,7 +1369,13 @@ bool LVCssSelector::parse(const char*& str, CrDomXml* dom)
         // element relation
         if (*str == '>') {
             str++;
-            LVCssSelectorRule* rule = new LVCssSelectorRule(cssrt_parent);
+            LVCssSelectorRule* rule;
+            if (_rules && _rules->getType() == cssrt_class) {
+                rule = new LVCssSelectorRule(cssrt_parent_class);
+                rule->setAttr(_rules->getAttrId(), _rules->getValue());
+            } else {
+                rule = new LVCssSelectorRule(cssrt_parent);
+            }
             rule->setId(_id);
             insertRuleStart(rule);
             _id = 0;
@@ -1458,7 +1477,7 @@ bool LVStyleSheet::parse(const char* str)
         // Ok: place rules to sheet
         for (LVCssSelector* nextItem = selector; nextItem;) {
             LVCssSelector* item = nextItem;
-#if 1
+#if 0
             CRLog::debug("Selector: %d %s",
                     item->getElementNameId(),
                     item->debug_desc_.c_str());
@@ -1587,7 +1606,7 @@ bool LVLoadStylesheetFile(lString16 pathName, lString8& css)
 }
 
 LVCssSelectorRule::LVCssSelectorRule(LVCssSelectorRule& v)
-        : _type(v._type), _id(v._id), _attrid(v._attrid), _next(NULL), _value(v._value)
+        : _type(v._type), _id(v._id), _attrid(v._attrid), _value(v._value), _next(NULL)
 {
     if (v._next) {
         _next = new LVCssSelectorRule(*v._next);

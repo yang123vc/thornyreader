@@ -63,6 +63,7 @@ enum LVCssSelectorRuleType
 {
     cssrt_universal,     // *
     cssrt_parent,        // E > F
+    cssrt_parent_class,  // E.class > F
     cssrt_ancessor,      // E F
     cssrt_predecessor,   // E + F
     cssrt_attrset,       // E[foo]
@@ -79,20 +80,23 @@ private:
     LVCssSelectorRuleType _type;
     lUInt16 _id;
     lUInt16 _attrid;
-    LVCssSelectorRule * _next;
     lString16 _value;
+    LVCssSelectorRule* _next;
 public:
     LVCssSelectorRule(LVCssSelectorRuleType type)
     : _type(type), _id(0), _attrid(0), _next(NULL)
     { }
-    LVCssSelectorRule( LVCssSelectorRule & v );
-    void setId( lUInt16 id ) { _id = id; }
-    void setAttr( lUInt16 id, lString16 value ) { _attrid = id; _value = value; }
-    LVCssSelectorRule * getNext() { return _next; }
-    void setNext(LVCssSelectorRule * next) { _next = next; }
+    LVCssSelectorRule(LVCssSelectorRule& v);
+    LVCssSelectorRuleType getType() { return _type; };
+    void setType(LVCssSelectorRuleType type) { _type = type; };
+    void setId(lUInt16 id) { _id = id; }
+    lUInt16 getAttrId() { return _attrid; }
+    lString16 getValue() { return _value; }
+    void setAttr(lUInt16 attr_id, lString16 value) { _attrid = attr_id; _value = value; }
+    bool check(const ldomNode*& node);
+    LVCssSelectorRule* getNext() { return _next; }
+    void setNext(LVCssSelectorRule* next) { _next = next; }
     ~LVCssSelectorRule() { if (_next) delete _next; }
-    /// check condition for node
-    bool check(const ldomNode * & node);
     lString16 ToString() const;
     lUInt32 getHash();
 };
