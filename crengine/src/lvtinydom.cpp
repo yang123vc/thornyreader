@@ -9,12 +9,22 @@
    See LICENSE file for details
 *******************************************************/
 
+#include <stdlib.h>
+#include <zlib.h>
+#include "include/lvstring.h"
+#include "include/lvtinydom.h"
+#include "include/fb2def.h"
+#include "include/lvrend.h"
+
 /// Data compression level (0=no compression, 1=fast compressions, 3=normal compression)
 #ifndef DOC_DATA_COMPRESSION_LEVEL
 #define DOC_DATA_COMPRESSION_LEVEL 1
 #endif
 
-// Default buffer size, was 0xA00000 in pyre crengine
+/// Define to store new text nodes as persistent text, instead of mutable
+#define USE_PERSISTENT_TEXT 1
+
+/// Default buffer size, was 0xA00000 in pyre crengine
 #ifndef DOC_BUFFER_SIZE
 #define DOC_BUFFER_SIZE 0x1000000
 #endif
@@ -45,16 +55,6 @@
 
 #define STYLE_HASH_TABLE_SIZE     512
 #define FONT_HASH_TABLE_SIZE      256
-
-#include <stdlib.h>
-#include <zlib.h>
-#include "include/lvstring.h"
-#include "include/lvtinydom.h"
-#include "include/fb2def.h"
-#include "include/lvrend.h"
-
-// Define to store new text nodes as persistent text, instead of mutable
-#define USE_PERSISTENT_TEXT 1
 
 static int NextDomIndex = 0;
 CrDom* ldomNode::_domInstances[MAX_DOM_INSTANCES] = {NULL};
@@ -279,9 +279,9 @@ void RenderRectAccessor::push()
         _node->setRenderData(*this);
         _modified = false;
         _dirty = true;
-        #ifdef DEBUG_RENDER_RECT_ACCESS
+#ifdef DEBUG_RENDER_RECT_ACCESS
             rr_unlock( _node );
-        #endif
+#endif
     }
 }
 
@@ -400,8 +400,6 @@ void RenderRectAccessor::getRect( lvRect & rc )
     rc.right = _x + _width;
     rc.bottom = _y + _height;
 }
-
-
 
 class ldomPersistentText;
 class ldomPersistentElement;
@@ -747,7 +745,6 @@ void ldomDataStorageManager::setStyleData(lUInt32 elemDataIndex, const ldomNodeS
             (const lUInt8*) src);
 }
 
-
 /// get or allocate space for rect data item
 void ldomDataStorageManager::getRendRectData(lUInt32 elemDataIndex, lvdomElementFormatRec* dst)
 {
@@ -865,7 +862,6 @@ void ldomDataStorageManager::freeNode( lUInt32 addr )
     chunk->freeNode(addr&0xFFFF);
 }
 
-
 lString8 ldomDataStorageManager::getText( lUInt32 address )
 {
     ldomTextStorageChunk * chunk = getChunk(address);
@@ -916,9 +912,7 @@ ldomDataStorageManager::ldomDataStorageManager(
 {
 }
 
-ldomDataStorageManager::~ldomDataStorageManager()
-{
-}
+ldomDataStorageManager::~ldomDataStorageManager() { }
 
 ldomTextStorageChunk::ldomTextStorageChunk(
         int preAllocSize,
@@ -981,7 +975,6 @@ void ldomTextStorageChunk::setRaw( int offset, int size, const lUInt8 * buf )
         modified();
     }
 }
-
 
 /// returns free space in buffer
 int ldomTextStorageChunk::space()
@@ -1062,7 +1055,6 @@ bool ldomTextStorageChunk::setParent( int offset, lUInt32 parentIndex )
             offset, this->_bufpos, this->_type, this->_index, _manager->_chunks.length() );
     return false;
 }
-
 
 /// get text node parent by offset
 lUInt32 ldomTextStorageChunk::getParent( int offset )
@@ -1200,8 +1192,7 @@ void ldomTextStorageChunk::setunpacked( const lUInt8 * buf, int bufsize )
     }
 }
 
-// moved to .cpp to hide implementation
-// fastDOM
+/// fastDOM, moved to .cpp to hide implementation
 class ldomAttributeCollection
 {
 private:
@@ -2203,7 +2194,6 @@ static void detectChildTypes( ldomNode * parent, bool & hasBlockItems, bool & ha
         }
     }
 }
-
 
 // init table element render methods
 // states: 0=table, 1=colgroup, 2=rowgroup, 3=row, 4=cell
