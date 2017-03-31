@@ -1782,7 +1782,7 @@ void CrDom::updateRenderContext()
 bool CrDom::checkRenderContext()
 {
     bool res = true;
-    ldomNode * node = getRootNode();
+    ldomNode* node = getRootNode();
     if (node != NULL && node->getFont().isNull()) {
         CRLog::trace("checkRenderContext: Style is not set for root node");
         res = false;
@@ -1823,7 +1823,7 @@ int CrDom::render(LVRendPageList* pages,
 		font_ref_t def_font,
 		int interline_space)
 {
-    CRLog::trace("CrDom::render w=%d, h=%d, fontFace=%s, docFlags=%d",
+    CRLog::info("CrDom::render w=%d, h=%d, fontFace=%s, docFlags=%d",
     		width, dy, def_font->getTypeFace().c_str(), getDocFlags());
     setRenderProps(width, dy, def_font, interline_space);
     // update styles
@@ -1837,16 +1837,14 @@ int CrDom::render(LVRendPageList* pages,
     //    CRLog::trace("reusing existing format data...");
     //}
     if (!checkRenderContext()) {
-        CRLog::trace("CrDom::checkRenderContext full render required");
+        CRLog::info("CrDom::checkRenderContext FORMATTING");
         dropStyles();
-        //ldomNode* root = getRootNode();
-        //css_style_ref_t roots = root->getStyle();
-        CRLog::trace("Save stylesheet");
+        CRLog::trace("stylesheet_.push()");
         stylesheet_.push();
-        CRLog::trace("Init node styles");
         applyDocStylesheet();
+        CRLog::info("initNodeStyleRecursive()");
         getRootNode()->initNodeStyleRecursive();
-        CRLog::trace("Restoring stylesheet");
+        CRLog::trace("stylesheet_.pop()");
         stylesheet_.pop();
         CRLog::trace("Init render method");
         getRootNode()->initNodeRendMethodRecursive();
@@ -2070,26 +2068,26 @@ void ldomElementWriter::updateTocItem()
 void ldomElementWriter::onBodyEnter()
 {
     _bodyEnterCalled = true;
-#if 0
-    CRLog::trace("onBodyEnter() for node %04x %s", _element->getDataIndex(),
-                 LCSTR(_element->getNodeName()));
-#endif
     if (_document->isDefStyleSet()) {
+#if 0
+        CRLog::trace("onBodyEnter() for node %04x %s",
+                _element->getDataIndex(),
+                LCSTR(_element->getNodeName()));
+#endif
         _element->initNodeStyle();
 #ifdef AXYDEBUG
         if (_element->getStyle().isNull()) {
             CRLog::error("element style init error %x %s",
-                         _element->getNodeIndex(), LCSTR(_element->getNodeName()));
+                    _element->getNodeIndex(),
+                    LCSTR(_element->getNodeName()));
         }
 #endif
         _isBlock = isBlockNode(_element);
-    } else {
     }
     if (_isSection) {
         if (_parent && _parent->_isSection) {
             _parent->updateTocItem();
         }
-
     }
 }
 
@@ -2149,6 +2147,9 @@ void ldomNode::autoboxChildren( int startIndex, int endIndex )
         removeChildren(lastNonEmpty+1, endIndex);
         // inner inline
         ldomNode * abox = insertChildElement( firstNonEmpty, LXML_NS_NONE, el_autoBoxing );
+#ifdef AXYDEBUG
+        CRLog::trace("autoboxChildren()");
+#endif
         abox->initNodeStyle();
         abox->setRendMethod( erm_final );
         moveItemsTo( abox, firstNonEmpty+1, lastNonEmpty+1 );
@@ -2703,6 +2704,9 @@ LvDomWriter::LvDomWriter(CrDom* document, bool headerOnly)
     _stopTagId = 0xFFFE;
     IS_FIRST_BODY = true;
     if (doc_->isDefStyleSet()) {
+#ifdef AXYDEBUG
+        CRLog::trace("LvDomWriter::LvDomWriter()");
+#endif
         doc_->getRootNode()->initNodeStyle();
         doc_->getRootNode()->setRendMethod(erm_block);
     }
@@ -2717,6 +2721,9 @@ LvDomWriter::~LvDomWriter()
         if (_popStyleOnFinish) {
             doc_->getStylesheet()->pop();
         }
+#ifdef AXYDEBUG
+        CRLog::trace("LvDomWriter::~LvDomWriter()");
+#endif
         doc_->getRootNode()->initNodeStyle();
         doc_->getRootNode()->initNodeFont();
         doc_->updateRenderContext();
@@ -7623,7 +7630,7 @@ void ldomNode::initNodeStyle()
         return;
     }
     if (isRoot() || getParentNode()->isRoot()) {
-        setNodeStyle(this, getCrDom()->getDefaultStyle(), getCrDom()->getDefaultFont());
+        setNodeStyleRend(this, getCrDom()->getDefaultStyle(), getCrDom()->getDefaultFont());
     } else {
         ldomNode* parent = getParentNode();
 #ifdef AXYDEBUG
@@ -7634,7 +7641,7 @@ void ldomNode::initNodeStyle()
 #endif
         css_style_ref_t style = parent->getStyle();
         LVFontRef font = parent->getFont();
-        setNodeStyle(this, style, font);
+        setNodeStyleRend(this, style, font);
     }
 }
 

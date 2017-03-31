@@ -17,7 +17,7 @@
 #include "include/lvtinydom.h"
 #include "include/fb2def.h"
 
-#define DEBUG_CSS
+//#define DEBUG_CSS
 
 #ifndef AXYDEBUG
 #undef DEBUG_CSS
@@ -630,12 +630,9 @@ bool LVCssSelector::check(const ldomNode* node) const
 
 void LVStyleSheet::applyCss(const ldomNode* node, css_style_rec_t* style)
 {
-#ifdef AXYDEBUG
-    CRLog::trace("LVStyleSheet::applyCss %s", LCSTR(GetNodeDesc(node)));
-#endif
     if (!_selectors.length()) {
 #ifdef AXYDEBUG
-        CRLog::info("    selectors null");
+        CRLog::info("LVStyleSheet::applyCss[%s]: selectors null", LCSTR(GetNodeDesc(node)));
 #endif
         return;
     }
@@ -644,8 +641,12 @@ void LVStyleSheet::applyCss(const ldomNode* node, css_style_rec_t* style)
     LVCssSelector* selector = _selectors[0];
     LVCssSelector* selector_id = id > 0 && id < _selectors.length() ? _selectors[id] : NULL;
 #ifdef DEBUG_CSS
-    if (id != 0 && !selector_id) {
-        CRLog::info("    selector wtf id %d %s", id, LCSTR(node->getNodeName()));
+    if (id == 0) {
+        CRLog::info("LVStyleSheet::applyCss[%s]: node id==0", LCSTR(GetNodeDesc(node)));
+    } else if (!selector_id) {
+        CRLog::trace("LVStyleSheet::applyCss[%s]: !selector_id", LCSTR(GetNodeDesc(node)));
+    } else {
+        CRLog::trace("LVStyleSheet::applyCss[%s]", LCSTR(GetNodeDesc(node)));
     }
 #endif
     for (;;) {
@@ -670,9 +671,9 @@ void LVStyleSheet::applyCss(const ldomNode* node, css_style_rec_t* style)
             applied = true;
         }
     }
-#ifdef AXYDEBUG
+#ifdef DEBUG_CSS
     if (!applied) {
-        CRLog::info("    selectors no match");
+        //CRLog::debug("    selectors miss");
     }
 #endif
 }

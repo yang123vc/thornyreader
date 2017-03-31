@@ -8,9 +8,7 @@
     GNU General Public License.
 
     See LICENSE file for details.
-
 */
-
 #ifndef __LV_REND_H_INCLUDED__
 #define __LV_REND_H_INCLUDED__
 
@@ -41,7 +39,7 @@ int renderBlockElement(LVRendPageContext & context, ldomNode * node, int x, int 
 /// renders table element
 int renderTable(LVRendPageContext & context, ldomNode * element, int x, int y, int width );
 /// sets node style
-void setNodeStyle(ldomNode * node, css_style_ref_t parent_style, LVFontRef parent_font );
+void setNodeStyleRend(ldomNode* node, css_style_ref_t parent_style, LVFontRef parent_font);
 
 /// draws formatted document to drawing buffer
 void DrawDocument(

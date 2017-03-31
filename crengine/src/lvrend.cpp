@@ -1767,20 +1767,28 @@ void convertLengthToPx( css_length_t & val, int base_px, int base_em )
     }
 }
 
-inline void spreadParent( css_length_t & val, css_length_t & parent_val, bool inherited=true )
+int renderTable(LVRendPageContext& context, ldomNode* node, int x, int y, int width)
 {
-    if ( val.type == css_val_inherited || (val.type == css_val_unspecified && inherited))
-        val = parent_val;
+    CCRTable table(node, width, 10);
+    int h = table.renderCells(context);
+    return h;
 }
 
-void setNodeStyle(ldomNode* enode, css_style_ref_t parent_style, LVFontRef parent_font)
+inline void spreadParent(css_length_t& val, css_length_t& parent_val, bool inherited = true)
+{
+    if (val.type == css_val_inherited || (val.type == css_val_unspecified && inherited)) {
+        val = parent_val;
+    }
+}
+
+void setNodeStyleRend(ldomNode* enode, css_style_ref_t parent_style, LVFontRef parent_font)
 {
     //lvdomElementFormatRec * fmt = node->getRenderData();
     css_style_ref_t style(new css_style_rec_t);
     css_style_rec_t* pstyle = style.get();
 #ifdef AXYDEBUG
     if (parent_style.isNull()) {
-        CRLog::error("setNodeStyle: parent style is null");
+        CRLog::error("setNodeStyleRend: parent style is null");
     }
 #endif
     // Init default style attribute values
@@ -1937,11 +1945,4 @@ void setNodeStyle(ldomNode* enode, css_style_ref_t parent_style, LVFontRef paren
     }
     // set font
     enode->initNodeFont();
-}
-
-int renderTable( LVRendPageContext & context, ldomNode * node, int x, int y, int width )
-{
-    CCRTable table( node, width, 10 );
-    int h = table.renderCells( context );
-    return h;
 }
