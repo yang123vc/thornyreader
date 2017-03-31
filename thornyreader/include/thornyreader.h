@@ -17,7 +17,7 @@
 #ifndef _THORNYREADER_H_
 #define _THORNYREADER_H_
 
-#define THORNYREADER_VERSION "1.0.19"
+#define THORNYREADER_VERSION "17.03.31+1"
 #define THORNYREADER_LOG_TAG "thornyreader"
 
 const char* ThornyReader_NDEBUG();

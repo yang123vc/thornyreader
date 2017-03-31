@@ -39,11 +39,18 @@ img, image, .section_image, .coverpage, coverpage {
   display: block;
   text-align: center;
   text-indent: 0px;
-  padding: 1em;
+  margin-top: 0em;
+  margin-bottom: 0em;
+  margin-left: 0em;
+  margin-right: 0em;
+  padding-top: 1em;
+  padding-bottom: 1em;
 }
 
 p image, li image {
   display: inline;
+  padding-left: 1em;
+  padding-right: 1em;
 }
 
 a, b, strong, q, u, del, s, strike, small, big, sub, sup, acronym, span, font {
