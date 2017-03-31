@@ -14,7 +14,7 @@
 #include "include/lvstyles.h"
 
 /// calculate font instance record hash
-lUInt32 calcHash(font_ref_t & f)
+lUInt32 calcHash(font_ref_t& f)
 {
     if ( !f )
         return 14321;
@@ -33,7 +33,7 @@ lUInt32 calcHash(font_ref_t & f)
     return v;
 }
 
-lUInt32 calcHash(css_style_rec_t & rec)
+lUInt32 calcHash(css_style_rec_t& rec)
 {
     if ( !rec.hash )
         rec.hash = (((((((((((((((((((((((((((((((lUInt32)rec.display * 31
@@ -45,7 +45,9 @@ lUInt32 calcHash(css_style_rec_t & rec)
          + (lUInt32)rec.list_style_type) * 31
          + (lUInt32)rec.letter_spacing.pack()) * 31
          + (lUInt32)rec.list_style_position) * 31
-         + (lUInt32)(rec.page_break_before | (rec.page_break_before<<4) | (rec.page_break_before<<8))) * 31
+         + (lUInt32)(rec.page_break_before
+                     | (rec.page_break_before<<4)
+                     | (rec.page_break_before<<8))) * 31
          + (lUInt32)rec.vertical_align) * 31
          + (lUInt32)rec.font_size.type) * 31
          + (lUInt32)rec.font_size.value) * 31
@@ -70,7 +72,7 @@ lUInt32 calcHash(css_style_rec_t & rec)
     return rec.hash;
 }
 
-bool operator == (const css_style_rec_t & r1, const css_style_rec_t & r2)
+bool operator == (const css_style_rec_t& r1, const css_style_rec_t& r2)
 {
     return 
            r1.display == r2.display &&
@@ -104,123 +106,99 @@ bool operator == (const css_style_rec_t & r1, const css_style_rec_t & r2)
            r1.font_family == r2.font_family;
 }
 
-/// splits string like "Arial", Times New Roman, Courier;  into list
+/// splits string like "Arial", Times New Roman, Courier; into list
 /// returns number of characters processed
-int splitPropertyValueList( const char * str, lString8Collection & list )
+int splitPropertyValueList(const char* str, lString8Collection& list)
 {
-    //
-    int i=0;
+    int i = 0;
     lChar8 quote_char = 0;
     lString8 name;
     name.reserve(32);
     bool last_space = false;
-    for (i=0; str[i]; i++)
-    {
-        switch(str[i])
-        {
+    for (i = 0; str[i]; i++) {
+        switch (str[i]) {
         case '\'':
-        case '\"':
-            {
-                if (quote_char==0)
-                {
-                    if (!name.empty())
-                    {
-                        list.add( name );
-                        name.clear();
-                    }
-                    quote_char = str[i];
+        case '\"': {
+            if (quote_char == 0) {
+                if (!name.empty()) {
+                    list.add(name);
+                    name.clear();
                 }
-                else if (quote_char==str[i])
-                {
-                    if (!name.empty())
-                    {
-                        list.add( name );
-                        name.clear();
-                    }
-                    quote_char = 0;
+                quote_char = str[i];
+            } else if (quote_char == str[i]) {
+                if (!name.empty()) {
+                    list.add(name);
+                    name.clear();
                 }
-                else
-                {
-                    // append char
-                    name << str[i];
-                }
-                last_space = false;
+                quote_char = 0;
+            } else {
+                // append char
+                name << str[i];
             }
+            last_space = false;
+        }
             break;
-        case ',':
-            {
-                if (quote_char==0)
-                {
-                    if (!name.empty())
-                    {
-                        list.add( name );
-                        name.clear();
-                    }
+        case ',': {
+            if (quote_char == 0) {
+                if (!name.empty()) {
+                    list.add(name);
+                    name.clear();
                 }
-                else
-                {
-                    // inside quotation: append char
-                    name << str[i];
-                }
-                last_space = false;
+            } else {
+                // inside quotation: append char
+                name << str[i];
             }
+            last_space = false;
+        }
             break;
         case '\t':
-        case ' ':
-            {
-                if (quote_char!=0)
-                {
-                    name << str[i];
-                }
-                last_space = true;
+        case ' ': {
+            if (quote_char != 0) {
+                name << str[i];
             }
+            last_space = true;
+        }
             break;
         case ';':
         case '}':
-                if (quote_char==0)
-                {
-                    if (!name.empty())
-                    {
-                        list.add( name );
-                        name.clear();
-                    }
-                    return i;
+            if (quote_char == 0) {
+                if (!name.empty()) {
+                    list.add(name);
+                    name.clear();
                 }
-                else
-                {
-                    // inside quotation: append char
-                    name << str[i];
-                    last_space = false;
-                }
+                return i;
+            } else {
+                // inside quotation: append char
+                name << str[i];
+                last_space = false;
+            }
             break;
         default:
-            if (last_space && !name.empty() && quote_char==0)
+            if (last_space && !name.empty() && quote_char == 0) {
                 name << ' ';
+            }
             name += str[i];
             last_space = false;
             break;
         }
     }
-    if (!name.empty())
-    {
-        list.add( name );
+    if (!name.empty()) {
+        list.add(name);
     }
     return i;
 }
 
 /// splits string like "Arial", Times New Roman, Courier  into list
-lString8 joinPropertyValueList( const lString8Collection & list )
+lString8 joinPropertyValueList(const lString8Collection& list)
 {
     lString8 res;
     res.reserve(100);
-    
-    for (int i=0; i<list.length(); i++)
-    {
-        if (i>0)
+    for (int i = 0; i < list.length(); i++) {
+        if (i > 0) {
             res << ", ";
+        }
         res << "\"" << list[i] << "\"";
     }
-    
     res.pack();
     return res;
 }
