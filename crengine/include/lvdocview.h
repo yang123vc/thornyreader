@@ -153,8 +153,6 @@ public:
     void SetBookmarks(LVPtrVector<CRBookmark> & bookmarks);
     /// find bookmark by window point, return NULL if point doesn't belong to any bookmark
     CRBookmark* FindBookmarkByPoint(lvPoint pt);
-    /// sets coverpage display flag
-    void setShowCover(bool show) { show_cover_ = show; }
     /// get background image
     LVImageSourceRef getBackgroundImage() const { return background_image; }
     /// set background image

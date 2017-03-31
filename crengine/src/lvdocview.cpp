@@ -48,7 +48,7 @@ LVDocView::LVDocView()
 		  is_rendered_(false),
 		  highlight_bookmarks_(1),
 		  margins_(),
-		  show_cover_(true),
+		  show_cover_(false),
           background_tiled_(true),
 		  position_is_set_(false),
 		  doc_format_(DOC_FORMAT_NULL),
@@ -378,6 +378,7 @@ bool LVDocView::LoadDoc(int doc_format, LVStreamRef stream)
 #endif
     offset_ = 0;
     page_ = 0;
+    //show_cover_ = !getCoverPageImage().isNull();
     CheckRenderProps(0, 0);
     REQUEST_RENDER("LoadDoc")
     return true;
@@ -1015,7 +1016,6 @@ void LVDocView::CheckRenderProps(int width, int height)
 		return;
 	}
 	UpdateLayout();
-	show_cover_ = !getCoverPageImage().isNull();
 	base_font_ = fontMan->GetFont(
             config_font_size_,
             400,
