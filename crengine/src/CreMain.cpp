@@ -19,7 +19,7 @@
 
 int main(int argc, char *argv[])
 {
-    StartThornyReader("crengine");
+    ThornyReaderStart("crengine");
     CreBridge cre;
     return cre.main(argc, argv);
 }

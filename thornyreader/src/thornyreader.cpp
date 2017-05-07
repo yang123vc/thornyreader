@@ -17,33 +17,38 @@
 #include <android/log.h>
 #include "thornyreader.h"
 
-const char* ThornyReader_NDEBUG()
-{
-    const char* ndebug;
-#ifdef NDEBUG
-    ndebug = "NDEBUG=def";
+const bool ThornyReaderIsDebugBuild() {
+#if !defined(NDEBUG) || defined(AXYDEBUG) || defined(DEBUG) || defined(_DEBUG)
+    return true;
 #else
-    ndebug = "NDEBUG=ndef";
+    return false;
 #endif
-    return ndebug;
 }
 
-const char* ThornyReader_AXYDEBUG()
-{
-    const char* axy_debug;
-#ifdef AXYDEBUG
-    axy_debug = "AXYDEBUG=def";
-#else
-    axy_debug = "AXYDEBUG=ndef";
-#endif
-    return axy_debug;
-}
-
-void StartThornyReader(const char* name)
-{
-    __android_log_print(ANDROID_LOG_INFO, THORNYREADER_LOG_TAG, "Start %s v%s, %s, %s",
+void ThornyReaderStart(const char *name) {
+    __android_log_print(ANDROID_LOG_INFO,
+                        THORNYREADER_LOG_TAG,
+                        "Start %s v%s%s",
                         name,
                         THORNYREADER_VERSION,
-                        ThornyReader_NDEBUG(),
-                        ThornyReader_AXYDEBUG());
+                        ThornyReaderIsDebugBuild() ? "-DEBUG" : "");
+    if (ThornyReaderIsDebugBuild()) {
+        const char *ndebug;
+#ifdef NDEBUG
+        ndebug = "NDEBUG=def";
+#else
+        ndebug = "NDEBUG=ndef";
+#endif
+        const char *axy_debug;
+#ifdef AXYDEBUG
+        axy_debug = "AXYDEBUG=def";
+#else
+        axy_debug = "AXYDEBUG=ndef";
+#endif
+        __android_log_print(ANDROID_LOG_DEBUG,
+                            THORNYREADER_LOG_TAG,
+                            "DEFINITIONS: %s %s",
+                            ndebug,
+                            axy_debug);
+    }
 }

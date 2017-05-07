@@ -17,12 +17,11 @@
 #ifndef _THORNYREADER_H_
 #define _THORNYREADER_H_
 
-#define THORNYREADER_VERSION "17.03.31+1"
+#define THORNYREADER_VERSION "17.03.31.00"
 #define THORNYREADER_LOG_TAG "thornyreader"
 
-const char* ThornyReader_NDEBUG();
-const char* ThornyReader_AXYDEBUG();
-void StartThornyReader(const char* name);
+const bool ThornyReaderIsDebugBuild();
+void ThornyReaderStart(const char* name);
 
 #define DOC_FORMAT_NULL 0
 #define DOC_FORMAT_EPUB 1
