@@ -147,13 +147,13 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
         }
         const char* val = reinterpret_cast<const char*>(temp_val);
 
-        if (key == CONFIG_CRENGINE_VIEWPORT_WIDTH) {
+        if (key == CONFIG_CRE_VIEWPORT_WIDTH) {
             int int_val = atoi(val);
             doc_view_->Resize(int_val, doc_view_->height_);
-        } else if (key == CONFIG_CRENGINE_VIEWPORT_HEIGHT) {
+        } else if (key == CONFIG_CRE_VIEWPORT_HEIGHT) {
             int int_val = atoi(val);
             doc_view_->Resize(doc_view_->width_, int_val);
-        } else if (key == CONFIG_CRENGINE_FONT_ANTIALIASING) {
+        } else if (key == CONFIG_CRE_FONT_ANTIALIASING) {
             int int_val = atoi(val);
             if (int_val < 0 || int_val > 2) {
                 response.result = RES_BAD_REQ_DATA;
@@ -161,12 +161,12 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             }
             fontMan->SetAntialiasMode(int_val);
             doc_view_->RequestRender();
-        } else if (key == CONFIG_CRENGINE_FONT_GAMMA) {
+        } else if (key == CONFIG_CRE_FONT_GAMMA) {
             double gamma = 1.0;
             if (sscanf(val, "%lf", &gamma) == 1) {
                 fontMan->SetGamma(gamma);
             }
-        } else if (key == CONFIG_CRENGINE_PAGES_COLUMNS) {
+        } else if (key == CONFIG_CRE_PAGES_COLUMNS) {
             int int_val = atoi(val);
             if (int_val < 1 || int_val > 2) {
                 response.result = RES_BAD_REQ_DATA;
@@ -178,35 +178,35 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 doc_view_->RequestRender();
                 doc_view_->position_is_set_ = false;
             }
-        } else if (key == CONFIG_CRENGINE_FONT_COLOR) {
+        } else if (key == CONFIG_CRE_FONT_COLOR) {
             doc_view_->text_color_ = (lUInt32) (atoi(val) & 0xFFFFFF);
             doc_view_->RequestRender();
-        } else if (key == CONFIG_CRENGINE_BACKGROUND_COLOR) {
+        } else if (key == CONFIG_CRE_BACKGROUND_COLOR) {
             doc_view_->background_color_ = (lUInt32) (atoi(val) & 0xFFFFFF);
             doc_view_->RequestRender();
-        } else if (key == CONFIG_CRENGINE_MARGIN_TOP
-                   || key == CONFIG_CRENGINE_MARGIN_LEFT
-                   || key == CONFIG_CRENGINE_MARGIN_RIGHT
-                   || key == CONFIG_CRENGINE_MARGIN_BOTTOM) {
+        } else if (key == CONFIG_CRE_MARGIN_TOP
+                   || key == CONFIG_CRE_MARGIN_LEFT
+                   || key == CONFIG_CRE_MARGIN_RIGHT
+                   || key == CONFIG_CRE_MARGIN_BOTTOM) {
             int margin = atoi(val);
-            if (key == CONFIG_CRENGINE_MARGIN_TOP) {
+            if (key == CONFIG_CRE_MARGIN_TOP) {
                 doc_view_->config_margins_.top = margin;
-            } else if (key == CONFIG_CRENGINE_MARGIN_BOTTOM) {
+            } else if (key == CONFIG_CRE_MARGIN_BOTTOM) {
                 doc_view_->config_margins_.bottom = margin;
-            } else if (key == CONFIG_CRENGINE_MARGIN_LEFT) {
+            } else if (key == CONFIG_CRE_MARGIN_LEFT) {
                 doc_view_->config_margins_.left = margin;
-            } else if (key == CONFIG_CRENGINE_MARGIN_RIGHT) {
+            } else if (key == CONFIG_CRE_MARGIN_RIGHT) {
                 doc_view_->config_margins_.right = margin;
             }
             doc_view_->UpdatePageMargins();
-        } else if (key == CONFIG_CRENGINE_FONT_FACE_MAIN) {
+        } else if (key == CONFIG_CRE_FONT_FACE_MAIN) {
             doc_view_->config_font_face_ = UnicodeToUtf8(lString16(val));
             doc_view_->UpdatePageMargins();
             doc_view_->RequestRender();
-        } else if (key == CONFIG_CRENGINE_FONT_FACE_FALLBACK) {
+        } else if (key == CONFIG_CRE_FONT_FACE_FALLBACK) {
             fontMan->SetFallbackFontFace(UnicodeToUtf8(lString16(val)));
             doc_view_->RequestRender();
-        } else if (key == CONFIG_CRENGINE_FONT_SIZE) {
+        } else if (key == CONFIG_CRE_FONT_SIZE) {
             int int_val = atoi(val);
             int_val = GetClosestValueInArray(
                     ALLOWED_FONT_SIZES,
@@ -217,7 +217,7 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                 doc_view_->UpdatePageMargins();
                 doc_view_->RequestRender();
             }
-        } else if (key == CONFIG_CRENGINE_INTERLINE_SPACE) {
+        } else if (key == CONFIG_CRE_INTERLINE_SPACE) {
             int int_val = atoi(val);
             int_val = GetClosestValueInArray(
                     ALLOWED_INTERLINE_SPACES,
@@ -228,7 +228,7 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
                     doc_view_->RequestRender();
                     doc_view_->position_is_set_ = false;
             }
-        } else if (key == CONFIG_CRENGINE_EMBEDDED_STYLES) {
+        } else if (key == CONFIG_CRE_EMBEDDED_STYLES) {
             int int_val = atoi(val);
             if (int_val < 0 || int_val > 1) {
                 response.result = RES_BAD_REQ_DATA;
@@ -238,7 +238,7 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             doc_view_->config_embeded_styles_ = bool_val;
             doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_EMBEDDED_STYLES, bool_val);
             doc_view_->RequestRender();
-        } else if (key == CONFIG_CRENGINE_EMBEDDED_FONTS) {
+        } else if (key == CONFIG_CRE_EMBEDDED_FONTS) {
             int int_val = atoi(val);
             if (int_val < 0 || int_val > 1) {
                 response.result = RES_BAD_REQ_DATA;
@@ -248,7 +248,7 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             doc_view_->config_embeded_fonts_ = bool_val;
             doc_view_->GetCrDom()->setDocFlag(DOC_FLAG_EMBEDDED_FONTS, bool_val);
             doc_view_->RequestRender();
-        } else if (key == CONFIG_CRENGINE_FOOTNOTES) {
+        } else if (key == CONFIG_CRE_FOOTNOTES) {
             int int_val = atoi(val);
             if (int_val < 0 || int_val > 1) {
                 response.result = RES_BAD_REQ_DATA;
