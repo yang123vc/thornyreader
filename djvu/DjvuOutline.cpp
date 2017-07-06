@@ -15,6 +15,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "StLog.h"
 #include "StProtocol.h"
