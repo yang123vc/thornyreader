@@ -11,6 +11,14 @@ LOCAL_MODULE := libjpeg-turbo
 
 LOCAL_MODULE_TAGS := release
 
+LOCAL_CFLAGS    := $(APP_CFLAGS)    -DAVOID_TABLES -fstrict-aliasing -fprefetch-loop-arrays -DANDROID -DANDROID_TILE_BASED_DECODE -DENABLE_ANDROID_NULL_CONVERT
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
+LOCAL_ARM_MODE := $(APP_ARM_MODE)
+
+
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
+
+
 # From autoconf-generated Makefile
 LOCAL_SRC_FILES := \
 	src/jcapimin.c  src/jcapistd.c   src/jccoefct.c  src/jccolor.c \
@@ -30,13 +38,6 @@ LOCAL_SRC_FILES := \
 
 LOCAL_STATIC_LIBRARIES := libsimd
  
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/include 
- 
-LOCAL_CFLAGS := -DAVOID_TABLES -fstrict-aliasing -fprefetch-loop-arrays -DANDROID \
-        -DANDROID_TILE_BASED_DECODE -DENABLE_ANDROID_NULL_CONVERT
-
-LOCAL_ARM_MODE := $(APP_ARM_MODE)
-
 include $(BUILD_STATIC_LIBRARY)
 
 

@@ -20,8 +20,8 @@
 #include "jsimddct.h"
 #include "jsimd.h"
 
-//#include "StLog.h"
-//#define LCTX "TurboJPEG.SIMD"
+#include "StLog.h"
+#define LCTX "TurboJPEG.SIMD"
 
 /*
  * In the PIC cases, we have no guarantee that constants will keep
@@ -62,7 +62,7 @@ init_simd (void)
     simd_support = 0;
   }
 
-  //INFO_L(LCTX, "SIMD support: %d", simd_support);
+  INFO_L(LCTX, "SIMD support: %d", simd_support);
 }
 
 GLOBAL(int)
