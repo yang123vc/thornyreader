@@ -1,29 +1,30 @@
 LOCAL_PATH:= $(call my-dir)
+
 include $(CLEAR_VARS)
+
 LOCAL_MODULE := mupdf
-LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES 	:= thornyreader freetype jpeg-turbo jbig2dec openjpeg thornyhelper
-LOCAL_LDLIBS 		    += -llog -latomic -lz
+LOCAL_CFLAGS    := $(APP_CFLAGS)    -DAA_BITS=8 -DNDEBUG -DHAVE_CONFIG_H
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
+LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 
-LOCAL_CFLAGS 		    += -DHAVE_CONFIG_H
-LOCAL_CFLAGS 		    += -DNDEBUG
-LOCAL_CFLAGS 		    += -DAA_BITS=8
+#LOCAL_CFLAGS   += -DMUPDF_LOG_WARN_ENABLED
 
 ifeq ($(TARGET_ARCH),arm)
 LOCAL_CFLAGS     += -DARCH_ARM -DARCH_THUMB -DARCH_ARM_CAN_LOAD_UNALIGNED
 endif # TARGET_ARCH == armeabi
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/../../thornyreader/include \
-	$(LOCAL_PATH)/../../jpeg-turbo/jpeg-turbo/include \
 	$(LOCAL_PATH)/../../thornyhelper/include \
 	$(LOCAL_PATH)/../freetype/overlay \
 	$(LOCAL_PATH)/../freetype/include \
+	$(LOCAL_PATH)/../../jpeg-turbo/jpeg-turbo/include \
 	$(LOCAL_PATH)/../jbig2dec/include \
 	$(LOCAL_PATH)/../openjpeg/openjpeg/include \
+	$(LOCAL_PATH)/../../thornyreader/include \
 	$(LOCAL_PATH)/include \
-	$(LOCAL_PATH)/generated
+	$(LOCAL_PATH)/generated \
+	$(LOCAL_PATH)/standalone \
 
 LOCAL_SRC_FILES := \
 	MuPdfMain.cpp \
@@ -170,5 +171,10 @@ LOCAL_SRC_FILES += \
 	fitz/ucdn.c \
 	fitz/unzip.c \
 	fitz/xml.c
+	
+LOCAL_STATIC_LIBRARIES := thornyreader thornyhelper freetype jpeg-turbo jbig2dec openjpeg
+
+# uses libz, which is officially supported for NDK API
+LOCAL_LDLIBS := -lz -llog # -latomic
 
 include $(BUILD_EXECUTABLE)

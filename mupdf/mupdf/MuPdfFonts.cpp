@@ -105,7 +105,7 @@ void MuPdfBridge::processFonts(CmdRequest& request, CmdResponse& response)
 
         uint8_t* fonts[4];
 
-        //INFO_L(LCTX, "Font family: %d", fontFamily);
+        INFO_L(LCTX, "Font family: %d", fontFamily);
         switch (fontFamily)
         {
         case SANS:
@@ -116,10 +116,10 @@ void MuPdfBridge::processFonts(CmdRequest& request, CmdResponse& response)
                 response.result = RES_BAD_REQ_DATA;
                 return;
             }
-            //INFO_L(LCTX, "Regular     : %s", fonts[REGULAR]);
-            //INFO_L(LCTX, "Italic      : %s", fonts[ITALIC]);
-            //INFO_L(LCTX, "Bold        : %s", fonts[BOLD]);
-            //INFO_L(LCTX, "Bold Italic : %s", fonts[BOLD_ITALIC]);
+            INFO_L(LCTX, "Regular     : %s", fonts[REGULAR]);
+            INFO_L(LCTX, "Italic      : %s", fonts[ITALIC]);
+            INFO_L(LCTX, "Bold        : %s", fonts[BOLD]);
+            INFO_L(LCTX, "Bold Italic : %s", fonts[BOLD_ITALIC]);
             setFontFileName(ext_font_Helvetica, fonts[REGULAR]);
             setFontFileName(ext_font_HelveticaOblique, fonts[ITALIC]);
             setFontFileName(ext_font_HelveticaBold, fonts[BOLD]);
@@ -133,10 +133,10 @@ void MuPdfBridge::processFonts(CmdRequest& request, CmdResponse& response)
                 response.result = RES_BAD_REQ_DATA;
                 return;
             }
-            //INFO_L(LCTX, "Regular     : %s", fonts[REGULAR]);
-            //INFO_L(LCTX, "Italic      : %s", fonts[ITALIC]);
-            //INFO_L(LCTX, "Bold        : %s", fonts[BOLD]);
-            //INFO_L(LCTX, "Bold Italic : %s", fonts[BOLD_ITALIC]);
+            INFO_L(LCTX, "Regular     : %s", fonts[REGULAR]);
+            INFO_L(LCTX, "Italic      : %s", fonts[ITALIC]);
+            INFO_L(LCTX, "Bold        : %s", fonts[BOLD]);
+            INFO_L(LCTX, "Bold Italic : %s", fonts[BOLD_ITALIC]);
             setFontFileName(ext_font_TimesRoman, fonts[REGULAR]);
             setFontFileName(ext_font_TimesItalic, fonts[ITALIC]);
             setFontFileName(ext_font_TimesBold, fonts[BOLD]);
@@ -150,10 +150,10 @@ void MuPdfBridge::processFonts(CmdRequest& request, CmdResponse& response)
                 response.result = RES_BAD_REQ_DATA;
                 return;
             }
-            //INFO_L(LCTX, "Regular     : %s", fonts[REGULAR]);
-            //INFO_L(LCTX, "Italic      : %s", fonts[ITALIC]);
-            //INFO_L(LCTX, "Bold        : %s", fonts[BOLD]);
-            //INFO_L(LCTX, "Bold Italic : %s", fonts[BOLD_ITALIC]);
+            INFO_L(LCTX, "Regular     : %s", fonts[REGULAR]);
+            INFO_L(LCTX, "Italic      : %s", fonts[ITALIC]);
+            INFO_L(LCTX, "Bold        : %s", fonts[BOLD]);
+            INFO_L(LCTX, "Bold Italic : %s", fonts[BOLD_ITALIC]);
             setFontFileName(ext_font_Courier, fonts[REGULAR]);
             setFontFileName(ext_font_CourierOblique, fonts[ITALIC]);
             setFontFileName(ext_font_CourierBold, fonts[BOLD]);
@@ -167,7 +167,7 @@ void MuPdfBridge::processFonts(CmdRequest& request, CmdResponse& response)
                 response.result = RES_BAD_REQ_DATA;
                 return;
             }
-            INFO_L(LCTX, "SYMBOL Regular     : %s", fonts[REGULAR]);
+            INFO_L(LCTX, "Regular     : %s", fonts[REGULAR]);
             setFontFileName(ext_font_Symbol, fonts[REGULAR]);
             break;
         case DINGBAT:
@@ -178,7 +178,7 @@ void MuPdfBridge::processFonts(CmdRequest& request, CmdResponse& response)
                 response.result = RES_BAD_REQ_DATA;
                 return;
             }
-            INFO_L(LCTX, "DINGBAT Regular     : %s", fonts[REGULAR]);
+            INFO_L(LCTX, "Regular     : %s", fonts[REGULAR]);
             setFontFileName(ext_font_ZapfDingbats, fonts[REGULAR]);
             break;
         default:

@@ -13,12 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <stdlib.h>
 #include <signal.h>
+#include <algorithm>
 
 #include "StLog.h"
 #include "StProtocol.h"
 #include "StSocket.h"
+
 #include "MuPdfBridge.h"
 #include "thornyreader.h"
 #include "bitmaputils.h"
@@ -42,7 +45,7 @@ void sig_handler(int signo)
         CmdData* data;
         for (data = current->first; data != NULL; data = data->nextData)
         {
-            ERROR_L(LCTX, "Data: %p %u %08x", data, data->type, data->value.value32);
+            ERROR_L(LCTX, "Data: %p %u %08x %p", data, data->type, data->value.value32, data->external_array);
         }
     }
     exit(-1);
@@ -60,12 +63,13 @@ MuPdfBridge::MuPdfBridge() : StBridge("MuPdfBridge")
     pageLists = NULL;
     storememory = 64 * 1024 * 1024;
     format = 0;
+    layersmask = -1;
     resetFonts();
 
-     //if ((defaultHandler = signal(SIGSEGV, sig_handler)) == SIG_ERR)
-     //{
-     //    ERROR_L(LCTX, "SIGSEGV signal fail");
-     //}
+    // if ((defaultHandler = signal(SIGSEGV, sig_handler)) == SIG_ERR)
+    // {
+    //     ERROR_L(LCTX, "!!! can't catch SIGSEGV");
+    // }
 }
 
 MuPdfBridge::~MuPdfBridge()
@@ -127,8 +131,14 @@ void MuPdfBridge::process(CmdRequest& request, CmdResponse& response)
     case CMD_REQ_PDF_GET_MISSED_FONTS:
         processGetMissedFonts(request, response);
         break;
+    case CMD_REQ_PDF_GET_LAYERS_LIST:
+        processGetLayersList(request, response);
+        break;
     case CMD_REQ_PDF_STORAGE:
         processStorage(request, response);
+        break;
+    case CMD_REQ_PDF_SET_LAYERS_MASK:
+        processSetLayersMask(request, response);
         break;
     case CMD_REQ_SET_CONFIG:
         processConfig(request, response);
@@ -176,6 +186,29 @@ void MuPdfBridge::processStorage(CmdRequest& request, CmdResponse& response)
     this->storememory = storageSize * 1024 * 1024;
 
     INFO_L(LCTX, "Storage size : %d MB", storageSize);
+}
+
+void MuPdfBridge::processSetLayersMask(CmdRequest& request, CmdResponse& response)
+{
+    response.cmd = CMD_RES_PDF_SET_LAYERS_MASK;
+    if (request.dataCount == 0)
+    {
+        ERROR_L(LCTX, "No request data found");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+
+    uint32_t layersMask = 0;
+    if (!CmdDataIterator(request.first).integer(&layersMask).isValid())
+    {
+        ERROR_L(LCTX, "Bad request data");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+
+    this->layersmask = layersMask;
+
+    restart();
 }
 
 void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
@@ -263,13 +296,18 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
         INFO_L(LCTX, "Opening document: %d %d", format, fd);
 
         INFO_L(LCTX, ctx->ebookdroid_hasPassword ? "Password present" : "No password");
-        fz_try(ctx) {
-            if (format == FORMAT_XPS) {
-                document = (fz_document*) xps_open_document_with_stream(ctx, fz_open_fd(ctx, dup(fd)));
-            } else {
-                document = (fz_document*) pdf_open_document_with_stream(ctx, fz_open_fd(ctx, dup(fd)));
-            }
-        } fz_catch(ctx) {
+        fz_try(ctx)
+                {
+                    if (format == FORMAT_XPS)
+                    {
+                        document = (fz_document*) xps_open_document_with_stream(ctx, fz_open_fd(ctx, dup(fd)));
+                    }
+                    else
+                    {
+                        document = (fz_document*) pdf_open_document_with_stream(ctx, fz_open_fd(ctx, dup(fd)));
+                    }
+                }fz_catch(ctx)
+        {
             const char* msg = fz_caught_message(ctx);
             ERROR_L(LCTX, "Opening document failed: %s", msg);
             response.result = RES_MUPDF_FAIL;
@@ -298,6 +336,7 @@ void MuPdfBridge::processOpen(CmdRequest& request, CmdResponse& response)
             }
         }
 
+        applyLayersMask();
         fz_try(ctx)
         {
 
@@ -340,7 +379,6 @@ static void SegfaultDeath()
 
 void MuPdfBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
 {
-    //DEBUG_L(L_DEBUG, LCTX, "processPageInfo");
     response.cmd = CMD_RES_PAGE_INFO;
     if (request.dataCount == 0)
     {
@@ -402,7 +440,6 @@ void MuPdfBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
 
 void MuPdfBridge::processPage(CmdRequest& request, CmdResponse& response)
 {
-    DEBUG_L(L_DEBUG, LCTX, "processPage");
     response.cmd = CMD_RES_PAGE;
     if (request.dataCount == 0)
     {
@@ -452,7 +489,6 @@ void MuPdfBridge::processPage(CmdRequest& request, CmdResponse& response)
 
 void MuPdfBridge::processPageFree(CmdRequest& request, CmdResponse& response)
 {
-    DEBUG_L(L_DEBUG, LCTX, "processPageFree");
     response.cmd = CMD_RES_PAGE_FREE;
     if (request.dataCount == 0)
     {
@@ -542,7 +578,6 @@ void MuPdfBridge::processPageFree(CmdRequest& request, CmdResponse& response)
 */
 void MuPdfBridge::processPageRender(CmdRequest& request, CmdResponse& response)
 {
-    DEBUG_L(L_DEBUG, LCTX, "processPageRender");
     response.cmd = CMD_RES_PAGE_RENDER;
     if (request.dataCount == 0)
     {
@@ -617,7 +652,8 @@ void MuPdfBridge::processPageRender(CmdRequest& request, CmdResponse& response)
     fz_device *dev = NULL;
     fz_pixmap *pixmap = NULL;
 
-    fz_try(ctx) {
+    fz_try(ctx)
+            {
 		pixmap = fz_new_pixmap_with_data(ctx, fz_device_rgb(ctx), width, height, pixels);
 
                 fz_clear_pixmap_with_value(ctx, pixmap, 0xff);
@@ -642,7 +678,6 @@ void MuPdfBridge::processPageRender(CmdRequest& request, CmdResponse& response)
 
 void MuPdfBridge::processOutline(CmdRequest& request, CmdResponse& response)
 {
-    DEBUG_L(L_DEBUG, LCTX, "processOutline");
     response.cmd = CMD_RES_OUTLINE;
 
     if (document == NULL)
@@ -665,7 +700,7 @@ void MuPdfBridge::processOutline(CmdRequest& request, CmdResponse& response)
     }
     else
     {
-        //ERROR_L(LCTX, "No outline");
+        ERROR_L(LCTX, "No outline");
     }
 }
 
@@ -756,7 +791,6 @@ fz_page* MuPdfBridge::getPage(uint32_t pageNo, bool decode)
 
 bool MuPdfBridge::restart()
 {
-    DEBUG_L(L_DEBUG, LCTX, "restart");
     release();
 
     DEBUG_L(L_DEBUG, LCTX, "Creating context: storememory = %d", storememory);
@@ -810,12 +844,13 @@ bool MuPdfBridge::restart()
         }
     }
 
+    applyLayersMask();
+
     return true;
 }
 
 void MuPdfBridge::release()
 {
-    DEBUG_L(L_DEBUG, LCTX, "release");
     if (pageLists != NULL)
     {
         int i;
@@ -854,6 +889,58 @@ void MuPdfBridge::release()
         ctx = NULL;
     }
 }
+
+void MuPdfBridge::applyLayersMask()
+{
+	if (document && format == FORMAT_PDF)
+	{
+		pdf_ocg_descriptor* ocg;
+		ocg = ((pdf_document*) document)->ocg;
+		if (ocg)
+		{
+			for (int i = 0; i < std::min(31, ocg->len); i++)
+			{
+				ocg->ocgs[i].state = ((layersmask & (1 << i)) != 0) ? 1 : 0;
+			}
+		}
+	}
+}
+
+void MuPdfBridge::processGetLayersList(CmdRequest& request, CmdResponse& response)
+{
+    response.cmd = CMD_RES_PDF_GET_LAYERS_LIST;
+
+    if (format != FORMAT_PDF || !document)
+    {
+        response.result = RES_NOT_OPENED;
+        return;
+    }
+
+    pdf_document* doc = (pdf_document*) document;
+
+	pdf_ocg_descriptor* ocg;
+	ocg = ((pdf_document*) document)->ocg;
+	if (ocg)
+	{
+	    response.addValue(ocg->len);
+		for (int i = 0; i < ocg->len; i++)
+		{
+			pdf_obj* obj = pdf_load_object(ctx, (pdf_document*)document, ocg->ocgs[i].num, ocg->ocgs[i].gen);
+
+			char *name;
+			name = pdf_to_utf8(ctx, (pdf_document*)document, pdf_dict_get(ctx, obj, PDF_NAME_Name));
+
+	    	response.addString(name, false);
+
+			pdf_drop_obj(ctx, obj);
+		}
+	}
+	else
+	{
+	    response.addValue(0);
+	}
+}
+
 
 void MuPdfBridge::processConfig(CmdRequest& request, CmdResponse& response)
 {
@@ -957,22 +1044,22 @@ void MuPdfBridge::processSmartCrop(CmdRequest& request, CmdResponse& response)
     fz_pixmap* pixmap = NULL;
 
     fz_try(ctx) {
-        pixmap = fz_new_pixmap_with_data(ctx, fz_device_rgb(ctx), viewbox.x1, viewbox.y1, pixels);
+                pixmap = fz_new_pixmap_with_data(ctx, fz_device_rgb(ctx), viewbox.x1, viewbox.y1, pixels);
 
-        fz_clear_pixmap_with_value(ctx, pixmap, 0xff);
+                fz_clear_pixmap_with_value(ctx, pixmap, 0xff);
 
-        device = fz_new_draw_device(ctx, pixmap);
+                device = fz_new_draw_device(ctx, pixmap);
 
-        fz_run_display_list(ctx, pageLists[page_index], device, &mat, &viewbox, NULL);
+                fz_run_display_list(ctx, pageLists[page_index], device, &mat, &viewbox, NULL);
 
-        float smart_crop[4];
-        CalcBitmapSmartCrop(smart_crop, pixels, SMART_CROP_W, SMART_CROP_H,
-                            slice_l, slice_t, slice_r, slice_b);
-        response.addFloatArray(4, smart_crop, true);
-    } fz_always(ctx) {
-        fz_drop_device(ctx, device);
-        fz_drop_pixmap(ctx, pixmap);
-    } fz_catch(ctx) {
+                float smart_crop[4];
+                CalcBitmapSmartCrop(smart_crop, pixels, SMART_CROP_W, SMART_CROP_H,
+                                    slice_l, slice_t, slice_r, slice_b);
+                response.addFloatArray(4, smart_crop, true);
+            } fz_always(ctx) {
+                fz_drop_device(ctx, device);
+                fz_drop_pixmap(ctx, pixmap);
+            } fz_catch(ctx) {
         const char* msg = fz_caught_message(ctx);
         ERROR_L(LCTX, "%s", msg);
         response.result = RES_MUPDF_FAIL;

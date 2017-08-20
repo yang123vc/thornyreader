@@ -52,6 +52,7 @@ private:
 
     int storememory;
     int format;
+    int layersmask;
 
     std::set<std::string> fonts;
 
@@ -74,8 +75,10 @@ protected:
     void processStorage(CmdRequest& request, CmdResponse& response);
     void processSystemFont(CmdRequest& request, CmdResponse& response);
     void processGetMissedFonts(CmdRequest& request, CmdResponse& response);
-    void processSmartCrop(CmdRequest& request, CmdResponse& response);
-    void processConfig(CmdRequest& request, CmdResponse& response);
+    void processGetLayersList(CmdRequest& request, CmdResponse& response);
+    void processSetLayersMask(CmdRequest& request, CmdResponse& response);
+	void processSmartCrop(CmdRequest& request, CmdResponse& response);
+	void processConfig(CmdRequest& request, CmdResponse& response);
 
     fz_page* getPage(uint32_t pageNo, bool decode);
 
@@ -88,6 +91,8 @@ protected:
     void processLinks(int pageNo, CmdResponse& response);
     void processOutline(fz_outline *outline, int level, int index, CmdResponse& response);
     void processText(int pageNo, const char* pattern, CmdResponse& response);
+
+    void applyLayersMask();
 };
 
 #endif

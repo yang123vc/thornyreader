@@ -28,10 +28,10 @@ const char EMPTY_STR[1] = { 0x0 };
 
 void toResponse(CmdResponse& response, int level, char* title, int kind, int pageNo, char* url, float x, float y)
 {
-	response.addWords((uint16_t) kind, pageNo);
+    response.addWords((uint16_t) kind, pageNo);
 	response.addInt((uint32_t) level);
-
 	response.addIpcString(title != NULL ? title : EMPTY_STR, false);
+
     if (kind == FZ_LINK_URI)
     {
         response.addIpcString(url != NULL ? url : EMPTY_STR, false);

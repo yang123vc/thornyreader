@@ -21,5 +21,6 @@ int main(int argc, char *argv[])
 {
     ThornyReaderStart("mupdf");
     MuPdfBridge mupdf;
+
     return mupdf.main(argc, argv);
 }

@@ -1869,15 +1869,19 @@ void pdf_update_text_annot_appearance(fz_context *ctx, pdf_document *doc, pdf_an
 		center_rect_within_rect(&bounds, &rect, &tm);
 		fz_concat(&tm, &tm, page_ctm);
 		cs = fz_device_rgb(ctx);
-		fz_fill_path(ctx, dev, path, 0, &tm, cs, yellow, 1.0f);
-		fz_stroke_path(ctx, dev, path, stroke, &tm, cs, black, 1.0f);
+//EBD >>>
+//		fz_fill_path(ctx, dev, path, 0, &tm, cs, yellow, 1.0f);
+//		fz_stroke_path(ctx, dev, path, stroke, &tm, cs, black, 1.0f);
+//EBD <<<
 		fz_drop_path(ctx, path);
 		path = NULL;
 
 		path = fz_new_path(ctx);
 		draw_speech_bubble(ctx, path);
-		fz_fill_path(ctx, dev, path, 0, &tm, cs, white, 1.0f);
-		fz_stroke_path(ctx, dev, path, stroke, &tm, cs, black, 1.0f);
+//EBD >>>
+//		fz_fill_path(ctx, dev, path, 0, &tm, cs, white, 1.0f);
+//		fz_stroke_path(ctx, dev, path, stroke, &tm, cs, black, 1.0f);
+//EBD <<<
 
 		fz_transform_rect(&rect, page_ctm);
 		pdf_set_annot_appearance(ctx, doc, annot, &rect, dlist);
@@ -2126,7 +2130,9 @@ void pdf_set_signature_appearance(fz_context *ctx, pdf_document *doc, pdf_annot 
 		center_rect_within_rect(&logo_bounds, &rect, &logo_tm);
 		fz_concat(&logo_tm, &logo_tm, page_ctm);
 		cs = fz_device_rgb(ctx);
-		fz_fill_path(ctx, dev, path, 0, &logo_tm, cs, logo_color, 1.0f);
+//EBD>>>
+// 	    fz_fill_path(ctx, dev, path, 0, &logo_tm, cs, logo_color, 1.0f);
+//EBD<<<
 		fz_drop_colorspace(ctx, cs);
 		cs = NULL;
 
