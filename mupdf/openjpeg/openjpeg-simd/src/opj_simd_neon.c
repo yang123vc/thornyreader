@@ -45,8 +45,8 @@
 
 #include "opj_simd.h"
 
-//#include "StLog.h"
-//#define LCTX "OpenJPEG.SIMD"
+#include "StLog.h"
+#define LCTX "OpenJPEG.SIMD"
 
 static unsigned int simd_support = ~0;
 
@@ -71,6 +71,6 @@ int opj_init_simd()
     simd_support = 0;
   }
 
-  //INFO_L(LCTX, "SIMD support: %d", simd_support);
+  INFO_L(LCTX, "SIMD support: %d", simd_support);
   return simd_support;
 }

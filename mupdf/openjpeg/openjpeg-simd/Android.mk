@@ -12,8 +12,9 @@ LOCAL_MODULE := openjpeg-simd-arm7-neon
  
 LOCAL_MODULE_TAGS := release
 
-LOCAL_CFLAGS += -march=armv7-a -mfpu=neon
- 
+LOCAL_CFLAGS    := $(APP_CFLAGS)   -march=armv7-a -mfpu=neon
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
+
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/../openjpeg/include
@@ -35,6 +36,9 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := openjpeg-simd-arm8-neon
  
 LOCAL_MODULE_TAGS := release
+
+LOCAL_CFLAGS    := $(APP_CFLAGS)
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
@@ -58,8 +62,9 @@ LOCAL_MODULE := openjpeg-simd-sse
  
 LOCAL_MODULE_TAGS := release
 
-LOCAL_CFLAGS += -D__SSE__
- 
+LOCAL_CFLAGS    := $(APP_CFLAGS)   -D__SSE__
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
+
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/../openjpeg/include
@@ -82,6 +87,9 @@ LOCAL_MODULE := openjpeg-simd
  
 LOCAL_MODULE_TAGS := release
 
+LOCAL_CFLAGS    := $(APP_CFLAGS)
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
+
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/../openjpeg/include \
@@ -89,27 +97,27 @@ LOCAL_C_INCLUDES := \
  
 ifeq ($(TARGET_ARCH_ABI),armeabi)
 	LOCAL_SRC_FILES := src/opj_simd.c src/opj_simd_none.c
-	LOCAL_ARM_MODE := $(APP_ARM_MODE)
+	LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 endif # TARGET_ARCH_ABI == armeabi
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
-	LOCAL_CFLAGS += -march=armv7-a -mfpu=neon
+	LOCAL_CFLAGS    += -march=armv7-a -mfpu=neon
+	LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 	LOCAL_SRC_FILES := src/opj_simd.c src/opj_simd_neon.c
 	LOCAL_STATIC_LIBRARIES := openjpeg-simd-arm7-neon
-	LOCAL_ARM_MODE := $(APP_ARM_MODE)
 endif # TARGET_ARCH_ABI == armeabi-v7a
 
 ifeq ($(TARGET_ARCH_ABI),armeabi-v7a-hard)
-	LOCAL_CFLAGS += -march=armv7-a -mfpu=neon
+	LOCAL_CFLAGS    += -march=armv7-a -mfpu=neon
+	LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 	LOCAL_SRC_FILES := src/opj_simd.c src/opj_simd_neon.c
 	LOCAL_STATIC_LIBRARIES := openjpeg-simd-arm7-neon
-	LOCAL_ARM_MODE := $(APP_ARM_MODE)
 endif # TARGET_ARCH_ABI == armeabi-v7a
 
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
+	LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 	LOCAL_SRC_FILES := src/opj_simd.c src/opj_simd_neon.c
 	LOCAL_STATIC_LIBRARIES := openjpeg-simd-arm8-neon
-	LOCAL_ARM_MODE := $(APP_ARM_MODE)
 endif # TARGET_ARCH_ABI == arm64-v8a
 
 ifeq ($(TARGET_ARCH_ABI),x86)

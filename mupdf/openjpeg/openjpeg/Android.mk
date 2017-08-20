@@ -4,11 +4,16 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := openjpeg
 
+LOCAL_CFLAGS    := $(APP_CFLAGS)
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
+LOCAL_ARM_MODE  := $(APP_ARM_MODE)
+
 #LOCAL_CFLAGS += -DOPJ_PROFILE
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
-	$(LOCAL_PATH)/../openjpeg-simd/include
+	$(LOCAL_PATH)/../openjpeg-simd/include \
+	$(LOCAL_PATH)/../standalone/include
 
 LOCAL_SRC_FILES := \
 	src/bio.c \
@@ -33,7 +38,5 @@ LOCAL_SRC_FILES := \
 	src/tgt.c
 
 LOCAL_STATIC_LIBRARIES := openjpeg-simd
-
-LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
 include $(BUILD_STATIC_LIBRARY)

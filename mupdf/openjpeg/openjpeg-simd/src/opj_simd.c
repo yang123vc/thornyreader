@@ -4,8 +4,8 @@
 
 #include "opj_simd.h"
 
-//#include "StLog.h"
-//#define LCTX "OpenJPEG.SIMD"
+#include "StLog.h"
+#define LCTX "OpenJPEG.SIMD"
 
 int opj_simd_v4dwt_decode_available()
 {
