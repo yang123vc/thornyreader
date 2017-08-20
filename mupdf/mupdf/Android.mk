@@ -4,7 +4,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := mupdf
 
-LOCAL_CFLAGS    := $(APP_CFLAGS)    -DAA_BITS=8 -DNDEBUG -DHAVE_CONFIG_H
+LOCAL_CFLAGS    := $(APP_CFLAGS)    -DAA_BITS=8 -DNDEBUG
 LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
 LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 
@@ -23,8 +23,7 @@ LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/../openjpeg/openjpeg/include \
 	$(LOCAL_PATH)/../../thornyreader/include \
 	$(LOCAL_PATH)/include \
-	$(LOCAL_PATH)/generated \
-	$(LOCAL_PATH)/standalone \
+	$(LOCAL_PATH)/generated
 
 LOCAL_SRC_FILES := \
 	MuPdfMain.cpp \
@@ -175,6 +174,6 @@ LOCAL_SRC_FILES += \
 LOCAL_STATIC_LIBRARIES := thornyreader thornyhelper freetype jpeg-turbo jbig2dec openjpeg
 
 # uses libz, which is officially supported for NDK API
-LOCAL_LDLIBS := -lz -llog # -latomic
+LOCAL_LDLIBS := -lz -llog
 
 include $(BUILD_EXECUTABLE)

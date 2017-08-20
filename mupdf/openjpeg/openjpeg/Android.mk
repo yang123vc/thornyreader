@@ -13,7 +13,7 @@ LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/../openjpeg-simd/include \
-	$(LOCAL_PATH)/../standalone/include
+	$(LOCAL_PATH)/../../thornyreader/include
 
 LOCAL_SRC_FILES := \
 	src/bio.c \

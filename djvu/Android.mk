@@ -4,8 +4,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := djvu
 
-#LOCAL_CPP_FEATURES      += exceptions
-LOCAL_CFLAGS    := $(APP_CFLAGS)   -D__APPLE__ -DHAVE_CONFIG_H
+LOCAL_CPP_FEATURES      += exceptions
+LOCAL_CFLAGS    := $(APP_CFLAGS)    -DHAVE_CONFIG_H
 LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
 LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 
@@ -78,6 +78,6 @@ LOCAL_SRC_FILES :=  \
 	src/miniexp.cpp
 
 LOCAL_STATIC_LIBRARIES := thornyreader thornyhelper jpeg-turbo
-LOCAL_LDLIBS := -llog # -latomic
+LOCAL_LDLIBS := -llog
 
 include $(BUILD_EXECUTABLE)

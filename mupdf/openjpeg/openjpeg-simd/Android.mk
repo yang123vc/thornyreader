@@ -93,7 +93,7 @@ LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/../openjpeg/include \
- 	$(LOCAL_PATH)/../standalone/include
+ 	$(LOCAL_PATH)/../../../thornyreader/include
  
 ifeq ($(TARGET_ARCH_ABI),armeabi)
 	LOCAL_SRC_FILES := src/opj_simd.c src/opj_simd_none.c

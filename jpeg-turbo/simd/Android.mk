@@ -53,7 +53,7 @@ LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/src \
                     $(LOCAL_PATH)/../jpeg-turbo/android \
                     $(LOCAL_PATH)/../jpeg-turbo/include \
-                    $(LOCAL_PATH)/../standalone/include 
+                    $(LOCAL_PATH)/../../thornyreader/include
  
 ifeq ($(TARGET_ARCH_ABI),armeabi)
 	LOCAL_ARM_MODE  := $(APP_ARM_MODE)

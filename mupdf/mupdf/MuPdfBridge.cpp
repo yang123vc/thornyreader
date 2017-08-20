@@ -199,7 +199,7 @@ void MuPdfBridge::processSetLayersMask(CmdRequest& request, CmdResponse& respons
     }
 
     uint32_t layersMask = 0;
-    if (!CmdDataIterator(request.first).integer(&layersMask).isValid())
+    if (!CmdDataIterator(request.first).getInt(&layersMask).isValid())
     {
         ERROR_L(LCTX, "Bad request data");
         response.result = RES_BAD_REQ_DATA;
@@ -922,7 +922,7 @@ void MuPdfBridge::processGetLayersList(CmdRequest& request, CmdResponse& respons
 	ocg = ((pdf_document*) document)->ocg;
 	if (ocg)
 	{
-	    response.addValue(ocg->len);
+	    response.addInt(ocg->len);
 		for (int i = 0; i < ocg->len; i++)
 		{
 			pdf_obj* obj = pdf_load_object(ctx, (pdf_document*)document, ocg->ocgs[i].num, ocg->ocgs[i].gen);
@@ -930,14 +930,14 @@ void MuPdfBridge::processGetLayersList(CmdRequest& request, CmdResponse& respons
 			char *name;
 			name = pdf_to_utf8(ctx, (pdf_document*)document, pdf_dict_get(ctx, obj, PDF_NAME_Name));
 
-	    	response.addString(name, false);
+	    	response.addIpcString(name, false);
 
 			pdf_drop_obj(ctx, obj);
 		}
 	}
 	else
 	{
-	    response.addValue(0);
+	    response.addInt(0);
 	}
 }
 
