@@ -59,12 +59,11 @@ void StBridge::renice()
         }
     }
 
-    //INFO_L(lctx, "Process nice level should not be changed");
+    INFO_L(lctx, "Process nice level should not be changed");
 }
 
 int StBridge::main(int argc, char *argv[])
 {
-	INFO_L(lctx, "Plugin started");
     if (argc < 3)
     {
         ERROR_L(lctx, "No command line arguments");
@@ -77,7 +76,7 @@ int StBridge::main(int argc, char *argv[])
 
     ResponseQueue out(argv[2], O_WRONLY, lctx);
 
-    INFO_L(lctx, "Responding with ready notification");
+    INFO_L(lctx, "Sending ready notification...");
     out.sendReadyNotification();
 
     DEBUG_L(L_DEBUG, lctx, "Input  file: %s", argv[1]);
@@ -109,7 +108,7 @@ int StBridge::main(int argc, char *argv[])
         response.reset();
     }
 
-    INFO_L(lctx, "Plugin exits");
+    INFO_L(lctx, "Exit");
 
     return 0;
 }

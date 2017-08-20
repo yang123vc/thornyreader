@@ -15,7 +15,6 @@
  */
 
 #include <stdlib.h>
-#include <string.h>
 
 #include "StProtocol.h"
 #include "StLog.h"
@@ -333,6 +332,11 @@ int CmdDataIterator::getCount()
     return count;
 }
 
+uint32_t CmdDataIterator::getErrors()
+{
+    return errors;
+}
+
 CmdDataIterator& CmdDataIterator::getWords(uint16_t* v0, uint16_t* v1)
 {
     *v0 = *v1 = 0;
@@ -402,7 +406,7 @@ CmdDataIterator& CmdDataIterator::optionalByteArray(uint8_t** buffer, uint32_t* 
 {
     *buffer = NULL;
     if (len) {
-    	*len = 0;
+    *len = 0;
     }
     if (this->data == NULL)
     {
@@ -415,7 +419,7 @@ CmdDataIterator& CmdDataIterator::optionalByteArray(uint8_t** buffer, uint32_t* 
     else
     {
     	if (len) {
-    		*len = this->data->value.value32;
+        *len = this->data->value.value32;
 		}
         *buffer = this->data->external_array;
     }

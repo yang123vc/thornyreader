@@ -34,7 +34,7 @@ private:
 
 public:
     StFileDescriptor(const int fd)
-            : fd(fd)
+        : fd(fd)
     {
     }
     StFileDescriptor(const char* filename, const char* openmode)
@@ -47,7 +47,7 @@ public:
         fd = other.isValid() ? (::dup(other.fd)) : -1;
     }
     StFileDescriptor(StFileDescriptor&& other)
-            : fd(other.fd)
+        : fd(other.fd)
     {
         other.cleanup();
     }
@@ -90,17 +90,17 @@ private:
 
 public:
     StFile(const char* filename)
-            : fd(filename, "r"), filebuf(fd.asInt(), std::ios::in), file(&filebuf)
+        : fd(filename, "r"), filebuf(fd.asInt(), std::ios::in), file(&filebuf)
     {
     }
 
     StFile(int fileDescriptor)
-            : fd(fileDescriptor), filebuf(fd.asInt(), std::ios::in), file(&filebuf)
+        : fd(fileDescriptor), filebuf(fd.asInt(), std::ios::in), file(&filebuf)
     {
     }
 
     StFile(StFile& file)
-            : fd(file.fd), filebuf(fd.asInt(), std::ios::in), file(&filebuf) {}
+        : fd(file.fd), filebuf(fd.asInt(), std::ios::in), file(&filebuf) {}
 
     ~StFile() = default;
 

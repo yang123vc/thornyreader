@@ -89,6 +89,48 @@ public:
     }
 };
 
+class JIntArray
+{
+private:
+    JNIEnv *jenv;
+    jint* buf;
+    jintArray buffer;
+
+public:
+    JIntArray(JNIEnv *jenv, jintArray buffer)
+        : jenv(jenv), buffer(buffer)
+    {
+        buf = buffer ? jenv->GetIntArrayElements(buffer, 0) : NULL;
+    }
+
+    JIntArray(JIntArray&) = delete;
+    JIntArray(JIntArray&&) = default;
+    JIntArray& operator=(JIntArray const&) = delete;
+
+    ~JIntArray()
+    {
+        if (buffer && buf)
+        {
+            jenv->ReleaseIntArrayElements(buffer, buf, 0);
+        }
+    }
+
+    bool isValid() const
+    {
+        return buf != NULL;
+    }
+
+    jint* asBuffer() const
+    {
+        return buf;
+    }
+
+    jint& operator[](int index) {
+        return buf[index];
+    }
+};
+
+
 template <typename T>
 class JBuffer
 {
@@ -184,6 +226,8 @@ public:
         {
             jenv->ReleaseStringUTFChars(javaString, buf);
         }
+        javaString = NULL;
+        buf = NULL;
     }
 public:
     bool isValid() const

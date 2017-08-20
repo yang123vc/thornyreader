@@ -17,6 +17,8 @@
 #ifndef __STPROTOCOL_H__
 #define __STPROTOCOL_H__
 
+#include <stdint.h>
+
 #define REQ_HEADER_SIZE     1
 #define RES_HEADER_SIZE     2
 #define DATA_HEADER_SIZE    5
@@ -67,6 +69,12 @@
 #define CMD_REQ_PDF_GET_MISSED_FONTS   120
 #define CMD_RES_PDF_GET_MISSED_FONTS   121
 
+#define CMD_REQ_PDF_GET_LAYERS_LIST   118
+#define CMD_RES_PDF_GET_LAYERS_LIST   119
+
+#define CMD_REQ_PDF_SET_LAYERS_MASK   116
+#define CMD_RES_PDF_SET_LAYERS_MASK   117
+
 #define RES_OK              0
 #define RES_UNKNOWN_CMD     1
 #define RES_NO_FILE         2
@@ -76,7 +84,6 @@
 #define RES_BAD_REQ_DATA    6
 #define RES_MUPDF_PWD_WRONG 251
 #define RES_MUPDF_PWD_NEED  252
-#define RES_MUPDF_OOM       253
 #define RES_MUPDF_FAIL      254
 
 #define TYPE_NONE           0
@@ -91,8 +98,6 @@
 #define OUTLINE_TARGET_PAGE 			1
 #define OUTLINE_TARGET_URI				2
 #define OUTLINE_TARGET_XPATH			10
-
-#include <stdint.h>
 
 class CmdData
 {
@@ -144,6 +149,7 @@ public:
     bool isValid();
     bool isValid(int index);
     int getCount();
+    uint32_t getErrors();
 
     CmdDataIterator& getWords(uint16_t* v0, uint16_t* v1);
     CmdDataIterator& getInt(uint32_t* v0);
