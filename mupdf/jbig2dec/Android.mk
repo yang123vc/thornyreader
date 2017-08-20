@@ -6,7 +6,9 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := jbig2dec
 
-LOCAL_CFLAGS 		+= -DHAVE_CONFIG_H
+LOCAL_CFLAGS    := $(APP_CFLAGS)
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
+LOCAL_ARM_MODE  := $(APP_ARM_MODE)
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
 
@@ -30,7 +32,5 @@ LOCAL_SRC_FILES := \
 	src/jbig2dec.c \
 	src/sha1.c \
 	src/memento.c
-
-LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
 include $(BUILD_STATIC_LIBRARY)
