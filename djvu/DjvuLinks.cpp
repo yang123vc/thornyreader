@@ -197,7 +197,7 @@ void parseLink(ddjvu_document_t *doc, int pageNo, ddjvu_pageinfo_t *pi, miniexp_
     }
     else
     {
-        response.addWords(PAGE_LINK, 0);
+        response.addWords(URI_LINK, 0);
         response.addIpcString(url_target != NULL ? url : EMPTY_URL, false);
         response.addFloat(data[0]);
         response.addFloat(data[1]);

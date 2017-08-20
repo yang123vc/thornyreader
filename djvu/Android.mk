@@ -1,13 +1,14 @@
 LOCAL_PATH := $(call my-dir)
+
 include $(CLEAR_VARS)
-LOCAL_MODULE := djvu
-LOCAL_ARM_MODE := $(APP_ARM_MODE)
 
-LOCAL_STATIC_LIBRARIES  := thornyreader jpeg-turbo thornyhelper
-LOCAL_LDLIBS            += -llog -latomic
-LOCAL_CPP_FEATURES      += exceptions
+LOCAL_MODULE    := djvu
 
-LOCAL_CFLAGS 		    += -DHAVE_CONFIG_H
+#LOCAL_CPP_FEATURES      += exceptions
+LOCAL_CFLAGS    := $(APP_CFLAGS)   -D__APPLE__ -DHAVE_CONFIG_H
+LOCAL_CPPFLAGS  := $(APP_CPPFLAGS)
+LOCAL_ARM_MODE  := $(APP_ARM_MODE)
+
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/../thornyreader/include \
@@ -75,5 +76,8 @@ LOCAL_SRC_FILES :=  \
 	src/debug.cpp \
 	src/ddjvuapi.cpp \
 	src/miniexp.cpp
+
+LOCAL_STATIC_LIBRARIES := thornyreader thornyhelper jpeg-turbo
+LOCAL_LDLIBS := -llog # -latomic
 
 include $(BUILD_EXECUTABLE)

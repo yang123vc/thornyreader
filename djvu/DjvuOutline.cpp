@@ -15,7 +15,6 @@
  */
 
 #include <stdlib.h>
-#include <string.h>
 
 #include "StLog.h"
 #include "StProtocol.h"
@@ -120,11 +119,12 @@ DjvuOutlineItem::~DjvuOutlineItem()
 
 void DjvuOutlineItem::toResponse(CmdResponse& response)
 {
-	response.addWords((uint16_t) PAGE_LINK, (uint16_t) this->pageNo);
+    response.addWords((uint16_t) PAGE_LINK, (uint16_t) this->pageNo);
 	response.addInt((uint32_t) this->level);
-
 	response.addIpcString(this->title != NULL ? this->title : EMPTY_TITLE, false);
     response.addFloat(.0f).addFloat(.0f);
+
+    DEBUG_L(L_DEBUG_OUTLINE, LCTX, "[%d:%d] %d", this->level, this->index, response.dataCount);
 
     if (firstChild != NULL)
     {

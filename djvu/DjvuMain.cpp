@@ -21,5 +21,6 @@ int main(int argc, char *argv[])
 {
     ThornyReaderStart("djvu");
     DjvuBridge djvu;
+
     return djvu.main(argc, argv);
 }

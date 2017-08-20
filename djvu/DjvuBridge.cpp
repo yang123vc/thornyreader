@@ -19,6 +19,7 @@
 #include "StLog.h"
 #include "StProtocol.h"
 #include "StSocket.h"
+
 #include "DjvuBridge.h"
 #include "thornyreader.h"
 #include "bitmaputils.h"
@@ -405,9 +406,7 @@ void DjvuBridge::processPageRender(CmdRequest& request, CmdResponse& response)
             (ddjvu_render_mode_t) HARDCONFIG_DJVU_RENDERING_MODE,
             &pageRect,
             &targetRect,
-            pixelFormat,
-            targetWidth * 4,
-            pixels);
+        pixelFormat, targetWidth * 4, pixels);
 
     ddjvu_format_release(pixelFormat);
 
