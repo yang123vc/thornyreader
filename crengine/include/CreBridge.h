@@ -22,6 +22,7 @@ protected:
     void processQuit(CmdRequest& request, CmdResponse& response);
     void processOutline(CmdRequest& request, CmdResponse& response);
     void processPage(CmdRequest& request, CmdResponse& response);
+    void processPageLinks(CmdRequest& request, CmdResponse& response);
     void processPageRender(CmdRequest& request, CmdResponse& response);
     void processPageByXPath(CmdRequest& request, CmdResponse& response);
     void processPageXPath(CmdRequest& request, CmdResponse& response);

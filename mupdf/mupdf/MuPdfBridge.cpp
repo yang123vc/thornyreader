@@ -107,6 +107,9 @@ void MuPdfBridge::process(CmdRequest& request, CmdResponse& response)
     case CMD_REQ_PAGE:
         processPage(request, response);
         break;
+    case CMD_REQ_LINKS:
+        processPageLinks(request, response);
+        break;
     case CMD_REQ_PAGE_RENDER:
         processPageRender(request, response);
         break;
@@ -477,14 +480,11 @@ void MuPdfBridge::processPage(CmdRequest& request, CmdResponse& response)
 #endif
 
     fz_page* p = getPage(pageNumber, true);
-
     if (p == NULL)
     {
         response.result = RES_MUPDF_FAIL;
         return;
     }
-
-    processLinks(pageNumber, response);
 }
 
 void MuPdfBridge::processPageFree(CmdRequest& request, CmdResponse& response)
@@ -939,6 +939,38 @@ void MuPdfBridge::processGetLayersList(CmdRequest& request, CmdResponse& respons
 	{
 	    response.addInt(0);
 	}
+}
+
+void MuPdfBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
+{
+    response.cmd = CMD_RES_LINKS;
+    if (request.dataCount == 0)
+    {
+        ERROR_L(LCTX, "No request data found");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    uint32_t pageNumber = 0;
+    CmdDataIterator iter(request.first);
+    if (!iter.getInt(&pageNumber).isValid())
+    {
+        ERROR_L(LCTX, "Bad request data");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    if (document == NULL)
+    {
+        ERROR_L(LCTX, "Document not yet opened");
+        response.result = RES_DUP_OPEN;
+        return;
+    }
+    if (pageNumber >= pageCount)
+    {
+        ERROR_L(LCTX, "Bad page index: %d", pageNumber);
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    processLinks(pageNumber, response);
 }
 
 

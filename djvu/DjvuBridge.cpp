@@ -104,6 +104,9 @@ void DjvuBridge::process(CmdRequest& request, CmdResponse& response)
     case CMD_REQ_PAGE:
         processPage(request, response);
         break;
+    case CMD_REQ_LINKS:
+        processPageLinks(request, response);
+        break;
     case CMD_REQ_PAGE_RENDER:
         processPageRender(request, response);
         break;
@@ -299,8 +302,6 @@ void DjvuBridge::processPage(CmdRequest& request, CmdResponse& response)
         response.result = RES_DJVU_FAIL;
         return;
     }
-
-    processLinks(pageNumber, response);
 }
 
 void DjvuBridge::processPageFree(CmdRequest& request, CmdResponse& response)
@@ -540,6 +541,38 @@ void DjvuBridge::handleMessages()
         }
         ddjvu_message_pop(context);
     }
+}
+
+void DjvuBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
+{
+    response.cmd = CMD_RES_LINKS;
+    if (request.dataCount == 0)
+    {
+        ERROR_L(LCTX, "No request data found");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    uint32_t pageNumber = 0;
+    CmdDataIterator iter(request.first);
+    if (!iter.getInt(&pageNumber).isValid())
+    {
+        ERROR_L(LCTX, "Bad request data");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    if (doc == NULL)
+    {
+        ERROR_L(LCTX, "Document not yet opened");
+        response.result = RES_DUP_OPEN;
+        return;
+    }
+    if (pageNumber >= pageCount)
+    {
+        ERROR_L(LCTX, "Bad page index: %d", pageNumber);
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    processLinks(pageNumber, response);
 }
 
 void DjvuBridge::processSmartCrop(CmdRequest& request, CmdResponse& response)

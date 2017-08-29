@@ -343,7 +343,11 @@ void CreBridge::processPageRender(CmdRequest& request, CmdResponse& response)
 void CreBridge::processPage(CmdRequest& request, CmdResponse& response)
 {
     response.cmd = CMD_RES_PAGE;
-    //processLinks(pageNumber, response);
+}
+
+void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
+{
+    response.cmd = CMD_RES_LINKS;
 }
 
 void CreBridge::processPageByXPath(CmdRequest& request, CmdResponse& response)
@@ -454,6 +458,9 @@ void CreBridge::process(CmdRequest& request, CmdResponse& response)
         break;
     case CMD_REQ_PAGE:
         processPage(request, response);
+        break;
+    case CMD_REQ_LINKS:
+        processPageLinks(request, response);
         break;
     case CMD_REQ_PAGE_RENDER:
         processPageRender(request, response);
