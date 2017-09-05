@@ -1,5 +1,4 @@
-/** \file lvfntman.h
-    \brief font manager interface
+/** Font manager interface
 
     CoolReader Engine
 
@@ -9,7 +8,6 @@
     GNU General Public License.
 
     See LICENSE file for details.
-
 */
 
 #ifndef __LV_FNT_MAN_H_INCLUDED__
@@ -87,7 +85,7 @@ struct LVFontGlyphCacheItem
     lInt8  origin_y;
     lUInt8 advance;
     lUInt8 bmp[1];
-    //=======================================================================
+
     int getSize()
     {
         return sizeof(LVFontGlyphCacheItem)
@@ -116,18 +114,13 @@ struct LVFontGlyphCacheItem
     }
 };
 
-
 enum hinting_mode_t {
     HINTING_MODE_DISABLED,
     HINTING_MODE_BYTECODE_INTERPRETOR,
     HINTING_MODE_AUTOHINT
 };
 
-
-/** \brief base class for fonts
-
-    implements single interface for font of any engine
-*/
+/// Base class for fonts implements single interface for font of any engine
 class LVFont : public LVRefCounter
 {
 protected:
@@ -379,9 +372,16 @@ public:
     /// returns font family id
     virtual css_font_family_t getFontFamily() const { return _family; }
     /// draws text string
-    virtual void DrawTextString( LVDrawBuf * buf, int x, int y, 
-                       const lChar16 * text, int len, 
-                       lChar16 def_char, lUInt32 * palette, bool addHyphen, lUInt32 flags=0, int letter_spacing=0 );
+    virtual void DrawTextString(LVDrawBuf* buf,
+                                int x,
+                                int y,
+                                const lChar16* text,
+                                int len,
+                                lChar16 def_char,
+                                lUInt32* palette,
+                                bool addHyphen,
+                                lUInt32 flags=0,
+                                int letter_spacing=0);
 };
 
 #define LVFONT_TRANSFORM_EMBOLDEN 1

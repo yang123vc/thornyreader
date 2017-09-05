@@ -8256,9 +8256,6 @@ LVStreamRef CrDom::getObjectImageStream( lString16 refName )
                 fname = LVExtractFilenameWithoutExtension(fname);
                 if ( !fname.empty() ) {
                     lString16 fn = fname + "_img";
-//                    if ( getDocParentContainer()->GetObjectInfo(fn) ) {
-
-//                    }
                     lString16 name = fn + "/" + refName;
                     if ( !getCodeBase().empty() )
                         name = getCodeBase() + name;

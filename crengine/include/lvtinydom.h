@@ -85,7 +85,7 @@ typedef enum {
 
 /// final block cache
 typedef LVRef<LFormattedText> LFormattedTextRef;
-typedef LVCacheMap< ldomNode *, LFormattedTextRef> CVRendBlockCache;
+typedef LVCacheMap<ldomNode*, LFormattedTextRef> CVRendBlockCache;
 
 /// XPath step kind
 typedef enum {
