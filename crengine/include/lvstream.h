@@ -135,7 +135,6 @@ public:
     virtual lverror_t SetMode( lvopen_mode_t ) { return LVERR_NOTIMPL; }
     /// flushes unsaved data from buffers to file, with optional flush of OS buffers
     virtual lverror_t Flush( bool /*sync*/ ) { return LVERR_OK; }
-    virtual lverror_t Flush( bool sync, CRTimerUtil & /*timeout*/ ) { return Flush(sync); }
 
     /// Seek (change file pos)
     /**

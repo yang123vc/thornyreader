@@ -1006,7 +1006,6 @@ public:
         if ( m_fd==-1 )
             return LVERR_FAIL;
         if ( sync ) {
-//            CRTimerUtil timer;
 //            CRLog::trace("calling fsync");
             fsync( m_fd );
 //            CRLog::trace("fsync took %d ms", (int)timer.elapsed());
@@ -2009,7 +2008,6 @@ public:
         return LVERR_NOTIMPL;
     }
 };
-
 
 #pragma pack(push, 1)
 typedef struct {
@@ -3898,12 +3896,8 @@ class LVBlockWriteStream : public LVNamedStream
 
 
 public:
-    virtual lverror_t Flush( bool sync ) {
-        CRTimerUtil infinite;
-        return Flush(sync, infinite);
-    }
     /// flushes unsaved data from buffers to file, with optional flush of OS buffers
-    virtual lverror_t Flush( bool sync, CRTimerUtil & timeout )
+    virtual lverror_t Flush(bool sync)
     {
 #if TRACE_BLOCK_WRITE_STREAM
         CRLog::trace("flushing unsaved blocks");
@@ -3915,12 +3909,6 @@ public:
                 res = LVERR_FAIL;
             p = p->next;
             delete tmp;
-            if (!sync && timeout.expired()) {
-                //CRLog::trace("LVBlockWriteStream::flush - timeout expired");
-                _firstBlock = p;
-                return LVERR_OK;
-            }
-
         }
         _firstBlock = NULL;
         _baseStream->Flush( sync );

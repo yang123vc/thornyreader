@@ -1,7 +1,6 @@
+#include <android/log.h>
 #include "include/trlog.h"
 #include "include/thornyreader.h"
-#include <android/log.h>
-
 
 static CRLog::LogLevel log_level_ = CRLog::TRACE;
 
@@ -30,6 +29,12 @@ void CRLog::fatal(const char* msg, ...)
     va_start(args, msg);
     __android_log_vprint(ANDROID_LOG_FATAL, THORNYREADER_LOG_TAG, msg, args);
     va_end(args);
+}
+
+void crFatalError(int code, const char* errorText)
+{
+    CRLog::error("FATAL ERROR! CODE:%d: MSG:%s", code, errorText);
+    //exit(errorCode);
 }
 
 void CRLog::error(const char* msg, ...)
@@ -86,3 +91,4 @@ void CRLog::trace(const char* msg, ...)
     __android_log_vprint(ANDROID_LOG_VERBOSE, THORNYREADER_LOG_TAG, msg, args);
     va_end(args);
 }
+

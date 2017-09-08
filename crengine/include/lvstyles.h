@@ -11,7 +11,6 @@
 #define __LV_STYLES_H_INCLUDED__
 
 #include "cssdef.h"
-#include "lvmemman.h"
 #include "lvrefcache.h"
 #include "lvtextfm.h"
 #include "lvfntman.h"

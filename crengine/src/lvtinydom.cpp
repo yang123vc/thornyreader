@@ -4269,16 +4269,18 @@ void ldomXRangeList::splitText( ldomMarkedTextList &dst, ldomNode * textNodeToSp
 }
 
 /// returns rectangle (in doc coordinates) for range. Returns true if found.
-bool ldomXRange::getRect( lvRect & rect )
+bool ldomXRange::getRect(lvRect& rect)
 {
-    if ( isNull() )
+    if (isNull()) {
         return false;
+    }
     // get start and end rects
     lvRect rc1;
     lvRect rc2;
-    if ( !getStart().getRect(rc1) || !getEnd().getRect(rc2) )
+    if (!getStart().getRect(rc1) || !getEnd().getRect(rc2)) {
         return false;
-    if ( rc1.top == rc2.top && rc1.bottom == rc2.bottom ) {
+    }
+    if (rc1.top == rc2.top && rc1.bottom == rc2.bottom) {
         // on same line
         rect.left = rc1.left;
         rect.top = rc1.top;
@@ -4287,9 +4289,10 @@ bool ldomXRange::getRect( lvRect & rect )
         return !rect.isEmpty();
     }
     // on different lines
-    ldomNode * parent = getNearestCommonParent();
-    if ( !parent )
+    ldomNode* parent = getNearestCommonParent();
+    if (!parent) {
         return false;
+    }
     parent->getAbsRect(rect);
     rect.top = rc1.top;
     rect.bottom = rc2.bottom;

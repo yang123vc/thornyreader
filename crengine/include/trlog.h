@@ -28,4 +28,8 @@ private:
     ~CRLog();
 };
 
+/// fatal error function calls fatal error handler
+void crFatalError( int code, const char * errorText );
+inline void crFatalError() { crFatalError( -1, "Unknown fatal error" ); }
+
 #endif //THORNYREADER_LOG_H

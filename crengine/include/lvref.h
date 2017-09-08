@@ -14,7 +14,6 @@
 #define __LVREF_H_INCLUDED__
 
 #include "lvtypes.h"
-#include "lvmemman.h"
 #include "lvautoptr.h"
 
 /// Memory manager pool for ref counting

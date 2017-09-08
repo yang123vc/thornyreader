@@ -40,7 +40,6 @@ LOCAL_SRC_FILES := \
     src/lvfnt.cpp \
     src/lvfntman.cpp \
     src/lvimg.cpp \
-    src/lvmemman.cpp \
     src/lvpagesplitter.cpp \
     src/lvrend.cpp \
     src/lvstream.cpp \

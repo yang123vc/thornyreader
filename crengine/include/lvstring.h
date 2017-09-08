@@ -13,12 +13,22 @@
 #ifndef __LV_STRING_H_INCLUDED__
 #define __LV_STRING_H_INCLUDED__
 
-#include "trlog.h"
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include "trlog.h"
 #include "lvtypes.h"
-#include "lvmemman.h"
+
+/// typed realloc with result check (size is counted in T), fatal error if failed
+template <typename T> T * cr_realloc(T * ptr, size_t new_size) {
+    T * newptr = reinterpret_cast<T*>(realloc(ptr, sizeof(T)*new_size));
+    if (newptr) {
+        return newptr;
+    }
+    free(ptr); // to bypass cppcheck warning
+    crFatalError(-2, "realloc failed");
+    return NULL;
+}
 
 #define UNICODE_SOFT_HYPHEN_CODE 0x00ad
 #define UNICODE_ZERO_WIDTH_SPACE 0x200b

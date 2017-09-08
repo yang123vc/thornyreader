@@ -152,7 +152,6 @@ void CreBridge::processConfig(CmdRequest& request, CmdResponse& response)
             return;
         }
         const char* val = reinterpret_cast<const char*>(temp_val);
-
         if (key == CONFIG_CRE_VIEWPORT_WIDTH) {
             int int_val = atoi(val);
             doc_view_->Resize(int_val, doc_view_->height_);
@@ -276,7 +275,6 @@ void CreBridge::processOpen(CmdRequest& request, CmdResponse& response)
 {
     response.cmd = CMD_RES_OPEN;
     CmdDataIterator iter(request.first);
-
     uint32_t doc_format = 0;
     uint8_t* socket_name = NULL;
     uint8_t* file_name = NULL;
@@ -285,7 +283,6 @@ void CreBridge::processOpen(CmdRequest& request, CmdResponse& response)
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-
     StSocketConnection connection((const char*) socket_name);
     if (!connection.isValid()) {
         response.result = RES_BAD_REQ_DATA;
@@ -308,7 +305,6 @@ void CreBridge::processPageRender(CmdRequest& request, CmdResponse& response)
     //CRLog::trace("processPageRender START");
     response.cmd = CMD_RES_PAGE_RENDER;
     CmdDataIterator iter(request.first);
-
     uint32_t page;
     uint32_t width;
     uint32_t height;
@@ -329,7 +325,6 @@ void CreBridge::processPageRender(CmdRequest& request, CmdResponse& response)
         return;
     }
     doc_view_->GoToPage(ImportPage(page, doc_view_->GetColumns()));
-
     CmdData* resp = new CmdData();
     unsigned char* pixels = resp->newByteArray(width * height * 4);
     LVColorDrawBuf* buf = new LVColorDrawBuf(width, height, pixels, 32);
@@ -348,6 +343,82 @@ void CreBridge::processPage(CmdRequest& request, CmdResponse& response)
 void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
 {
     response.cmd = CMD_RES_LINKS;
+    CmdDataIterator iter(request.first);
+    uint32_t page = 0;
+    iter.getInt(&page);
+    if (!iter.isValid()) {
+        CRLog::error("processPageLinks bad request data");
+        response.result = RES_BAD_REQ_DATA;
+        return;
+    }
+    doc_view_->GoToPage(ImportPage(page, doc_view_->GetColumns()));
+    ldomXRangeList list;
+    doc_view_->GetCurrentPageLinks(list);
+    if (list.empty()) {
+        return;
+    }
+    float page_width = doc_view_->GetWidth();
+    float page_height = doc_view_->GetHeight();
+    float page_top = page_height * ImportPage(page, doc_view_->GetColumns());
+    CRLog::trace("processPageLinks page=%d page_width=%.0f page_height=%.0f page_top=%.0f",
+                 page, page_width, page_height, page_top);
+    for (int i = 0; i < list.length(); i++) {
+        ldomXRange* link = list[i];
+        lvRect rect;
+        link->getRect(rect);
+        lvPoint top_left = rect.topLeft();
+        lvPoint bottom_right = rect.bottomRight();
+        if (doc_view_->DocToWindowPoint(top_left) && doc_view_->DocToWindowPoint(bottom_right)) {
+            rect.setTopLeft(top_left);
+            rect.setBottomRight(bottom_right);
+        } else {
+            CRLog::warn("processPageLink DocToWindowPoint fail");
+        }
+        float l = rect.left / page_width;
+        float t = rect.top / page_height;
+        float r = rect.right / page_width;
+        float b = rect.bottom / page_height;
+        lString16 href = link->getHRef();
+        if (href.length() > 1 && href[0] == '#') {
+            lString16 ref = href.substr(1, href.length() - 1);
+            lUInt16 id = doc_view_->GetCrDom()->getAttrValueIndex(ref.c_str());
+            ldomNode* node = doc_view_->GetCrDom()->getNodeById(id);
+            if (node) {
+                ldomXPointer position(node, 0);
+                uint16_t target_page = (uint16_t) doc_view_->GetPageForBookmark(position);
+                target_page = (uint16_t) ExportPage(doc_view_->GetColumns(), target_page);
+                response.addWords(LINK_TARGET_PAGE, target_page);
+                response.addFloat(l);
+                response.addFloat(t);
+                response.addFloat(r);
+                response.addFloat(b);
+                response.addFloat(.0F);
+                response.addFloat(.0F);
+                CRLog::trace("processPageLinks %d:%d %d:%d %.5f:%.5f %.5f:%.5f %d %s",
+                             rect.left, rect.right, rect.top, rect.bottom, l, r, t, b, target_page, LCSTR(href));
+                continue;
+            }
+        }
+        if (href.startsWith("http:") || href.startsWith("https:")) {
+            response.addWords(LINK_TARGET_URI, 0);
+            responseAddString(response, href);
+            response.addFloat(l);
+            response.addFloat(t);
+            response.addFloat(r);
+            response.addFloat(b);
+            CRLog::trace("processPageLinks %d:%d %d:%d %.5f:%.5f %.5f:%.5f %s",
+                         rect.left, rect.right, rect.top, rect.bottom, l, r, t, b, LCSTR(href));
+            continue;
+        }
+        response.addWords(LINK_TARGET_UNKNOWN, 0);
+        responseAddString(response, href);
+        response.addFloat(l);
+        response.addFloat(t);
+        response.addFloat(r);
+        response.addFloat(b);
+        CRLog::trace("processPageLinks %d:%d %d:%d %.5f:%.5f %.5f:%.5f %s",
+                     rect.left, rect.right, rect.top, rect.bottom, l, r, t, b, LCSTR(href));
+    }
 }
 
 void CreBridge::processPageByXPath(CmdRequest& request, CmdResponse& response)

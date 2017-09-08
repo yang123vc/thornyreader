@@ -22,7 +22,6 @@
 #ifndef __LV_TINYDOM_H_INCLUDED__
 #define __LV_TINYDOM_H_INCLUDED__
 
-#include "lvmemman.h"
 #include "lvstring.h"
 #include "lstridmap.h"
 #include "lvxml.h"
@@ -1341,25 +1340,22 @@ class ldomXRange {
     ldomXPointerEx _end;
     lUInt32 _flags;
 public:
-    ldomXRange()
-        : _flags(0)
-    {
-    }
+    ldomXRange() : _flags(0) { }
     ldomXRange( const ldomXPointerEx & start, const ldomXPointerEx & end, lUInt32 flags=0 )
-    : _start( start ), _end( end ), _flags(flags)
+            : _start( start ), _end( end ), _flags(flags)
     {
     }
     ldomXRange( const ldomXPointer & start, const ldomXPointer & end )
-    : _start( start ), _end( end ), _flags(0)
+            : _start( start ), _end( end ), _flags(0)
     {
     }
     /// copy constructor
     ldomXRange( const ldomXRange & v )
-    : _start( v._start ), _end( v._end ), _flags(v._flags)
+            : _start( v._start ), _end( v._end ), _flags(v._flags)
     {
     }
     ldomXRange( const ldomWord & word )
-        : _start( word.getStartXPointer() ), _end( word.getEndXPointer() ), _flags(1)
+            : _start( word.getStartXPointer() ), _end( word.getEndXPointer() ), _flags(1)
     {
     }
     /// if start is after end, swap start and end
@@ -1429,7 +1425,6 @@ public:
     bool getRect( lvRect & rect );
     /// returns nearest common element for start and end points
     ldomNode * getNearestCommonParent();
-
     /// searches for specified text inside range
     bool findText(lString16 pattern, bool caseInsensitive, bool reverse, LVArray<ldomWord>& words,
                   int maxCount, int maxHeight, bool checkMaxFromStart = false);

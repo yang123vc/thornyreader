@@ -101,6 +101,12 @@
 #define OUTLINE_TARGET_URI				2
 #define OUTLINE_TARGET_XPATH			10
 
+#define LINK_TARGET_PAGE                1
+#define LINK_TARGET_URI                 2
+#define LINK_TARGET_OUTER_PAGE          3
+#define LINK_TARGET_LAUNCH              4
+#define LINK_TARGET_UNKNOWN             10
+
 class CmdData
 {
 public:

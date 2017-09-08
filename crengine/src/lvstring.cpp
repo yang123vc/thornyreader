@@ -11,11 +11,13 @@
 
 *******************************************************/
 
-#include "include/lvstring.h"
-#include <assert.h>
 #include <stdio.h>
-
+#include <assert.h>
 #include <zlib.h>
+#include "include/lvstring.h"
+#include "include/lvref.h"
+
+ref_count_rec_t ref_count_rec_t::null_ref(NULL);
 
 #define LS_DEBUG_CHECK
 
