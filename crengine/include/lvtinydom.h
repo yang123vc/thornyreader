@@ -265,7 +265,6 @@ public:
     ~ldomTextStorageChunk();
 };
 
-// Forward declaration
 class ldomNode;
 
 #define TNC_PART_COUNT 1024
@@ -274,7 +273,7 @@ class ldomNode;
 #define TNC_PART_LEN (1<<TNC_PART_SHIFT)
 #define TNC_PART_MASK (TNC_PART_LEN-1)
 
-/// storage of ldomNode
+/// Storage of ldomNode
 class CrDomBase
 {
     friend class ldomNode;
@@ -413,9 +412,9 @@ class ldomNode
 private:
     static CrDom* _domInstances[MAX_DOM_INSTANCES];
     /// adds document to list, returns ID of allocated document, -1 if no space in instance array
-    static int registerDom( CrDom * doc );
+    static int registerDom(CrDom* doc);
     /// removes document from list
-    static void unregisterDom( CrDom * doc );
+    static void unregisterDom(CrDom* doc);
 
     // types for _handle._type
     enum {
@@ -423,7 +422,6 @@ private:
         NT_ELEMENT=1,    // mutable element node
         NT_PTEXT=2,      // immutable (persistent) text node
         NT_PELEMENT=3   // immutable (persistent) element node
-
     };
 
     /// 0: packed 32bit data field
@@ -460,18 +458,14 @@ private:
     void setParentNode( ldomNode * newParent );
     /// add child
     void addChild( lInt32 childNodeIndex );
-
     /// call to invalidate cache if persistent node content is modified
     void modified();
-
     /// returns copy of render data structure
     void getRenderData( lvdomElementFormatRec & dst);
     /// sets new value for render data structure
     void setRenderData( lvdomElementFormatRec & newData);
-
     void autoboxChildren( int startIndex, int endIndex );
     void removeChildren( int startIndex, int endIndex );
-
 public:
     /// if stylesheet file name is set, and file is found, set stylesheet to its value
     bool applyNodeStylesheet();
@@ -485,7 +479,6 @@ public:
     void initNodeStyleRecursive();
     /// remove node, clear resources
     void destroy();
-
     /// returns true for invalid/deleted node ot NULL this pointer
     inline bool isNull() const { return this == NULL || _handle._dataIndex==0; }
     /// returns true if node is stored in persistent storage
@@ -519,7 +512,6 @@ public:
     inline bool hasChildren() { return getChildCount()!=0; }
     /// returns true if node is element has attributes
     inline bool hasAttributes() const { return getAttrCount()!=0; }
-
     /// returns element child count
     int getChildCount() const;
     /// returns element attribute count
@@ -547,20 +539,17 @@ public:
     /// returns attribute name by index
     const lString16 & getAttributeName( lUInt32 ) const;
     /// sets attribute value
-    void setAttributeValue( lUInt16 , lUInt16 , const lChar16 *  );
-
+    void setAttributeValue( lUInt16 , lUInt16 , const lChar16 * );
     /// returns attribute value by attribute name id
     inline const lString16& getAttributeValue(lUInt16 id) const
     {
         return getAttributeValue(LXML_NS_ANY, id);
     }
-
     /// returns true if element node has attribute with specified name id
     inline bool hasAttribute(lUInt16 id) const
     {
         return hasAttribute(LXML_NS_ANY, id);
     }
-
     /// returns element type structure pointer if it was set in document for this element name
     const css_elem_def_props_t * getElementTypePtr();
     /// returns element name id
@@ -575,7 +564,6 @@ public:
     bool isNodeName(const char * name) const;
     /// returns element namespace name
     const lString16 & getNodeNsName() const;
-
     /// returns child node by index
     ldomNode * getChildNode( lUInt32 index ) const;
     /// returns true child node is element
@@ -588,7 +576,6 @@ public:
     /// returns child node by index, NULL if node with this index is not element
     /// or nodeTag!=0 and element node name!=nodeTag
     ldomNode * getChildElementNode( lUInt32 index, const lChar16 * nodeTag ) const;
-
     /// returns text node text as wide string
     lString16 getText( lChar16 blockDelimiter = 0, int maxSize=0 ) const;
     /// returns text node text as utf8 string
@@ -597,7 +584,6 @@ public:
     void setText( lString16 );
     /// sets text node text as utf8 string
     void setText8( lString8 );
-
     /// returns node absolute rectangle
     void getAbsRect( lvRect & rect );
     /// sets node rendering structure pointer
@@ -608,17 +594,14 @@ public:
     void recurseElementsDeepFirst( void (*pFun)( ldomNode * node ) );
     /// calls specified function recursively for all nodes of DOM tree
     void recurseNodes( void (*pFun)( ldomNode * node ) );
-
     /// returns first text child element
     ldomNode * getFirstTextChild( bool skipEmpty=false );
     /// returns last text child element
     ldomNode * getLastTextChild();
-
     /// find node by coordinates of point in formatted document
     ldomNode * elementFromPoint( lvPoint pt, int direction );
     /// find final node by coordinates of point in formatted document
     ldomNode * finalBlockFromPoint( lvPoint pt );
-
     // rich interface stubs for supporting Element operations
     /// returns rendering method
     lvdom_element_render_method getRendMethod();
@@ -656,10 +639,8 @@ public:
     ldomNode * insertChildText(const lString8 & value);
     /// remove child
     ldomNode * removeChild( lUInt32 index );
-
     /// returns XPath segment for this element relative to parent element (e.g. "p[10]")
     lString16 getXPathSegment();
-
     /// creates stream to read base64 encoded data from element
     LVStreamRef createBase64Stream();
     /// returns object image source
@@ -676,7 +657,6 @@ public:
     ldomNode * persist();
     /// replace node with r/w implementation
     ldomNode * modify();
-
     /// for display:list-item node, get marker
     bool getNodeListMarker( int & counterValue, lString16 & marker, int & markerWidth );
 };
@@ -894,18 +874,8 @@ protected:
     SerialBuf _pagesData;
 };
 
-/*
-struct lxmlNode
-{
-    lUInt32 parent;
-    lUInt8  nodeType;
-    lUInt8  nodeLevel;
-};
-*/
-
 struct lxmlAttribute
 {
-    //
     lUInt16 nsid;
     lUInt16 id;
     lUInt16 index;
@@ -925,7 +895,6 @@ class CrDom;
 
 /**
  * @brief XPointer/XPath object with reference counting.
- * 
  */
 class ldomXPointer
 {
@@ -1052,7 +1021,6 @@ public:
     {
         return relative( lString16(relativePath) );
     }
-
     /// returns true for NULL pointer
 	bool isNull() const
 	{
@@ -1090,7 +1058,7 @@ public:
     /// converts to string
 	lString16 toString();
     /// returns XPath node text
-    lString16 getText(  lChar16 blockDelimiter=0 )
+    lString16 getText(lChar16 blockDelimiter=0)
     {
         ldomNode * node = getNode();
         if ( !node )
@@ -1124,26 +1092,19 @@ public:
     /// returns node level
     int getLevel() { return _level; }
     /// default constructor
-    ldomXPointerEx()
-	    : ldomXPointer()
-    {
-        initIndex();
-    }
+    ldomXPointerEx() : ldomXPointer() { initIndex(); }
     /// constructor by node pointer and offset
-    ldomXPointerEx(  ldomNode * node, int offset )
-		: ldomXPointer( node, offset )
+    ldomXPointerEx(ldomNode* node, int offset) : ldomXPointer( node, offset )
     {
         initIndex();
     }
     /// copy constructor
-    ldomXPointerEx( const ldomXPointer& v )
-		: ldomXPointer( v._data )
+    ldomXPointerEx( const ldomXPointer& v ) : ldomXPointer( v._data )
     {
         initIndex();
     }
     /// copy constructor
-    ldomXPointerEx( const ldomXPointerEx& v )
-		: ldomXPointer( v._data )
+    ldomXPointerEx( const ldomXPointerEx& v ) : ldomXPointer( v._data )
     {
         _level = v._level;
         for ( int i=0; i<_level; i++ )
@@ -1162,10 +1123,10 @@ public:
     /// assignment operator
     ldomXPointerEx & operator =( const ldomXPointerEx& v )
     {
-		if ( _data==v._data )
-			return *this;
-		_data->release();
-		_data = new XPointerData( *v._data );
+        if ( _data==v._data )
+            return *this;
+        _data->release();
+        _data = new XPointerData( *v._data );
         _level = v._level;
         for ( int i=0; i<_level; i++ )
             _indexes[ i ] = v._indexes[i];
@@ -1225,7 +1186,6 @@ public:
     bool nextVisibleText( bool thisBlockOnly = false );
     /// move to previous visible text node
     bool prevVisibleText( bool thisBlockOnly = false );
-
     /// move to previous visible word beginning
     bool prevVisibleWordStart( bool thisBlockOnly = false );
     /// move to previous visible word end
@@ -1236,7 +1196,6 @@ public:
     bool thisVisibleWordEnd( bool thisBlockOnly = false );
     /// move to next visible word end
     bool nextVisibleWordEnd( bool thisBlockOnly = false );
-
     /// move to beginning of current visible text sentence
     bool thisSentenceStart();
     /// move to end of current visible text sentence
@@ -1253,15 +1212,12 @@ public:
     bool isSentenceStart();
     /// returns true if points to end of sentence
     bool isSentenceEnd();
-
     /// returns true if points to last visible text inside block element
     bool isLastVisibleTextInBlock();
     /// returns true if points to first visible text inside block element
     bool isFirstVisibleTextInBlock();
-
     /// returns block owner node of current node (or current node if it's block)
-    ldomNode * getThisBlockNode();
-
+    ldomNode* getThisBlockNode();
     /// returns true if current position is visible word beginning
     bool isVisibleWordStart();
     /// returns true if current position is visible word end
@@ -1284,9 +1240,9 @@ public:
     /// destructor
     virtual ~ldomNodeCallback() { }
     /// called for each found text fragment in range
-    virtual void onText( ldomXRange * ) { }
+    virtual void onText(ldomXRange*) { }
     /// called for each found node in range
-    virtual bool onElement( ldomXPointerEx * ) { return true; }
+    virtual bool onElement(ldomXPointerEx*) { return true; }
 };
 
 /// range for word inside text node
@@ -1296,15 +1252,9 @@ class ldomWord
     int _start;
     int _end;
 public:
-    ldomWord( )
-    : _node(NULL), _start(0), _end(0)
-    { }
-    ldomWord( ldomNode * node, int start, int end )
-    : _node(node), _start(start), _end(end)
-    { }
-    ldomWord( const ldomWord & v )
-    : _node(v._node), _start(v._start), _end(v._end)
-    { }
+    ldomWord( ) : _node(NULL), _start(0), _end(0) { }
+    ldomWord( ldomNode * node, int start, int end ) : _node(node), _start(start), _end(end) { }
+    ldomWord( const ldomWord & v ) : _node(v._node), _start(v._start), _end(v._end) { }
     ldomWord & operator = ( const ldomWord & v )
     {
         _node = v._node;
@@ -1342,22 +1292,19 @@ class ldomXRange {
 public:
     ldomXRange() : _flags(0) { }
     ldomXRange( const ldomXPointerEx & start, const ldomXPointerEx & end, lUInt32 flags=0 )
-            : _start( start ), _end( end ), _flags(flags)
-    {
-    }
+            : _start( start ),
+              _end( end ),
+              _flags(flags) {}
     ldomXRange( const ldomXPointer & start, const ldomXPointer & end )
-            : _start( start ), _end( end ), _flags(0)
-    {
-    }
+            : _start( start ),
+              _end( end ),
+              _flags(0) {}
     /// copy constructor
-    ldomXRange( const ldomXRange & v )
-            : _start( v._start ), _end( v._end ), _flags(v._flags)
-    {
-    }
+    ldomXRange( const ldomXRange & v ) : _start( v._start ), _end( v._end ), _flags(v._flags) {}
     ldomXRange( const ldomWord & word )
-            : _start( word.getStartXPointer() ), _end( word.getEndXPointer() ), _flags(1)
-    {
-    }
+            : _start( word.getStartXPointer() ),
+              _end( word.getEndXPointer() ),
+              _flags(1) {}
     /// if start is after end, swap start and end
     void sort();
     /// create intersection of two ranges
@@ -1412,7 +1359,7 @@ public:
     /// returns true if this interval intersects specified interval
     bool checkIntersection( ldomXRange & v );
     /// returns text between two XPointer positions
-    lString16 getRangeText( lChar16 blockDelimiter='\n', int maxTextLen=0 );
+    lString16 GetRangeText( lChar16 blockDelimiter='\n', int maxTextLen=0 );
     /// get all words from specified range
     void getRangeWords( LVArray<ldomWord> & list );
     /// returns href attribute of <A> element, null string if not found
@@ -1424,7 +1371,7 @@ public:
     /// returns rectangle (in doc coordinates) for range. Returns true if found.
     bool getRect( lvRect & rect );
     /// returns nearest common element for start and end points
-    ldomNode * getNearestCommonParent();
+    ldomNode* getNearestCommonParent();
     /// searches for specified text inside range
     bool findText(lString16 pattern, bool caseInsensitive, bool reverse, LVArray<ldomWord>& words,
                   int maxCount, int maxHeight, bool checkMaxFromStart = false);
@@ -1436,19 +1383,8 @@ public:
     lString16 text;
     lUInt32   flags;
     int offset;
-
-    ldomMarkedText(lString16 s, lUInt32 flg, int offs)
-    		: text(s),
-    		  flags(flg),
-    		  offset(offs)
-    {
-    }
-
-    ldomMarkedText(const ldomMarkedText & v)
-    		: text(v.text),
-    		  flags(v.flags),
-    		  offset(0)
-    { }
+    ldomMarkedText(lString16 s, lUInt32 flg, int offs) : text(s), flags(flg), offset(offs) {}
+    ldomMarkedText(const ldomMarkedText & v) : text(v.text), flags(v.flags), offset(0) {}
 };
 
 typedef LVPtrVector<ldomMarkedText> ldomMarkedTextList;
@@ -1494,12 +1430,8 @@ public:
         start = startPos.toPoint();
         end = endPos.toPoint();
     }
-
     /// copy constructor
-    ldomMarkedRange( const ldomMarkedRange & v )
-    : start(v.start), end(v.end), flags(v.flags)
-    {
-    }
+    ldomMarkedRange( const ldomMarkedRange & v ) : start(v.start), end(v.end), flags(v.flags) {}
 };
 
 class ldomWordEx : public ldomWord
@@ -1509,8 +1441,7 @@ class ldomWordEx : public ldomWord
     ldomXRange _range;
     lString16 _text;
 public:
-    ldomWordEx( ldomWord & word )
-        :  _word(word), _mark(word), _range(word)
+    ldomWordEx( ldomWord & word ) : _word(word), _mark(word), _range(word)
     {
         _text = _word.getText();
     }
@@ -1534,10 +1465,7 @@ class ldomWordExList : public LVPtrVector<ldomWordEx>
     void init();
     ldomWordEx * findWordByPattern();
 public:
-    ldomWordExList()
-        : minx(-1), maxx(-1), miny(-1), maxy(-1), x(-1), y(-1), selWord(NULL)
-    {
-    }
+    ldomWordExList() : minx(-1), maxx(-1), miny(-1), maxy(-1), x(-1), y(-1), selWord(NULL) {}
     /// adds all visible words from range, returns number of added words
     int addRangeWords( ldomXRange & range, bool trimPunctuation );
     /// find word nearest to specified point
@@ -1560,9 +1488,7 @@ public:
 class ldomMarkedRangeList : public LVPtrVector<ldomMarkedRange>
 {
 public:
-    ldomMarkedRangeList()
-    {
-    }
+    ldomMarkedRangeList() {}
     /// create bounded by RC list, with (0,0) coordinates at left top corner
     ldomMarkedRangeList( const ldomMarkedRangeList * list, lvRect & rc );
 };
@@ -1665,10 +1591,7 @@ class ListNumberingProps
 public:
     int maxCounter;
     int maxWidth;
-    ListNumberingProps( int c, int w )
-        : maxCounter(c), maxWidth(w)
-    {
-    }
+    ListNumberingProps(int c, int w) : maxCounter(c), maxWidth(w) {}
 };
 typedef LVRef<ListNumberingProps> ListNumberingPropsRef;
 
@@ -1773,7 +1696,6 @@ class ldomElementWriter
 {
     ldomElementWriter * _parent;
     CrDom * _document;
-
     ldomNode * _element;
     LvTocItem * _tocItem;
     lString16 _path;
@@ -1793,13 +1715,11 @@ class ldomElementWriter
     void onText(const lChar16 * text, int len, lUInt32 flags);
     void addAttribute(lUInt16 nsid, lUInt16 id, const wchar_t * value);
     //lxmlElementWriter * pop( lUInt16 id );
-
-    ldomElementWriter(CrDom * document, lUInt16 nsid, lUInt16 id, ldomElementWriter * parent);
-    ~ldomElementWriter();
-
     friend class LvDomWriter;
     friend class LvDomAutocloseWriter;
     //friend ldomElementWriter * pop( ldomElementWriter * obj, lUInt16 id );
+    ldomElementWriter(CrDom * document, lUInt16 nsid, lUInt16 id, ldomElementWriter * parent);
+    ~ldomElementWriter();
 };
 
 /** \brief callback object to fill DOM tree
@@ -1823,52 +1743,38 @@ protected:
 public:
     /// returns flags
     virtual lUInt32 getFlags() { return _flags; }
-
     /// sets flags
     virtual void setFlags( lUInt32 flags ) { _flags = flags; }
-
     // overrides
     /// called when encoding directive found in document
     virtual void OnEncoding( const lChar16 * name, const lChar16 * table );
-
     /// called on parsing start
     virtual void OnStart(LVFileFormatParser * parser);
-
     /// called on parsing end
     virtual void OnStop();
-
     /// called on opening tag
     virtual ldomNode* OnTagOpen(const lChar16* nsname, const lChar16* tagname);
-
     /// called after > of opening tag (when entering tag body)
     virtual void OnTagBody();
-
     /// called on closing tag
     virtual void OnTagClose(const lChar16* nsname, const lChar16* tagname);
-
     /// called on attribute
     virtual void OnAttribute(const lChar16* nsname,
     		const lChar16* attrname, const lChar16* attrvalue);
-
     /// close tags
     ldomElementWriter* pop(ldomElementWriter* obj, lUInt16 id);
-
     virtual void OnText(const lChar16* text, int len, lUInt32 flags);
-
     /// add named BLOB data to document
     virtual bool OnBlob(lString16 name, const lUInt8 * data, int size)
     {
     	return doc_->addBlob(name, data, size);
     }
-
     /// set document property
     virtual void OnDocProperty(const char * name, lString8 value)
     {
     	doc_->getProps()->setString(name, value);
     }
-
     LvDomWriter(CrDom* document, bool headerOnly=false);
-
     virtual ~LvDomWriter();
 };
 
@@ -2025,14 +1931,14 @@ lString16 ExtractDocSeries(CrDom* dom, int * pSeriesNumber=NULL);
 bool IsEmptySpace(const lChar16 * text, int len);
 
 /// parse XML document from stream, returns NULL if failed
-CrDom * LVParseXMLStream(
+CrDom* LVParseXMLStream(
         LVStreamRef stream,
         const elem_def_t * elem_table=NULL,
         const attr_def_t * attr_table=NULL,
         const ns_def_t * ns_table=NULL);
 
 /// parse XML document from stream, returns NULL if failed
-CrDom * LVParseHTMLStream(
+CrDom* LVParseHTMLStream(
         LVStreamRef stream,
         const elem_def_t * elem_table=NULL,
         const attr_def_t * attr_table=NULL,

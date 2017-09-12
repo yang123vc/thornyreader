@@ -6,9 +6,8 @@
     GNU General Public License.
     See LICENSE file for details.
 */
-
-#ifndef __LV_TEXT_VIEW_H_INCLUDED__
-#define __LV_TEXT_VIEW_H_INCLUDED__
+#ifndef __LV_DOC_VIEW_H_INCLUDED__
+#define __LV_DOC_VIEW_H_INCLUDED__
 
 #include "lvtinydom.h"
 #include "lvpagesplitter.h"
@@ -68,10 +67,10 @@ private:
     LVContainerRef archive_container_;
     LVPtrVector<CRBookmark> bookmarks_;
     ldomXPointer bookmark_;
-    LVRendPageList pages_list_;
     LVScrollInfo scroll_info_;
     LVImageSourceRef background_image;
     LVRef<LVColorDrawBuf> background_image_scaled_;
+    LVRendPageList pages_list_;
     lvRect page_rects_[2];
     CRPropRef doc_props_;
     ldomMarkedRangeList marked_ranges_;
@@ -132,41 +131,33 @@ public:
     void SetBookmarks(LVPtrVector<CRBookmark>& bookmarks);
     /// find bookmark by window point, return NULL if point doesn't belong to any bookmark
     CRBookmark* FindBookmarkByPoint(lvPoint pt);
-    /// get background image
-    LVImageSourceRef getBackgroundImage() const { return background_image; }
     /// set background image
-    void setBackgroundImage(LVImageSourceRef bgImage, bool tiled = true)
-    {
-    	background_image = bgImage;
-    	background_tiled_ = tiled;
-    	background_image_scaled_.Clear();
-    }
+    void SetBackgroundImage(LVImageSourceRef image, bool tiled = true);
     /// clears page background
     void DrawBackgroundTo(LVDrawBuf& drawbuf, int offsetX, int offsetY, int alpha = 0);
-    // Links and selections functions
     /// sets selection for whole element, clears previous selection
-    virtual void selectElement(ldomNode* elem);
+    void selectElement(ldomNode* elem);
     /// sets selection for range, clears previous selection
-    virtual void selectRange(const ldomXRange& range);
+    void selectRange(const ldomXRange& range);
     /// sets selection for list of words, clears previous selection
-    virtual void selectWords(const LVArray<ldomWord>& words);
+    void selectWords(const LVArray<ldomWord>& words);
     /// sets selections for ranges, clears previous selections
-    virtual void selectRanges(ldomXRangeList& ranges);
+    void selectRanges(ldomXRangeList& ranges);
     /// clears selection
-    virtual void ClearSelection();
+    void ClearSelection();
     /// get list of links
-    virtual void GetCurrentPageLinks(ldomXRangeList& list);
+    void GetCurrentPageLinks(ldomXRangeList& list);
     /// selects first link on page, if any. returns selected link range, null if no links.
-    virtual ldomXRange* SelectFirstPageLink();
+    ldomXRange* SelectFirstPageLink();
     /// invalidate formatted data, request render
     void RequestRender();
     /// update selection ranges
     void UpdateSelections();
     void UpdateBookmarksRanges();
     /// get page document range, -1 for current page
-    LVRef<ldomXRange> GetPageDocRange(int pageIndex = -1);
+    LVRef<ldomXRange> GetPageDocRange(int page_index = -1);
     /// get page text, -1 for current page
-    lString16 getPageText(bool wrapWords, int pageIndex = -1);
+    lString16 GetPageText(int page_index = -1);
     int GetColumns();
     void UpdatePageMargins();
     /// returns pointer to TOC root node
@@ -201,8 +192,6 @@ public:
     int GetPageForBookmark(ldomXPointer bm);
     /// get bookmark position text
     bool getBookmarkPosText(ldomXPointer bm, lString16& titleText, lString16& posText);
-    /// returns scrollbar control info
-    const LVScrollInfo* getScrollInfo() { UpdateScrollInfo(); return &scroll_info_; }
     /// move to position specified by scrollbar
     bool goToScrollPos(int pos);
     /// converts scrollbar pos to doc pos
@@ -229,6 +218,7 @@ public:
     /// load document from file
     bool LoadDoc(int doc_format, const char* crengine_uri);
     LVDocView();
-    virtual ~LVDocView();
+    ~LVDocView();
 };
-#endif
+
+#endif //__LV_TEXT_VIEW_H_INCLUDED__

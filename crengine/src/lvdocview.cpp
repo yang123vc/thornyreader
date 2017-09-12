@@ -22,8 +22,8 @@
 #include "include/pdbfmt.h"
 #include "include/crcss.h"
 
-// Yep, twice include single header with different define. Probably, this should be last
-// in include list, to do not mess up with other includes.
+// Yep, twice include single header with different define.
+// Probably should be last in include list, to don't mess up with other includes.
 #include "include/fb2def.h"
 #define XS_IMPLEMENT_SCHEME 1
 #include "include/fb2def.h"
@@ -131,28 +131,23 @@ void LVDocView::RenderIfDirty()
 	if (is_rendered_) {
 		return;
 	}
+    is_rendered_ = true;
+    position_is_set_ = false;
 	if (cr_dom_ && cr_dom_->getRootNode() != NULL) {
         int	dx = page_rects_[0].width() - margins_.left - margins_.right;
         int	dy = page_rects_[0].height() - margins_.top - margins_.bottom;
         CheckRenderProps(dx, dy);
-        if (!base_font_.isNull()) {
-            cr_dom_->render(&pages_list_,
-                    dx,
-                    dy,
-                    show_cover_,
-                    show_cover_ ? dy + margins_.bottom * 4 : 0,
-                    base_font_,
-                    config_interline_space_);
-            fontMan->gc();
-            is_rendered_ = true;
-            UpdateSelections();
-            UpdateBookmarksRanges();
-        } else {
+        if (base_font_.isNull()) {
             CRLog::error("RenderIfDirty base_font_.isNull()");
+            return;
         }
+        int y0 = show_cover_ ? dy + margins_.bottom * 4 : 0;
+        cr_dom_->render(&pages_list_, dx, dy, show_cover_, y0, base_font_, config_interline_space_);
+        fontMan->gc();
+        is_rendered_ = true;
+        UpdateSelections();
+        UpdateBookmarksRanges();
     }
-    is_rendered_ = true;
-    position_is_set_ = false;
 }
 
 /// Invalidate formatted data, request render
@@ -683,6 +678,13 @@ static bool CheckBufferSize(LVRef<LVColorDrawBuf>& buf, int dx, int dy) {
     }
 }
 
+void LVDocView::SetBackgroundImage(LVImageSourceRef image, bool tiled)
+{
+    background_image = image;
+    background_tiled_ = tiled;
+    background_image_scaled_.Clear();
+}
+
 /// clears page background
 void LVDocView::DrawBackgroundTo(LVDrawBuf& buf, int offsetX, int offsetY, int alpha)
 {
@@ -966,39 +968,6 @@ void LVDocView::UpdateLayout() {
 	}
 }
 
-/// get page document range, -1 for current page
-LVRef<ldomXRange> LVDocView::GetPageDocRange(int page_index) {
-    CHECK_RENDER("getPageDocRange()")
-	LVRef < ldomXRange > res(NULL);
-	if (IsScrollMode()) {
-		// SCROLL mode
-		int starty = offset_;
-		int endy = offset_ + height_;
-		int fh = GetFullHeight();
-		if (endy >= fh)
-			endy = fh - 1;
-		ldomXPointer start = cr_dom_->createXPointer(lvPoint(0, starty));
-		ldomXPointer end = cr_dom_->createXPointer(lvPoint(0, endy));
-		if (start.isNull() || end.isNull())
-			return res;
-		res = LVRef<ldomXRange> (new ldomXRange(start, end));
-	} else {
-		// PAGES mode
-		if (page_index < 0 || page_index >= pages_list_.length())
-            page_index = GetCurrPage();
-		LVRendPageInfo * page = pages_list_[page_index];
-		if (page->type != PAGE_TYPE_NORMAL)
-			return res;
-		ldomXPointer start = cr_dom_->createXPointer(lvPoint(0, page->start));
-        //ldomXPointer end = cr_dom_->createXPointer(lvPoint(m_dx + m_dy, page->start + page->height - 1));
-		ldomXPointer end = cr_dom_->createXPointer(lvPoint(0, page->start + page->height), 1);
-		if (start.isNull() || end.isNull())
-			return res;
-		res = LVRef<ldomXRange> (new ldomXRange(start, end));
-	}
-	return res;
-}
-
 /// Call setRenderProps(0, 0) to allow apply styles and rend method while loading.
 void LVDocView::CheckRenderProps(int width, int height)
 {
@@ -1049,52 +1018,6 @@ LVImageSourceRef LVDocView::getImageByPoint(lvPoint pt) {
                      pt.x, pt.y, res->GetWidth(), res->GetHeight());
     }
     return res;
-}
-
-/* 	Number of non-space characters on current page:
-
-   	lString16 text = getPageText(true);
-   	int count = 0;
-   	for (int i=0; i<text.length(); i++) {
-        lChar16 ch = text[i];
-        if (ch>='0')
-            count++;
-   	}
-   	return count;
-
-   	Number of images on current page:
-
-	CHECK_RENDER("getCurPageImgCount()")
-    LVRef<ldomXRange> range = GetPageDocRange(-1);
-    class ImageCounter : public ldomNodeCallback {
-        int count;
-    public:
-        int get() { return count; }
-        ImageCounter() : count(0) { }
-        /// called for each found text fragment in range
-        virtual void onText(ldomXRange *) { }
-        /// called for each found node in range
-        virtual bool onElement(ldomXPointerEx * ptr) {
-            lString16 nodeName = ptr->getNode()->getNodeName();
-            if (nodeName == "img" || nodeName == "image")
-                count++;
-			return true;
-        }
-
-    };
-    ImageCounter cnt;
-    range->forEach(&cnt);
-    return cnt.get();
-*/
-
-/// get page text, -1 for current page
-lString16 LVDocView::getPageText(bool, int pageIndex)
-{
-    CHECK_RENDER("getPageText()")
-    lString16 txt;
-    LVRef <ldomXRange> range = GetPageDocRange(pageIndex);
-    txt = range->getRangeText();
-    return txt;
 }
 
 /// sets selection for whole element, clears previous selection
@@ -1511,45 +1434,145 @@ int LVDocView::scrollPosToDocPos(int scrollpos)
 	}
 }
 
-void LVDocView::GetCurrentPageLinks(ldomXRangeList& list)
+/// get page document range, -1 for current page
+LVRef<ldomXRange> LVDocView::GetPageDocRange(int page_index) {
+    CHECK_RENDER("getPageDocRange()")
+    LVRef<ldomXRange> res(NULL);
+    if (IsScrollMode()) {
+        // SCROLL mode
+        int starty = offset_;
+        int endy = offset_ + height_;
+        int fh = GetFullHeight();
+        if (endy >= fh)
+            endy = fh - 1;
+        ldomXPointer start = cr_dom_->createXPointer(lvPoint(0, starty));
+        ldomXPointer end = cr_dom_->createXPointer(lvPoint(0, endy));
+        if (start.isNull() || end.isNull())
+            return res;
+        res = LVRef<ldomXRange>(new ldomXRange(start, end));
+    } else {
+        // PAGES mode
+        if (page_index < 0 || page_index >= pages_list_.length()) {
+            page_index = GetCurrPage();
+        }
+        LVRendPageInfo* page = pages_list_[page_index];
+        if (page->type != PAGE_TYPE_NORMAL) {
+            return res;
+        }
+        ldomXPointer start = cr_dom_->createXPointer(lvPoint(0, page->start));
+        //ldomXPointer end = cr_dom_->createXPointer(lvPoint(m_dx + m_dy, page->start + page->height - 1));
+        ldomXPointer end = cr_dom_->createXPointer(lvPoint(0, page->start + page->height), 1);
+        if (start.isNull() || end.isNull()) {
+            return res;
+        }
+        res = LVRef<ldomXRange>(new ldomXRange(start, end));
+    }
+    return res;
+}
+
+void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
 {
-	list.clear();
-	LVRef<ldomXRange> page = GetPageDocRange();
-	if (page.isNull()) {
+	links_list.clear();
+	LVRef<ldomXRange> page_range = GetPageDocRange();
+	if (page_range.isNull()) {
 		return;
 	}
     class LinkKeeper: public ldomNodeCallback {
-        ldomXRangeList& _list;
+        ldomXRangeList& list_;
     public:
-        LinkKeeper(ldomXRangeList& callback_list) : _list(callback_list) { }
-        /// Called for each found text fragment in range
+        LinkKeeper(ldomXRangeList& list) : list_(list) { }
+        // Called for each text fragment in range
         virtual void onText(ldomXRange*) { }
-        /// Called for each found node in range
+        // Called for each node in range
         virtual bool onElement(ldomXPointerEx* ptr) {
-            ldomNode* elem = ptr->getNode();
-            if (elem->getNodeId() == el_a) {
-                for (int i = 0; i < _list.length(); i++) {
-                    if (_list[i]->getStart().getNode() == elem) {
-                        // Don't add, duplicate found!
-                        CRLog::debug("Links duplicate");
-                        return true;
+            ldomNode* element_node = ptr->getNode();
+            if (element_node->getNodeId() != el_a) {
+                return true;
+            }
+            for (int i = 0; i < list_.length(); i++) {
+                if (list_[i]->getStart().getNode() == element_node) {
+                    // Don't add, duplicate found!
+                    CRLog::debug("GetCurrentPageLinks duplicate");
+                    return true;
+                }
+            }
+            ldomNode* node = element_node->getChildNode(0);
+            int end_index = node->isText() ? node->getText().length() : node->getChildCount();
+            ldomXPointerEx start = ldomXPointerEx(node, 0);
+            ldomXPointerEx end = ldomXPointerEx(node, end_index);
+            lvRect start_rect;
+            lvRect end_rect;
+            if (!start.getRect(start_rect) || !end.getRect(end_rect)) {
+                CRLog::error("GetCurrentPageLinks getRect fail");
+                return true;
+            }
+            if (start_rect.top == end_rect.top && start_rect.bottom == end_rect.bottom) {
+                // Singleline link
+                list_.add(new ldomXRange(start, end));
+                return true;
+            }
+            lvRect curr_rect;
+            for (int i = end_index - 1; i >= 0; i--) {
+                ldomXPointerEx curr = ldomXPointerEx(node, i);
+                if (!curr.getRect(curr_rect)) {
+                    CRLog::error("GetCurrentPageLinks getRect fail");
+                    return true;
+                }
+                if (curr_rect.top == start_rect.top) {
+                    if (curr_rect.bottom == start_rect.bottom) {
+                        // Запрыгнули на верхнюю строчку
+                        list_.add(new ldomXRange(start, curr));
+                        ldomXPointerEx prev = ldomXPointerEx(node, i + 1);
+                        list_.add(new ldomXRange(prev, end));
+                        break;
+                    } else {
+                        CRLog::error("GetCurrentPageLinks tops equals, bottoms doesnt");
+                    }
+                } else if (curr_rect.top != end_rect.top) {
+                    if (curr_rect.bottom != end_rect.bottom) {
+                        ldomXPointerEx prev = ldomXPointerEx(node, i + 1);
+                        list_.add(new ldomXRange(prev, end));
+                        end = ldomXPointerEx(curr);
+                        if (!end.getRect(end_rect)) {
+                            CRLog::error("GetCurrentPageLinks getRect fail");
+                            return true;
+                        }
+                    } else {
+                        CRLog::error("GetCurrentPageLinks tops not equals, bottoms does");
                     }
                 }
-                _list.add(new ldomXRange(elem->getChildNode(0)));
             }
             return true;
         }
     };
-    LinkKeeper callback(list);
-    page->forEach(&callback);
+    LinkKeeper callback(links_list);
+    page_range->forEach(&callback);
     if (viewport_mode_ == MODE_PAGES && GetColumns() > 1) {
         // Process second page
-        int pageNumber = GetCurrPage();
-        page = GetPageDocRange(pageNumber + 1);
-        if (!page.isNull()) {
-            page->forEach(&callback);
+        int page_index = GetCurrPage();
+        page_range = GetPageDocRange(page_index + 1);
+        if (!page_range.isNull()) {
+            page_range->forEach(&callback);
         }
     }
+}
+
+/// get page text, -1 for current page
+lString16 LVDocView::GetPageText(int page_index)
+{
+    CHECK_RENDER("GetPageText()")
+    if (page_index < 0 || page_index >= pages_list_.length()) {
+        page_index = GetCurrPage();
+    }
+    lString16 text;
+    LVRef<ldomXRange> range = GetPageDocRange(page_index);
+    text = range->GetRangeText();
+    if (viewport_mode_ == MODE_PAGES && GetColumns() > 1) {
+        // Process second page
+        range = GetPageDocRange(page_index + 1);
+        text = text + range->GetRangeText();
+    }
+    return text;
 }
 
 /// sets new list of bookmarks, removes old values
@@ -1673,15 +1696,15 @@ LVPageWordSelector::~LVPageWordSelector()
     doc_view_->ClearSelection();
 }
 
-LVPageWordSelector::LVPageWordSelector(LVDocView * docview) : doc_view_(docview)
+LVPageWordSelector::LVPageWordSelector(LVDocView* docview) : doc_view_(docview)
 {
     LVRef<ldomXRange> range = doc_view_->GetPageDocRange();
     if (!range.isNull()) {
 		words_.addRangeWords(*range, true);
 		if (doc_view_->GetColumns() > 1) { // _docview->isPageMode() &&
 				// process second page
-				int pageNumber = doc_view_->GetCurrPage();
-				range = doc_view_->GetPageDocRange(pageNumber + 1);
+				int page_index = doc_view_->GetCurrPage();
+				range = doc_view_->GetPageDocRange(page_index + 1);
 				if (!range.isNull())
 					words_.addRangeWords(*range, true);
 		}

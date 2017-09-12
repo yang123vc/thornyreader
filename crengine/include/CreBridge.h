@@ -29,6 +29,8 @@ protected:
     void processMetadata(CmdRequest& request, CmdResponse& response);
     void responseAddString(CmdResponse& response, lString16 str16);
     void convertBitmap(LVColorDrawBuf* bitmap);
+    void responseAddLinkUnknown(CmdResponse& response, lString16 href,
+                                float l, float t, float r, float b);
 };
 
 #endif //READERA_CREBRIDGE_H
