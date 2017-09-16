@@ -63,8 +63,11 @@ i, em, emphasis, dfn, var {
   display: inline;
   font-style: italic;
 }
-a, u {
+u {
   text-decoration: underline;
+}
+a {
+  color: #0000EE;
 }
 del, s, strike, strikethrough {
   text-decoration: line-through;
