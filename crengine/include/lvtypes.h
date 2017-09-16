@@ -68,8 +68,6 @@ public:
     int top;
     int right;
     int bottom;
-    /// returns true if rectangle is empty
-    bool isEmpty() const { return left>=right || bottom<=top; }
     lvRect() : left(0), top(0), right(0), bottom(0) { }
     lvRect( int x0, int y0, int x1, int y1) : left(x0), top(y0), right(x1), bottom(y1) { }
     lvPoint topLeft() const { return lvPoint( left, top ); }
@@ -86,24 +84,9 @@ public:
     {
         return !(rc.left == left && rc.right == right && rc.top == top && rc.bottom == bottom);
     }
-    /// returns non-NULL pointer to trimming values for 4 sides of rc, if clipping is necessary
-    lvRect * clipBy(lvRect & cliprc) {
-    	if (intersects(cliprc) && !cliprc.isRectInside(*this)) {
-    		lvRect * res = new lvRect();
-    		if (cliprc.left > left)
-    			res->left = cliprc.left - left;
-    		if (cliprc.top > top)
-    			res->top = cliprc.top - top;
-    		if (right > cliprc.right)
-    			res->right = right - cliprc.right;
-    		if (bottom > cliprc.bottom)
-    			res->bottom = bottom - cliprc.bottom;
-    		return res;
-    	} else {
-    		return NULL;
-    	}
-    }
-
+    /// returns true if rectangle is empty
+    bool isEmpty() const { return left>=right || bottom<=top; }
+    void clear() { left=right=top=bottom=0; }
     /// returns rectangle width
     int width() const { return right - left; }
     /// returns rectangle height
@@ -114,6 +97,23 @@ public:
     void shrinkBy( const lvRect & rc ) { left+=rc.left; right-=rc.right; top+=rc.top; bottom-=rc.bottom; }
     void extend( int delta ) { shrink(-delta); }
     void extendBy( const lvRect & rc ) { left-=rc.left; right+=rc.right; top-=rc.top; bottom+=rc.bottom; }
+    /// returns non-NULL pointer to trimming values for 4 sides of rc, if clipping is necessary
+    lvRect * clipBy(lvRect & cliprc) {
+        if (intersects(cliprc) && !cliprc.isRectInside(*this)) {
+            lvRect * res = new lvRect();
+            if (cliprc.left > left)
+                res->left = cliprc.left - left;
+            if (cliprc.top > top)
+                res->top = cliprc.top - top;
+            if (right > cliprc.right)
+                res->right = right - cliprc.right;
+            if (bottom > cliprc.bottom)
+                res->bottom = bottom - cliprc.bottom;
+            return res;
+        } else {
+            return NULL;
+        }
+    }
     /// makes this rect to cover both this and specified rect (bounding box for two rectangles)
     void extend( lvRect rc )
     {
@@ -144,7 +144,6 @@ public:
             return false;
         return true;
     }
-
     /// returns true if specified rectangle has common part with this rectangle
     bool intersects(const lvRect & rc) const
     {
@@ -154,14 +153,11 @@ public:
             return false;
         return true;
     }
-
     /// returns true if point is inside this rectangle
     bool isPointInside ( const lvPoint & pt ) const
     {
         return left<=pt.x && top<=pt.y && right>pt.x && bottom > pt.y;
     }
-	void clear() { left=right=top=bottom=0; }
-	
     bool intersect(const lvRect &rc)
 	{
         if (left < rc.left)

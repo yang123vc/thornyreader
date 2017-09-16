@@ -1703,16 +1703,18 @@ int CrDomBase::calcFinalBlocks()
     return cnt;
 }
 
-/*
-inline LVStyleSheet* getStylesheet() { return &_stylesheet; }
-LVLoadStylesheetFile
-LVStyleSheet::parse
-void CrDomBase::dropStyles()
-bool CrDomBase::updateLoadedStyles( bool enabled )
-DISABLE_STYLESHEET_REL
-*/
 void CrDom::applyDocStylesheet()
 {
+    /*
+     * Stylesheet stuff tips:
+     *
+     * inline LVStyleSheet* getStylesheet() { return &_stylesheet; }
+     * LVLoadStylesheetFile
+     * LVStyleSheet::parse
+     * void CrDomBase::dropStyles()
+     * bool CrDomBase::updateLoadedStyles( bool enabled )
+     * DISABLE_STYLESHEET_REL
+    */
     if (!getDocFlag(DOC_FLAG_EMBEDDED_STYLES)) {
         return;
     }
@@ -1944,7 +1946,7 @@ void CrDomXml::dumpUnknownEntities( const char * fname )
     fclose(f);
 }
 
-bool IsEmptySpace( const lChar16 * text, int len )
+static bool IsEmptySpace(const lChar16* text, int len)
 {
    for (int i=0; i<len; i++)
       if ( text[i]!=' ' && text[i]!='\r' && text[i]!='\n' && text[i]!='\t')
@@ -3239,8 +3241,9 @@ lvPoint ldomXPointer::toPoint() const
 bool ldomXPointer::getRect(lvRect & rect) const
 {
     //CRLog::trace("ldomXPointer::getRect()");
-    if ( isNull() )
+    if (isNull()) {
         return false;
+    }
     ldomNode * p = isElement() ? getNode() : getNode()->getParentNode();
     ldomNode * p0 = p;
     ldomNode * finalNode = NULL;
@@ -5513,7 +5516,7 @@ lString16 ldomXRange::GetRangeText(lChar16 blockDelimiter, int maxTextLen)
         bool newBlock;
         lChar16 delimiter;
         int maxLen;
-        lString16 text;
+        lString16 text_;
     public:
         TextCollector(lChar16 blockDelimiter, int maxTextLen)
                 : lastText(false), newBlock(true), delimiter(blockDelimiter), maxLen(maxTextLen) {
@@ -5521,15 +5524,15 @@ lString16 ldomXRange::GetRangeText(lChar16 blockDelimiter, int maxTextLen)
         /// destructor
         virtual ~TextCollector() {}
         /// called for each found text fragment in range
-        virtual void onText(ldomXRange* nodeRange) {
-            if (newBlock && !text.empty()) {
-                text << delimiter;
+        virtual void onText(ldomXRange* node_range) {
+            if (newBlock && !text_.empty()) {
+                text_ << delimiter;
             }
-            lString16 txt = nodeRange->getStart().getNode()->getText();
-            int start = nodeRange->getStart().getOffset();
-            int end = nodeRange->getEnd().getOffset();
+            lString16 text = node_range->getStart().getNode()->getText();
+            int start = node_range->getStart().getOffset();
+            int end = node_range->getEnd().getOffset();
             if (start < end) {
-                text << txt.substr(start, end - start);
+                text_ << text.substr(start, end - start);
             }
             lastText = true;
             newBlock = false;
@@ -5569,7 +5572,7 @@ lString16 ldomXRange::GetRangeText(lChar16 blockDelimiter, int maxTextLen)
             }
         }
         /// get collected text
-        lString16 getText() { return text; }
+        lString16 getText() { return text_; }
     };
     TextCollector callback(blockDelimiter, maxTextLen);
     forEach(&callback);

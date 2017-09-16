@@ -99,8 +99,6 @@ private:
     void CheckPos();
     /// set properties before rendering
     void CheckRenderProps(int dx, int dy);
-    /// get screen rectangle for specified cursor position, returns false if not visible
-    bool getCursorRect(ldomXPointer ptr, lvRect& rc, bool scrollToCursor = false);
 public:
     bool position_is_set_;
     int doc_format_;
@@ -167,9 +165,9 @@ public:
     /// returns image source for specified window point, if point is inside image
     LVImageSourceRef getImageByPoint(lvPoint pt);
     /// converts point from window to document coordinates, returns true if success
-    bool WindowToDocPoint(lvPoint & pt);
-    /// converts point from documsnt to window coordinates, returns true if success
-    bool DocToWindowPoint(lvPoint & pt);
+    bool WindowToDocPoint(lvPoint& pt);
+    /// converts rect from documsnt to window coordinates, returns true if success
+    bool DocToWindowRect(lvRect& rect);
     /// returns document
     CrDom* GetCrDom() { return cr_dom_; }
     /// draws scaled image into buffer, clear background according to current settings

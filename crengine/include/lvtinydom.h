@@ -673,14 +673,11 @@ class CrDomXml : public CrDomBase {
     friend class ldomNode;
 	friend class ldomXPointer;
 public:
-
     /// Default constructor
     CrDomXml();
     /// Destructor
     virtual ~CrDomXml();
-
     // Name <-> Id maps functions
-
     /// Get namespace name by id
     /**
         \param id is numeric value of namespace
@@ -690,21 +687,18 @@ public:
     {
         return _nsNameTable.StrByInt( id );
     }
-
     /// Get namespace id by name
     /**
         \param name is string value of namespace
         \return id of namespace
     */
     lUInt16 getNsNameIndex( const lChar16 * name );
-
     /// Get namespace id by name
     /**
         \param name is string value of namespace (ASCII only)
         \return id of namespace
     */
     lUInt16 getNsNameIndex( const lChar8 * name );
-
     /// Get attribute name by id
     /**
         \param id is numeric value of attribute
@@ -714,39 +708,33 @@ public:
     {
         return _attrNameTable.StrByInt(id);
     }
-
     /// Get attribute id by name
     /**
         \param name is string value of attribute
         \return id of attribute
     */
     lUInt16 getAttrNameIndex( const lChar16 * name );
-
     /// Get attribute id by name
     /**
         \param name is string value of attribute (8bit ASCII only)
         \return id of attribute
     */
     lUInt16 getAttrNameIndex( const lChar8 * name );
-
     /// helper: returns attribute value
     inline const lString16 & getAttrValue( lUInt16 index ) const
     {
         return _attrValueTable[index];
     }
-
     /// helper: returns attribute value index
     inline lUInt16 getAttrValueIndex( const lChar16 * value )
     {
         return (lUInt16)_attrValueTable.add( value );
     }
-
     /// helper: returns attribute value index, 0xffff if not found
     inline lUInt16 findAttrValueIndex( const lChar16 * value )
     {
         return (lUInt16)_attrValueTable.find( value );
     }
-
     /// Get element name by id
     /**
         \param id is numeric value of element name
@@ -756,28 +744,24 @@ public:
     {
         return _elementNameTable.StrByInt( id );
     }
-
     /// Get element id by name
     /**
         \param name is string value of element name
         \return id of element
     */
     lUInt16 getElementNameIndex( const lChar16 * name );
-
     /// Get element id by name
     /**
         \param name is string value of element name (8bit ASCII only)
         \return id of element, allocates new ID if not found
     */
     lUInt16 getElementNameIndex( const lChar8 * name );
-
     /// Get element id by name
     /**
         \param name is string value of element name (8bit ASCII only)
         \return id of element, 0 if not found
     */
     lUInt16 findElementNameIndex( const lChar8 * name );
-
     /// Get element type properties structure by id
     /**
         \param id is element id
@@ -788,32 +772,25 @@ public:
     {
         return _elementNameTable.dataById( id );
     }
-
     // set node types from table
     void setNodeTypes( const elem_def_t * node_scheme );
     // set attribute types from table
     void setAttributeTypes( const attr_def_t * attr_scheme );
     // set namespace types from table
     void setNameSpaceTypes( const ns_def_t * ns_scheme );
-
     // debug dump
     void dumpUnknownEntities( const char * fname );
-
     /// garbage collector
     virtual void gc() { fontMan->gc(); }
-
     inline LVStyleSheet* getStylesheet() { return &stylesheet_; }
     /// Sets style sheet, clears old content of css if arg replace is true
     void setStylesheet(const char* css, bool replace);
-
     void onAttributeSet( lUInt16 attrId, lUInt16 valueId, ldomNode * node );
-
     /// get element by id attribute value code
     inline ldomNode * getNodeById( lUInt16 attrValueId )
     {
         return getTinyNode( _idNodeMap.get( attrValueId ) );
     }
-
     /// get element by id attribute value
     inline ldomNode * getElementById( const lChar16 * id )
     {
@@ -823,19 +800,15 @@ public:
     }
     /// returns root element
     ldomNode * getRootNode();
-
     /// returns code base path relative to document container
     inline lString16 getCodeBase() { return getProps()->getStringDef(DOC_PROP_CODE_BASE, ""); }
-
     /// sets code base path relative to document container
     inline void setCodeBase(const lString16& codeBase)
     {
         getProps()->setStringDef(DOC_PROP_CODE_BASE, codeBase);
     }
-
     /// create formatted text object with options set
     LFormattedText * createFormattedText();
-
     void setHightlightOptions(text_highlight_options_t & options) {
         _highlightOptions = options;
     }
@@ -852,9 +825,7 @@ protected:
                   render_dy(0),
                   render_docflags(0),
                   render_style_hash(0),
-                  stylesheet_hash(0)
-        {
-        }
+                  stylesheet_hash(0) {}
     };
     DocFileHeader _hdr;
     text_highlight_options_t _highlightOptions;
@@ -915,15 +886,13 @@ protected:
 			: _doc(node ? node->getCrDom() : NULL)
 			, _dataIndex(node ? node->getDataIndex() : 0)
 			, _offset( offset )
-			, _refCount( 1 )
-		{ }
-
+			, _refCount( 1 ) {}
         // clone
         XPointerData(const XPointerData& v)
-                : _doc(v._doc), _dataIndex(v._dataIndex), _offset(v._offset), _refCount(1)
-        {
-        }
-
+                : _doc(v._doc),
+                  _dataIndex(v._dataIndex),
+                  _offset(v._offset),
+                  _refCount(1) {}
 		inline CrDom * getDocument() { return _doc; }
         inline bool operator == (const XPointerData & v) const
 		{
@@ -933,22 +902,18 @@ protected:
 		{
             return _doc != v._doc || _dataIndex != v._dataIndex || _offset != v._offset;
 		}
-
         inline bool isNull()
         {
             return _dataIndex == 0;
         }
-
         inline ldomNode* getNode()
         {
             return _dataIndex > 0 ? ((CrDomXml*) _doc)->getTinyNode(_dataIndex) : NULL;
         }
-
         inline int getOffset()
         {
             return _offset;
         }
-
         inline void setNode( ldomNode * node )
 		{
 			if ( node ) {
@@ -961,17 +926,14 @@ protected:
 		}
 		inline void setOffset( int offset ) { _offset = offset; }
         inline void addOffset( int offset ) { _offset+=offset; }
-        ~XPointerData() { }
+        ~XPointerData() {}
 	};
 	/// node pointer
     //ldomNode * _node;
 	/// offset within node for pointer, -1 for xpath
 	//int _offset;
 	// cloning constructor
-	ldomXPointer( const XPointerData * data )
-		: _data( new XPointerData( *data ) )
-	{
-	}
+	ldomXPointer(const XPointerData* data) : _data(new XPointerData(*data)) {}
 public:
 	XPointerData * _data;
     /// clear pointer (make null)
@@ -987,18 +949,11 @@ public:
 	/// set pointer offset within node
 	inline void setOffset( int offset ) { _data->setOffset( offset ); }
     /// default constructor makes NULL pointer
-	ldomXPointer()
-		: _data( new XPointerData() )
-	{
-	}
+	ldomXPointer() : _data( new XPointerData() ) {}
 	/// remove reference
 	~ldomXPointer() { _data->release(); }
     /// copy constructor
-	ldomXPointer( const ldomXPointer& v )
-		: _data(v._data)
-	{
-		_data->addRef();
-	}
+	ldomXPointer( const ldomXPointer& v ) : _data(v._data) { _data->addRef(); }
     /// assignment operator
 	ldomXPointer & operator =( const ldomXPointer& v )
 	{
@@ -1010,10 +965,7 @@ public:
         return *this;
 	}
     /// constructor
-    ldomXPointer( ldomNode * node, int offset )
-		: _data( new XPointerData( node, offset ) )
-	{
-	}
+    ldomXPointer( ldomNode * node, int offset )	: _data( new XPointerData( node, offset ) )	{}
     /// get pointer for relative path
     ldomXPointer relative( lString16 relativePath );
     /// get pointer for relative path
@@ -1132,7 +1084,6 @@ public:
             _indexes[ i ] = v._indexes[i];
         return *this;
     }
-
     /// returns true if ranges are equal
     bool operator==(const ldomXPointerEx& v) const
     {
@@ -1300,7 +1251,10 @@ public:
               _end( end ),
               _flags(0) {}
     /// copy constructor
-    ldomXRange( const ldomXRange & v ) : _start( v._start ), _end( v._end ), _flags(v._flags) {}
+    ldomXRange( const ldomXRange & v )
+            : _start( v._start ),
+              _end( v._end ),
+              _flags(v._flags) {}
     ldomXRange( const ldomWord & word )
             : _start( word.getStartXPointer() ),
               _end( word.getEndXPointer() ),
@@ -1419,9 +1373,9 @@ public:
     bool intersects( lvRect & rc, lvRect & intersection );
     /// constructor
     ldomMarkedRange( lvPoint _start, lvPoint _end, lUInt32 _flags )
-    : start(_start), end(_end), flags(_flags)
-    {
-    }
+            : start(_start),
+              end(_end),
+              flags(_flags) {}
     /// constructor
     ldomMarkedRange( ldomWord & word ) : flags(0)
     {
@@ -1582,7 +1536,7 @@ public:
     }
     void clear() { _children.clear(); }
     // root node constructor
-    LvTocItem( CrDom * doc ) : _parent(NULL), _doc(doc), _level(0), _index(0), _page(0){ }
+    LvTocItem( CrDom * doc ) : _parent(NULL), _doc(doc), _level(0), _index(0), _page(0) {}
     ~LvTocItem() { clear(); }
 };
 
@@ -1920,16 +1874,6 @@ public:
     virtual ~LvDocFragmentWriter() { }
 };
 
-//utils
-/// extract authors from FB2 document, delimiter is lString16 by default
-lString16 ExtractDocAuthors(CrDom* dom, lString16 delimiter = lString16::empty_str);
-lString16 ExtractDocTitle(CrDom* dom);
-lString16 ExtractDocLanguage(CrDom* dom);
-/// returns "(Series Name #number)" if pSeriesNumber is NULL, separate name and number otherwise
-lString16 ExtractDocSeries(CrDom* dom, int * pSeriesNumber=NULL);
-
-bool IsEmptySpace(const lChar16 * text, int len);
-
 /// parse XML document from stream, returns NULL if failed
 CrDom* LVParseXMLStream(
         LVStreamRef stream,
@@ -1943,4 +1887,12 @@ CrDom* LVParseHTMLStream(
         const elem_def_t * elem_table=NULL,
         const attr_def_t * attr_table=NULL,
         const ns_def_t * ns_table=NULL);
+
+/// extract authors from FB2 document, delimiter is lString16 by default
+lString16 ExtractDocAuthors(CrDom* dom, lString16 delimiter = lString16::empty_str);
+lString16 ExtractDocTitle(CrDom* dom);
+lString16 ExtractDocLanguage(CrDom* dom);
+/// returns "(Series Name #number)" if pSeriesNumber is NULL, separate name and number otherwise
+lString16 ExtractDocSeries(CrDom* dom, int* pSeriesNumber=NULL);
+
 #endif

@@ -866,9 +866,17 @@ void LVDocView::Draw(LVDrawBuf& buf, bool auto_resize)
 			rc.right -= margins_.right;
 			DrawCoverTo(&buf, rc);
 		}
-		DrawDocument(buf, cr_dom_->getRootNode(), margins_.left, 0, buf.GetWidth()
-				- margins_.left - margins_.right, buf.GetHeight(), 0, -offset,
-				buf.GetHeight(), &marked_ranges_, &bookmark_ranges_);
+		DrawDocument(buf,
+                     cr_dom_->getRootNode(),
+                     margins_.left,
+                     0,
+                     buf.GetWidth()	- margins_.left - margins_.right,
+                     buf.GetHeight(),
+                     0,
+                     -offset,
+                     buf.GetHeight(),
+                     &marked_ranges_,
+                     &bookmark_ranges_);
 	} else {
 		if (page == -1) {
 			page = pages_list_.FindNearestPage(offset, 0);
@@ -927,27 +935,31 @@ bool LVDocView::WindowToDocPoint(lvPoint & pt) {
 }
 
 /// converts point from document to window coordinates, returns true if success
-bool LVDocView::DocToWindowPoint(lvPoint & pt) {
-    CHECK_RENDER("docToWindowPoint()")
+bool LVDocView::DocToWindowRect(lvRect& rect) {
+    CHECK_RENDER("DocToWindowRect()")
 	if (IsScrollMode()) {
-		pt.y -= offset_;
-		pt.x += margins_.left;
+		rect.top -= offset_;
+        rect.bottom -= offset_;
+		rect.left += margins_.left;
+        rect.right += margins_.left;
 		return true;
 	} else {
         int page = GetCurrPage();
-        if (page >= 0 && page < pages_list_.length() && pt.y >= pages_list_[page]->start) {
+        if (page >= 0 && page < pages_list_.length() && rect.top >= pages_list_[page]->start) {
             int index = -1;
-            if (pt.y <= (pages_list_[page]->start + pages_list_[page]->height)) {
+            if (rect.bottom <= (pages_list_[page]->start + pages_list_[page]->height)) {
                 index = 0;
             } else if (GetColumns() == 2 && page + 1 < pages_list_.length() &&
-                pt.y <= (pages_list_[page + 1]->start + pages_list_[page + 1]->height)) {
+                rect.bottom <= (pages_list_[page + 1]->start + pages_list_[page + 1]->height)) {
                 index = 1;
             }
             if (index >= 0) {
-                int x = pt.x + page_rects_[index].left + margins_.left;
-                if (x < page_rects_[index].right - margins_.right) {
-                    pt.x = x;
-                    pt.y = pt.y + margins_.top - pages_list_[page + index]->start;
+                int right = rect.right + page_rects_[index].left + margins_.left;
+                if (right < page_rects_[index].right - margins_.right) {
+                    rect.left = rect.left + page_rects_[index].left + margins_.left;
+                    rect.right = right;
+                    rect.top = rect.top + margins_.top - pages_list_[page + index]->start;
+                    rect.bottom = rect.bottom + margins_.top - pages_list_[page + index]->start;
                     return true;
                 }
             }
@@ -1081,36 +1093,6 @@ ldomXRange* LVDocView::SelectFirstPageLink() {
 	ldomXRangeList& sel = GetCrDom()->getSelections();
 	UpdateSelections();
 	return sel[0];
-}
-
-/// get screen rectangle for specified cursor position, returns false if not visible
-bool LVDocView::getCursorRect(ldomXPointer ptr, lvRect& rc, bool scrollToCursor) {
-    rc.clear();
-    if (ptr.isNull()) {
-        return false;
-    }
-    if (!ptr.getRect(rc)) {
-        rc.clear();
-        return false;
-    }
-	for (;;) {
-		lvPoint topLeft = rc.topLeft();
-		lvPoint bottomRight = rc.bottomRight();
-		if (DocToWindowPoint(topLeft) && DocToWindowPoint(bottomRight)) {
-			rc.setTopLeft(topLeft);
-			rc.setBottomRight(bottomRight);
-			return true;
-		}
-		// try to scroll and convert doc->window again
-		if (!scrollToCursor) {
-			break;
-		}
-		// scroll
-		GoToBookmark(ptr);
-		scrollToCursor = false;
-	};
-	rc.clear();
-	return false;
 }
 
 /// update selection ranges
@@ -1479,26 +1461,9 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
 	}
     class LinkKeeper: public ldomNodeCallback {
         ldomXRangeList& list_;
-    public:
-        LinkKeeper(ldomXRangeList& list) : list_(list) { }
-        // Called for each text fragment in range
-        virtual void onText(ldomXRange*) { }
-        // Called for each node in range
-        virtual bool onElement(ldomXPointerEx* ptr) {
-            ldomNode* element_node = ptr->getNode();
-            if (element_node->getNodeId() != el_a) {
-                return true;
-            }
-            for (int i = 0; i < list_.length(); i++) {
-                if (list_[i]->getStart().getNode() == element_node) {
-                    // Don't add, duplicate found!
-                    CRLog::debug("GetCurrentPageLinks duplicate");
-                    return true;
-                }
-            }
-            ldomNode* node = element_node->getChildNode(0);
+        bool processNode(ldomNode* node, int start_index) {
             int end_index = node->isText() ? node->getText().length() : node->getChildCount();
-            ldomXPointerEx start = ldomXPointerEx(node, 0);
+            ldomXPointerEx start = ldomXPointerEx(node, start_index);
             ldomXPointerEx end = ldomXPointerEx(node, end_index);
             lvRect start_rect;
             lvRect end_rect;
@@ -1544,6 +1509,48 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
             }
             return true;
         }
+    public:
+        bool text_is_first_ = true;
+        LinkKeeper(ldomXRangeList& list) : list_(list) { }
+        // Called for each text fragment in range
+        virtual void onText(ldomXRange* node_range) {
+            if (!text_is_first_) {
+                return;
+            }
+            text_is_first_ = false;
+            ldomNode* node = node_range->getStart().getNode();
+            ldomNode* element_node = node->getParentNode();
+            if (element_node->isNull() || element_node->getNodeId() != el_a) {
+                return;
+            }
+            processNode(node, node_range->getStart().getOffset());
+#ifdef AXYDEBUG
+            lString16 text = element_node->getText();
+            int start = node_range->getStart().getOffset();
+            int end = node_range->getEnd().getOffset();
+            if (start < end) {
+                text = text.substr(start, end - start);
+            }
+            ldomNode* end_node = node_range->getEnd().getNode();
+            CRLog::debug("GetCurrentPageLinks first text on page: %d-%d %s",
+                         node->getDataIndex(), end_node->getDataIndex(), LCSTR(text));
+#endif
+        }
+        // Called for each node in range
+        virtual bool onElement(ldomXPointerEx* ptr) {
+            ldomNode* element_node = ptr->getNode();
+            if (element_node->getNodeId() != el_a) {
+                return true;
+            }
+            for (int i = 0; i < list_.length(); i++) {
+                if (list_[i]->getStart().getNode() == element_node) {
+                    // Don't add, duplicate found!
+                    CRLog::debug("GetCurrentPageLinks duplicate");
+                    return true;
+                }
+            }
+            return processNode(element_node->getChildNode(0), 0);
+        }
     };
     LinkKeeper callback(links_list);
     page_range->forEach(&callback);
@@ -1552,6 +1559,7 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
         int page_index = GetCurrPage();
         page_range = GetPageDocRange(page_index + 1);
         if (!page_range.isNull()) {
+            callback.text_is_first_ = true;
             page_range->forEach(&callback);
         }
     }
