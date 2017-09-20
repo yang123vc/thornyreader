@@ -66,8 +66,9 @@ i, em, emphasis, dfn, var {
 u {
   text-decoration: underline;
 }
+/* Mozilla: 0000EE Dark: 00569f Light: 4285f4 Lebedev: 008ACE */
 a {
-  color: #0000EE;
+  color: #00569f;
 }
 del, s, strike, strikethrough {
   text-decoration: line-through;
