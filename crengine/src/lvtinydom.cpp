@@ -2149,9 +2149,6 @@ void ldomNode::autoboxChildren( int startIndex, int endIndex )
         removeChildren(lastNonEmpty+1, endIndex);
         // inner inline
         ldomNode * abox = insertChildElement( firstNonEmpty, LXML_NS_NONE, el_autoBoxing );
-#ifdef AXYDEBUG
-        CRLog::trace("autoboxChildren()");
-#endif
         abox->initNodeStyle();
         abox->setRendMethod( erm_final );
         moveItemsTo( abox, firstNonEmpty+1, lastNonEmpty+1 );
