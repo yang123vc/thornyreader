@@ -71,19 +71,7 @@ Authors
 - Vadim Lopatin (http://www.coolreader.org/) - most source code
 - Alan (http://alreader.kms.ru/) - hyphenation sypport code
 
-Installation
-
-- download source code from CoolReader homepage http://www.coolreader.org/
-- unpack archieve into some folder
-- build library
-- build sample applications located in /tools folder
-
 Getting started
-
-Please see Tools/Fb2Test/Fb2Test.cpp source code for sample code.
-
-Library implements \a LVDocView class which can read XML document from
-file and draw it in grayscale buffer.
 
 Before loading of document, you have to initialize font manager:
 
@@ -99,8 +87,6 @@ Typical usage of LVDocView:
 - Call LVDocView::setStylesheet() to set stylesheet for document.
 - Set draw buffer dimensions using LVDocView::Resize(dx, dy).
 - LVDocView::Draw() draws document into gray buffer.
-- \a DrawBuf2DC() can be used to draw gray bitmap in Windows device context.
-- LVDocView::GetPos() and LVDocView::SetPos() can be used to scroll throuh document.
 
 Configuration:
 
