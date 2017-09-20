@@ -1545,11 +1545,16 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
             for (int i = 0; i < list_.length(); i++) {
                 if (list_[i]->getStart().getNode() == element_node) {
                     // Don't add, duplicate found!
-                    CRLog::debug("GetCurrentPageLinks duplicate");
+                    CRLog::error("GetCurrentPageLinks duplicate");
                     return true;
                 }
             }
-            return processNode(element_node->getChildNode(0), 0);
+            if (element_node->getChildCount() > 0) {
+                return processNode(element_node->getChildNode(0), 0);
+            } else {
+                // Empty link in malformed doc, example: <a name="sync_on_demand"></a>
+                return true;
+            }
         }
     };
     LinkKeeper callback(links_list);
