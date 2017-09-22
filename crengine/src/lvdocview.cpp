@@ -1461,27 +1461,27 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
 	}
     class LinkKeeper: public ldomNodeCallback {
         ldomXRangeList& list_;
-        bool processNode(ldomNode* node, int start_index) {
+        void ProcessFinalNode(ldomNode* node) {
             int end_index = node->isText() ? node->getText().length() : node->getChildCount();
-            ldomXPointerEx start = ldomXPointerEx(node, start_index);
+            ldomXPointerEx start = ldomXPointerEx(node, 0);
             ldomXPointerEx end = ldomXPointerEx(node, end_index);
             lvRect start_rect;
             lvRect end_rect;
             if (!start.getRect(start_rect) || !end.getRect(end_rect)) {
                 CRLog::error("GetCurrentPageLinks getRect fail");
-                return true;
+                return;
             }
             if (start_rect.top == end_rect.top && start_rect.bottom == end_rect.bottom) {
                 // Singleline link
                 list_.add(new ldomXRange(start, end));
-                return true;
+                return;
             }
             lvRect curr_rect;
             for (int i = end_index - 1; i >= 0; i--) {
                 ldomXPointerEx curr = ldomXPointerEx(node, i);
                 if (!curr.getRect(curr_rect)) {
                     CRLog::error("GetCurrentPageLinks getRect fail");
-                    return true;
+                    return;
                 }
                 if (curr_rect.top == start_rect.top) {
                     if (curr_rect.bottom == start_rect.bottom) {
@@ -1500,14 +1500,23 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
                         end = ldomXPointerEx(curr);
                         if (!end.getRect(end_rect)) {
                             CRLog::error("GetCurrentPageLinks getRect fail");
-                            return true;
+                            return;
                         }
                     } else {
                         CRLog::error("GetCurrentPageLinks tops not equals, bottoms does");
                     }
                 }
             }
-            return true;
+        }
+        void ProcessLinkNode(ldomNode* node) {
+            for (lUInt32 i = 0; i < node->getChildCount(); i++) {
+                ldomNode* child = node->getChildNode(i);
+                if (child->isText()) {
+                    ProcessFinalNode(child);
+                } else {
+                    ProcessLinkNode(child);
+                }
+            }
         }
     public:
         bool text_is_first_ = true;
@@ -1523,7 +1532,7 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
             if (element_node->isNull() || element_node->getNodeId() != el_a) {
                 return;
             }
-            processNode(node, node_range->getStart().getOffset());
+            ProcessLinkNode(element_node);
 #ifdef AXYDEBUG
             lString16 text = element_node->getText();
             int start = node_range->getStart().getOffset();
@@ -1549,12 +1558,14 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
                     return true;
                 }
             }
-            if (element_node->getChildCount() > 0) {
-                return processNode(element_node->getChildNode(0), 0);
-            } else {
+            ProcessLinkNode(element_node);
+#ifdef AXYDEBUG
+            if (element_node->getChildCount() == 0) {
                 // Empty link in malformed doc, example: <a name="sync_on_demand"></a>
-                return true;
+                CRLog::trace("GetCurrentPageLinks empty link in malformed doc");
             }
+#endif
+            return true;
         }
     };
     LinkKeeper callback(links_list);

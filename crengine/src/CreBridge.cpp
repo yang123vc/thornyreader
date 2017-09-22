@@ -353,17 +353,24 @@ void CreBridge::processPage(CmdRequest& request, CmdResponse& response)
 
 void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
 {
+#define DEBUG_LINKS
     response.cmd = CMD_RES_LINKS;
     CmdDataIterator iter(request.first);
-    uint32_t page_index = 0;
-    iter.getInt(&page_index);
+    uint32_t external_page = 0;
+    iter.getInt(&external_page);
     if (!iter.isValid()) {
         CRLog::error("processPageLinks bad request data");
         response.result = RES_BAD_REQ_DATA;
         return;
     }
-    page_index = (uint32_t) ImportPage(page_index, doc_view_->GetColumns());
-    doc_view_->GoToPage(page_index);
+    uint32_t page = (uint32_t) ImportPage(external_page, doc_view_->GetColumns());
+    doc_view_->GoToPage(page);
+#ifdef DEBUG_LINKS
+    float page_width_temp = doc_view_->GetWidth();
+    float page_height_temp = doc_view_->GetHeight();
+    CRLog::debug("processPageLinks external_page=%d page=%d page_width=%d page_height=%d",
+                 external_page, page, page_width_temp, page_height_temp);
+#endif
     ldomXRangeList list;
     doc_view_->GetCurrentPageLinks(list);
     if (list.empty()) {
@@ -371,14 +378,9 @@ void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
     }
     float page_width = doc_view_->GetWidth();
     float page_height = doc_view_->GetHeight();
-#ifdef AXYDEBUG
-    if (1) {
-        CRLog::debug("processPageLinks page=%d page_width=%.0f page_height=%.0f",
-                     page_index, page_width, page_height);
-    } else {
-        lString16 text = doc_view_->GetPageText(page_index);
-        CRLog::debug("processPageLinks page=%d page_width=%.0f page_height=%.0f \n    %s",
-                     page_index, page_width, page_height, LCSTR(text));
+#ifdef DEBUG_LINKS
+    if (0) {
+        CRLog::debug("processPageLinks text: %s", LCSTR(doc_view_->GetPageText(page)));
     }
 #endif
     for (int i = 0; i < list.length(); i++) {
@@ -387,7 +389,7 @@ void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
         link->getRect(raw_rect);
         lvRect rect = lvRect(raw_rect.left, raw_rect.top, raw_rect.right, raw_rect.bottom);
         if (!doc_view_->DocToWindowRect(rect)) {
-#ifdef AXYDEBUG
+#ifdef DEBUG_LINKS
             ldomNode* start_node = link->getStart().getNode();
             ldomNode* end_node = link->getEnd().getNode();
             CRLog::warn("processPageLinks DocToWindowRect fail %s\n  %d:%d-%d:%d\n  %s %d\n  %s %d",
@@ -432,7 +434,7 @@ void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
         } else {
             responseAddLinkUnknown(response, href, l, t, r, b);
         }
-#ifdef AXYDEBUG
+#ifdef DEBUG_LINKS
         ldomNode* start_node = link->getStart().getNode();
         ldomNode* end_node = link->getEnd().getNode();
         CRLog::trace("processPageLinks %s %d\n  %d:%d-%d:%d %d:%d-%d:%d\n  %s %d\n  %s %d",
@@ -442,6 +444,7 @@ void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
                      LCSTR(link->getEnd().toString()), end_node->getDataIndex());
 #endif
     }
+#undef DEBUG_LINKS
 }
 
 void CreBridge::processPageByXPath(CmdRequest& request, CmdResponse& response)
