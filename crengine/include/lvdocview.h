@@ -88,8 +88,6 @@ private:
     bool show_cover_;
     bool background_tiled_;
 
-	inline bool IsPagesMode() { return viewport_mode_ == MODE_PAGES; }
-	inline bool IsScrollMode() { return viewport_mode_ == MODE_SCROLL; }
     void UpdateScrollInfo();
     /// load document from stream
     bool LoadDoc(int doc_format, LVStreamRef stream);
@@ -116,6 +114,8 @@ public:
     bool config_enable_footnotes_;
     bool config_txt_smart_format_;
 
+    inline bool IsPagesMode() { return viewport_mode_ == MODE_PAGES; }
+    inline bool IsScrollMode() { return viewport_mode_ == MODE_SCROLL; }
     /// draw current page to specified buffer
     void Draw(LVDrawBuf& drawbuf, bool autoResize = true);
     void UpdateLayout();

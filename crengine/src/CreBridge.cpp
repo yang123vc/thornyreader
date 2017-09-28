@@ -366,10 +366,11 @@ void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
     uint32_t page = (uint32_t) ImportPage(external_page, doc_view_->GetColumns());
     doc_view_->GoToPage(page);
 #ifdef DEBUG_LINKS
-    float page_width_temp = doc_view_->GetWidth();
-    float page_height_temp = doc_view_->GetHeight();
     CRLog::debug("processPageLinks external_page=%d page=%d page_width=%d page_height=%d",
-                 external_page, page, page_width_temp, page_height_temp);
+                 external_page, page, doc_view_->GetWidth(), doc_view_->GetHeight());
+    if (0) {
+        CRLog::debug("processPageLinks text: %s", LCSTR(doc_view_->GetPageText(page)));
+    }
 #endif
     ldomXRangeList list;
     doc_view_->GetCurrentPageLinks(list);
@@ -378,11 +379,6 @@ void CreBridge::processPageLinks(CmdRequest& request, CmdResponse& response)
     }
     float page_width = doc_view_->GetWidth();
     float page_height = doc_view_->GetHeight();
-#ifdef DEBUG_LINKS
-    if (0) {
-        CRLog::debug("processPageLinks text: %s", LCSTR(doc_view_->GetPageText(page)));
-    }
-#endif
     for (int i = 0; i < list.length(); i++) {
         ldomXRange* link = list[i];
         lvRect raw_rect;

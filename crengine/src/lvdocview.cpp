@@ -1443,7 +1443,9 @@ LVRef<ldomXRange> LVDocView::GetPageDocRange(int page_index) {
         }
         ldomXPointer start = cr_dom_->createXPointer(lvPoint(0, page->start));
         //ldomXPointer end = cr_dom_->createXPointer(lvPoint(m_dx + m_dy, page->start + page->height - 1));
-        ldomXPointer end = cr_dom_->createXPointer(lvPoint(0, page->start + page->height), 1);
+        //ldomXPointer end = cr_dom_->createXPointer(lvPoint(0, page->start + page->height - 1), 1);
+        //ldomXPointer end = cr_dom_->createXPointer(lvPoint(0, page->start + page->height), 1);
+        ldomXPointer end = cr_dom_->createXPointer(lvPoint(0, page->start + page->height - 1), 1);
         if (start.isNull() || end.isNull()) {
             return res;
         }
@@ -1551,20 +1553,13 @@ void LVDocView::GetCurrentPageLinks(ldomXRangeList& links_list)
             if (element_node->getNodeId() != el_a) {
                 return true;
             }
-            for (int i = 0; i < list_.length(); i++) {
-                if (list_[i]->getStart().getNode() == element_node) {
-                    // Don't add, duplicate found!
-                    CRLog::error("GetCurrentPageLinks duplicate");
-                    return true;
-                }
-            }
-            ProcessLinkNode(element_node);
 #ifdef AXYDEBUG
             if (element_node->getChildCount() == 0) {
                 // Empty link in malformed doc, example: <a name="sync_on_demand"></a>
                 CRLog::trace("GetCurrentPageLinks empty link in malformed doc");
             }
 #endif
+            ProcessLinkNode(element_node);
             return true;
         }
     };
@@ -1720,17 +1715,17 @@ LVPageWordSelector::~LVPageWordSelector()
     doc_view_->ClearSelection();
 }
 
-LVPageWordSelector::LVPageWordSelector(LVDocView* docview) : doc_view_(docview)
+LVPageWordSelector::LVPageWordSelector(LVDocView* doc_view) : doc_view_(doc_view)
 {
     LVRef<ldomXRange> range = doc_view_->GetPageDocRange();
     if (!range.isNull()) {
 		words_.addRangeWords(*range, true);
-		if (doc_view_->GetColumns() > 1) { // _docview->isPageMode() &&
-				// process second page
-				int page_index = doc_view_->GetCurrPage();
-				range = doc_view_->GetPageDocRange(page_index + 1);
-				if (!range.isNull())
-					words_.addRangeWords(*range, true);
+		if (doc_view_->IsPagesMode() && doc_view_->GetColumns() > 1) {
+            // process second page
+            int page_index = doc_view_->GetCurrPage();
+            range = doc_view_->GetPageDocRange(page_index + 1);
+            if (!range.isNull())
+                words_.addRangeWords(*range, true);
 		}
 		words_.selectMiddleWord();
 		UpdateSelection();
