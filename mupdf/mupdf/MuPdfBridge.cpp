@@ -408,9 +408,6 @@ void MuPdfBridge::processPageInfo(CmdRequest& request, CmdResponse& response)
     if (pageNo == 1) {
         SegfaultDeath();
     }
-    if (pageNo % 2) {
-        SegfaultDeath();
-    }
 #endif
 
     fz_page *page = getPage(pageNo, false);
