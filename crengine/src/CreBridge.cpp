@@ -568,6 +568,9 @@ void CreBridge::process(CmdRequest& request, CmdResponse& response)
     case CMD_REQ_CRE_METADATA:
         processMetadata(request, response);
         break;
+    case CMD_REQ_ALIVE:
+        response.cmd = CMD_RES_ALIVE;
+        break;
     case CMD_REQ_QUIT:
         processQuit(request, response);
         break;
