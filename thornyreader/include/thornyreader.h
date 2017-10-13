@@ -17,7 +17,7 @@
 #ifndef _THORNYREADER_H_
 #define _THORNYREADER_H_
 
-#define THORNYREADER_VERSION "17.07.31.00"
+#define THORNYREADER_VERSION "17.10.13.00"
 #define THORNYREADER_LOG_TAG "thornyreader"
 
 const bool ThornyReaderIsDebugBuild();
